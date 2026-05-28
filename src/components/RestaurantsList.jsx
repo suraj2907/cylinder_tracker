@@ -40,12 +40,12 @@ export default function RestaurantsList({ restaurants, tot21, tot192, totEmpty, 
             <tr className="border-b border-customBorder bg-[#0d1520]">
               <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">#</th>
               <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Restaurant</th>
+              <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Outstanding</th>
               <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">🔵 21 KG Del</th>
               <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">🟢 19.2 KG Del</th>
               <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">🔵 21 KG Khali</th>
               <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">🟢 19.2 KG Khali</th>
               <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">⚪ Total Khali</th>
-              <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Outstanding</th>
               <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Grand Total Del</th>
             </tr>
           </thead>
@@ -54,6 +54,11 @@ export default function RestaurantsList({ restaurants, tot21, tot192, totEmpty, 
               <tr key={r.name} className="hover:bg-white/[0.02] transition-colors">
                 <td className="px-4 py-3 text-xs font-bold text-mutedSlate">{i + 1}</td>
                 <td className="px-4 py-3 text-xs font-semibold text-textSlate">{r.name}</td>
+                <td className="px-4 py-3 text-xs">
+                  <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${r.outstanding > 0 ? 'bg-accentYellow/10 text-accentYellow border-accentYellow/30' : 'bg-green-500/10 text-green-400 border-green-500/30'}`}>
+                    {r.outstanding}
+                  </span>
+                </td>
                 <td className="px-4 py-3 text-xs">
                   <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-accentCyan/10 text-accentCyan border border-accentCyan/30">{r.kg21}</span>
                 </td>
@@ -69,11 +74,6 @@ export default function RestaurantsList({ restaurants, tot21, tot192, totEmpty, 
                 <td className="px-4 py-3 text-xs">
                   <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-mutedSlate/15 text-mutedSlate border border-mutedSlate/30">{r.empty}</span>
                 </td>
-                <td className="px-4 py-3 text-xs">
-                  <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${r.outstanding > 0 ? 'bg-accentYellow/10 text-accentYellow border-accentYellow/30' : 'bg-green-500/10 text-green-400 border-green-500/30'}`}>
-                    {r.outstanding}
-                  </span>
-                </td>
                 <td className={`px-4 py-3 text-xs font-extrabold ${r.total > 50 ? 'text-accentOrange' : 'text-textSlate'}`}>{r.total}</td>
               </tr>
             ))}
@@ -81,6 +81,11 @@ export default function RestaurantsList({ restaurants, tot21, tot192, totEmpty, 
           <tfoot>
             <tr className="border-t border-customBorder bg-[#0d1520]">
               <td colSpan={2} className="px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-accentOrange">GRAND TOTAL</td>
+              <td className="px-4 py-3.5 text-xs">
+                <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${totOutstanding > 0 ? 'bg-accentYellow/10 text-accentYellow border-accentYellow/30' : 'bg-green-500/10 text-green-400 border-green-500/30'}`}>
+                  {totOutstanding}
+                </span>
+              </td>
               <td className="px-4 py-3.5 text-xs">
                 <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-accentCyan/10 text-accentCyan border border-accentCyan/30">{tot21}</span>
               </td>
@@ -95,11 +100,6 @@ export default function RestaurantsList({ restaurants, tot21, tot192, totEmpty, 
               </td>
               <td className="px-4 py-3.5 text-xs">
                 <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-mutedSlate/15 text-mutedSlate border border-mutedSlate/30">{totEmpty}</span>
-              </td>
-              <td className="px-4 py-3.5 text-xs">
-                <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${totOutstanding > 0 ? 'bg-accentYellow/10 text-accentYellow border-accentYellow/30' : 'bg-green-500/10 text-green-400 border-green-500/30'}`}>
-                  {totOutstanding}
-                </span>
               </td>
               <td className="px-4 py-3.5 text-sm font-black text-accentOrange">{totAll}</td>
             </tr>

@@ -35,10 +35,10 @@ export default function Dashboard({ restaurants, batchStats, restMap, totAll, to
               <tr className="border-b border-customBorder bg-[#0d1520]">
                 <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">#</th>
                 <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Restaurant</th>
+                <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Outstanding</th>
                 <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">🔵 21 KG</th>
                 <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">🟢 19.2 KG</th>
                 <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">⚪ Khali</th>
-                <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Outstanding</th>
                 <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Total Delivered</th>
               </tr>
             </thead>
@@ -48,6 +48,11 @@ export default function Dashboard({ restaurants, batchStats, restMap, totAll, to
                   <td className={`px-4 py-3 text-xs font-bold ${i < 3 ? 'text-accentOrange' : 'text-mutedSlate'}`}>{i + 1}</td>
                   <td className="px-4 py-3 text-xs font-semibold text-textSlate">{r.name}</td>
                   <td className="px-4 py-3 text-xs">
+                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${r.outstanding > 0 ? 'bg-accentYellow/10 text-accentYellow border-accentYellow/30' : 'bg-green-500/10 text-green-400 border-green-500/30'}`}>
+                      {r.outstanding}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-xs">
                     <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-accentCyan/10 text-accentCyan border border-accentCyan/30">{r.kg21}</span>
                   </td>
                   <td className="px-4 py-3 text-xs">
@@ -55,11 +60,6 @@ export default function Dashboard({ restaurants, batchStats, restMap, totAll, to
                   </td>
                   <td className="px-4 py-3 text-xs">
                     <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-mutedSlate/15 text-mutedSlate border border-mutedSlate/30">{r.empty}</span>
-                  </td>
-                  <td className="px-4 py-3 text-xs">
-                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${r.outstanding > 0 ? 'bg-accentYellow/10 text-accentYellow border-accentYellow/30' : 'bg-green-500/10 text-green-400 border-green-500/30'}`}>
-                      {r.outstanding}
-                    </span>
                   </td>
                   <td className={`px-4 py-3 text-xs font-extrabold ${r.total > 50 ? 'text-accentOrange' : 'text-textSlate'}`}>{r.total}</td>
                 </tr>

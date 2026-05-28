@@ -5,6 +5,8 @@ import RestaurantsList from './components/RestaurantsList';
 import BatchesList from './components/BatchesList';
 import CalendarView from './components/CalendarView';
 import AddEntry from './components/AddEntry';
+import GasPredictor from './components/GasPredictor';
+import AgingTracker from './components/AgingTracker';
 import { supabase } from './utils/supabaseClient';export default function App() {
   const [tab, setTab] = useState("dashboard");
   const [batches, setBatches] = useState(() => {
@@ -29,6 +31,7 @@ import { supabase } from './utils/supabaseClient';export default function App() 
   const [newEntry, setNewEntry] = useState({ name: "", qty: 1, type: "19.2kg-delivery", date: "", batchNum: "", isNewBatch: false, khaliDate: "" });
   const [toast, setToast] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   // PWA states
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -45,48 +48,59 @@ import { supabase } from './utils/supabaseClient';export default function App() 
   // Load from Supabase on start if configured
   useEffect(() => {
     if (isSupabaseConfigured) {
-      setLoading(true);
+      setSyncing(true);
       const fetchData = async () => {
         try {
-          // Fetch batches in pagination/unlimited (just in case they cross 1000 batches too!)
-          let dbBatches = [];
-          let batchFrom = 0;
-          let batchTo = 999;
-          let keepFetchingBatches = true;
-          while (keepFetchingBatches) {
-            const { data, error } = await supabase
-              .from('batches')
-              .select('*')
-              .range(batchFrom, batchTo);
-            if (error) throw error;
-            if (data && data.length > 0) {
-              dbBatches = [...dbBatches, ...data];
-              if (data.length < 1000) keepFetchingBatches = false;
-              else { batchFrom += 1000; batchTo += 1000; }
-            } else {
-              keepFetchingBatches = false;
+          // Fetch batches and entries in parallel sequential chains
+          const fetchBatchesChain = async () => {
+            let dbBatches = [];
+            let batchFrom = 0;
+            let batchTo = 999;
+            let keepFetchingBatches = true;
+            while (keepFetchingBatches) {
+              const { data, error } = await supabase
+                .from('batches')
+                .select('*')
+                .range(batchFrom, batchTo);
+              if (error) throw error;
+              if (data && data.length > 0) {
+                dbBatches = [...dbBatches, ...data];
+                if (data.length < 1000) keepFetchingBatches = false;
+                else { batchFrom += 1000; batchTo += 1000; }
+              } else {
+                keepFetchingBatches = false;
+              }
             }
-          }
+            return dbBatches;
+          };
 
-          // Fetch entries in pagination/unlimited (currently 2633 entries, will pull all chunks)
-          let dbEntries = [];
-          let entryFrom = 0;
-          let entryTo = 999;
-          let keepFetchingEntries = true;
-          while (keepFetchingEntries) {
-            const { data, error } = await supabase
-              .from('entries')
-              .select('*')
-              .range(entryFrom, entryTo);
-            if (error) throw error;
-            if (data && data.length > 0) {
-              dbEntries = [...dbEntries, ...data];
-              if (data.length < 1000) keepFetchingEntries = false;
-              else { entryFrom += 1000; entryTo += 1000; }
-            } else {
-              keepFetchingEntries = false;
+          const fetchEntriesChain = async () => {
+            let dbEntries = [];
+            let entryFrom = 0;
+            let entryTo = 999;
+            let keepFetchingEntries = true;
+            while (keepFetchingEntries) {
+              const { data, error } = await supabase
+                .from('entries')
+                .select('*')
+                .range(entryFrom, entryTo);
+              if (error) throw error;
+              if (data && data.length > 0) {
+                dbEntries = [...dbEntries, ...data];
+                if (data.length < 1000) keepFetchingEntries = false;
+                else { entryFrom += 1000; entryTo += 1000; }
+              } else {
+                keepFetchingEntries = false;
+              }
             }
-          }
+            return dbEntries;
+          };
+
+          // Execute sequential chains in parallel
+          const [dbBatches, dbEntries] = await Promise.all([
+            fetchBatchesChain(),
+            fetchEntriesChain()
+          ]);
 
           const batchesMap = {};
           dbBatches.forEach(b => {
@@ -132,7 +146,7 @@ import { supabase } from './utils/supabaseClient';export default function App() 
           console.error("Failed to load Supabase data:", err);
           showToast("⚠️ Supabase connection failed! Using local cache.", false);
         } finally {
-          setLoading(false);
+          setSyncing(false);
         }
       };
       fetchData();
@@ -141,10 +155,10 @@ import { supabase } from './utils/supabaseClient';export default function App() 
 
   // Guarded local storage synchronization
   useEffect(() => {
-    if (!loading) {
+    if (!loading && !syncing) {
       localStorage.setItem('cylinder_data', JSON.stringify(batches));
     }
-  }, [batches, loading]);
+  }, [batches, loading, syncing]);
   useEffect(() => {
     const handler = (e) => {
       e.preventDefault();
@@ -378,7 +392,9 @@ import { supabase } from './utils/supabaseClient';export default function App() 
     { id: "restaurants", label: "🏪 Restaurants" },
     { id: "calendar", label: "📅 Calendar" },
     { id: "batches", label: "📦 Batches" },
-    { id: "add", label: "➕ Add" },
+    { id: "gasPredictor", label: "🔮 Gas Predictor" },
+    { id: "agingTracker", label: "🚨 Aging Tracker" },
+    { id: "add", label: "➕ Add Entry" },
   ];
 
   return (
@@ -408,39 +424,78 @@ import { supabase } from './utils/supabaseClient';export default function App() 
       {/* HEADER */}
       <div className="bg-gradient-to-r from-[#0d1520] to-cardBg border-b border-customBorder/50 px-5 py-4 sticky top-0 z-50 flex items-center justify-between flex-wrap gap-4 backdrop-blur-md bg-opacity-95">
         <div>
-          <div className="text-lg font-black text-accentOrange tracking-wider flex items-center gap-2">
+          <div className="text-lg font-black text-accentOrange tracking-wider flex items-center gap-2 flex-wrap">
             <span className="w-2.5 h-2.5 rounded-full bg-accentOrange animate-pulse"></span>
             Cylinder Tracker
+            {syncing && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black bg-accentCyan/10 text-accentCyan border border-accentCyan/30 animate-pulse ml-2">
+                🔄 Syncing Supabase...
+              </span>
+            )}
           </div>
           <div className="text-[10px] text-mutedSlate font-semibold uppercase tracking-wider mt-0.5">
             LPG Management • {batches.length} batches • {totAll} total cylinders
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {TABS.map(t => (
+        <div className="flex items-center gap-2 flex-wrap w-full lg:w-auto">
+          {/* Desktop Navigation Tabs (Hidden on mobile) */}
+          <div className="hidden lg:flex items-center gap-2 flex-wrap">
+            {TABS.map(t => (
+              <button 
+                key={t.id} 
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 active:scale-95 border ${
+                  tab === t.id 
+                    ? 'border-accentOrange bg-accentOrange/10 text-accentOrange' 
+                    : 'border-customBorder bg-transparent text-mutedSlate hover:text-textSlate'
+                }`}
+                onClick={() => setTab(t.id)}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Responsive Mobile Navigation (Hidden on desktop) */}
+          <div className="flex lg:hidden items-center justify-between w-full sm:w-auto gap-2">
+            {/* View Selector Dropdown */}
+            <select
+              value={tab}
+              onChange={e => setTab(e.target.value)}
+              className="bg-cardBg border border-customBorder rounded-lg px-3 py-2 text-textSlate focus:outline-none focus:border-accentCyan text-xs font-bold w-40 transition-colors"
+            >
+              <option value="dashboard">📊 Dashboard</option>
+              <option value="restaurants">🏪 Restaurants</option>
+              <option value="calendar">📅 Calendar</option>
+              <option value="batches">📦 Batches</option>
+              <option value="gasPredictor">🔮 Gas Predictor</option>
+              <option value="agingTracker">🚨 Aging Tracker</option>
+            </select>
+
+            {/* Prominent Add Button */}
             <button 
-              key={t.id} 
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 active:scale-95 border ${
-                tab === t.id 
-                  ? 'border-accentOrange bg-accentOrange/10 text-accentOrange' 
-                  : 'border-customBorder bg-transparent text-mutedSlate hover:text-textSlate'
-              }`}
-              onClick={() => setTab(t.id)}>
-              {t.label}
+              onClick={() => setTab("add")}
+              className={`px-4 py-2 rounded-lg text-xs font-black transition-all duration-200 active:scale-95 border shadow-sm flex items-center gap-1 ${
+                tab === 'add' 
+                  ? 'border-accentOrange bg-accentOrange/20 text-accentOrange' 
+                  : 'border-accentOrange bg-accentOrange/10 text-accentOrange'
+              }`}>
+              ➕ Add Entry
             </button>
-          ))}
-          <button 
-            className="px-3 py-1.5 rounded-lg text-xs font-bold border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 active:scale-95 text-green-400 flex items-center gap-1.5 transition-all duration-200"
-            onClick={handleDownload}>
-            💾 Download Data
-          </button>
-          {isInstallable && (
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end sm:justify-start">
             <button 
-              className="px-3 py-1.5 rounded-lg text-xs font-bold border border-accentCyan/30 bg-accentCyan/10 hover:bg-accentCyan/20 active:scale-95 text-accentCyan flex items-center gap-1.5 transition-all duration-200"
-              onClick={handleInstallClick}>
-              📲 Install App
+              className="px-3 py-1.5 rounded-lg text-xs font-bold border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 active:scale-95 text-green-400 flex items-center gap-1.5 transition-all duration-200"
+              onClick={handleDownload}>
+              💾 Download Data
             </button>
-          )}
+            {isInstallable && (
+              <button 
+                className="px-3 py-1.5 rounded-lg text-xs font-bold border border-accentCyan/30 bg-accentCyan/10 hover:bg-accentCyan/20 active:scale-95 text-accentCyan flex items-center gap-1.5 transition-all duration-200"
+                onClick={handleInstallClick}>
+                📲 Install App
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -470,6 +525,8 @@ import { supabase } from './utils/supabaseClient';export default function App() 
         {tab === "calendar" && <CalendarView dateMap={dateMap} selectedDate={selectedDate} setSelectedDate={setSelectedDate} handleDeleteEntry={handleDeleteEntry} />}
         {tab === "batches" && <BatchesList filteredBatches={filteredBatches} batchSearch={batchSearch} setBatchSearch={setBatchSearch} />}
         {tab === "add" && <AddEntry newEntry={newEntry} setNewEntry={setNewEntry} handleAdd={handleAdd} restMap={restMap} isInstallable={isInstallable} handleInstallClick={handleInstallClick} />}
+        {tab === "gasPredictor" && <GasPredictor restaurants={restaurants} batches={batches} />}
+        {tab === "agingTracker" && <AgingTracker restaurants={restaurants} batches={batches} />}
       </div>
     </>
   );
