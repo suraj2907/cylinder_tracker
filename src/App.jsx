@@ -318,7 +318,7 @@ import { supabase } from './utils/supabaseClient';export default function App() 
         });
 
         showToast(`✅ ${name} - ${qty} ${parsedType} ${isReturn ? 'Khali Return' : 'Delivery'} batch #${num} mein add ho gaya!`);
-        setNewEntry(p => ({ ...p, name: "", qty: 1, type: "19.2kg-delivery", date: "" }));
+        setNewEntry(p => ({ ...p, name: "", qty: 1 }));
       } catch (err) {
         console.error("Supabase write error:", err);
         showToast("Supabase database mein save nahi ho paya ❌", false);
@@ -336,7 +336,7 @@ import { supabase } from './utils/supabaseClient';export default function App() 
         }
       });
       showToast(`✅ ${name} - ${qty} ${parsedType} ${isReturn ? 'Khali Return' : 'Delivery'} batch #${num} mein add ho gaya (Local Mode)!`);
-      setNewEntry(p => ({ ...p, name: "", qty: 1, type: "19.2kg-delivery", date: "" }));
+      setNewEntry(p => ({ ...p, name: "", qty: 1 }));
     }
   }
 
