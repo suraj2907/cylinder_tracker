@@ -32,6 +32,8 @@ export const ALIASES = {
   "Dudh Sagar": "Doodh Sagar",
   "Mangaura": "Magnaura",
   "Shivam": "Suryakant Sahu",
+  "Vijay": "Vijay Laxmi Project",
+  "Shri Gurudev Agro India Private Limited": "Gurudev Rice Mill",
 
   // Samrat Bakery
   "Samrat Bamery": "Samrat Bakery",

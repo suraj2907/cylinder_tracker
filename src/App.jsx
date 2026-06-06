@@ -61,6 +61,7 @@ import { supabase } from './utils/supabaseClient';export default function App() 
               const { data, error } = await supabase
                 .from('batches')
                 .select('*')
+                .order('batch_num', { ascending: true })
                 .range(batchFrom, batchTo);
               if (error) throw error;
               if (data && data.length > 0) {
@@ -83,6 +84,7 @@ import { supabase } from './utils/supabaseClient';export default function App() 
               const { data, error } = await supabase
                 .from('entries')
                 .select('*')
+                .order('id', { ascending: true })
                 .range(entryFrom, entryTo);
               if (error) throw error;
               if (data && data.length > 0) {
