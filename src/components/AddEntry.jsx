@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useUser } from '../context/UserContext';
 
 export default function AddEntry({ newEntry, setNewEntry, handleAdd, restMap }) {
+  const { currentUser } = useUser();
   const [activeForm, setActiveForm] = useState('delivery'); // 'delivery' | 'return'
   const [weight, setWeight] = useState('19.2kg'); // '19.2kg' | '21kg'
 
-  // Automatically update the parent type state whenever form or weight changes
   useEffect(() => {
     setNewEntry(p => ({
       ...p,
@@ -13,13 +14,13 @@ export default function AddEntry({ newEntry, setNewEntry, handleAdd, restMap }) 
   }, [activeForm, weight, setNewEntry]);
 
   return (
-    <div className="space-y-6">
-      {/* Premium Tab Switcher */}
-      <div className="flex p-1 bg-cardBg border border-customBorder rounded-xl max-w-md mx-auto">
+    <div className="space-y-6 fade">
+      {/* Light Theme Tab Switcher */}
+      <div className="flex p-1.5 bg-white border border-customBorder shadow-soft rounded-2xl max-w-md mx-auto">
         <button
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-xs font-black uppercase tracking-wider transition-all duration-300 ${
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 ${
             activeForm === 'delivery'
-              ? 'bg-gradient-to-r from-cyan-600/20 to-blue-600/20 border border-cyan-500/30 text-cyan-400 shadow-md shadow-cyan-500/5'
+              ? 'bg-sky-50 border border-sky-200 text-sky-700 shadow-sm'
               : 'text-mutedSlate hover:text-textSlate'
           }`}
           onClick={() => setActiveForm('delivery')}
@@ -29,7 +30,7 @@ export default function AddEntry({ newEntry, setNewEntry, handleAdd, restMap }) 
         <button
           className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-xs font-black uppercase tracking-wider transition-all duration-300 ${
             activeForm === 'return'
-              ? 'bg-gradient-to-r from-emerald-600/20 to-green-600/20 border border-green-500/30 text-green-400 shadow-md shadow-green-500/5'
+              ? 'bg-emerald-50 border border-emerald-200 text-emerald-700 shadow-sm'
               : 'text-mutedSlate hover:text-textSlate'
           }`}
           onClick={() => setActiveForm('return')}
@@ -38,38 +39,19 @@ export default function AddEntry({ newEntry, setNewEntry, handleAdd, restMap }) 
         </button>
       </div>
 
-      {/* Main Glassmorphic Form Card */}
-      <div
-        className={`bg-cardBg border rounded-2xl overflow-hidden transition-all duration-500 ${
-          activeForm === 'delivery'
-            ? 'border-cyan-500/20 shadow-xl shadow-cyan-950/10'
-            : 'border-green-500/20 shadow-xl shadow-green-950/10'
-        }`}
-      >
-        {/* Glowing Header */}
-        <div
-          className={`px-6 py-4 border-b flex items-center justify-between ${
-            activeForm === 'delivery'
-              ? 'bg-gradient-to-r from-[#0c2033] to-[#0e1724] border-cyan-500/10'
-              : 'bg-gradient-to-r from-[#0d2b1d] to-[#0e1724] border-green-500/10'
-          }`}
-        >
+      {/* Main Light Form Card */}
+      <div className="bg-white border border-customBorder rounded-2xl shadow-soft overflow-hidden">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-customBorder flex items-center justify-between flex-wrap gap-2 bg-slate-50">
           <div className="flex items-center gap-2.5">
-            <span
-              className={`w-2.5 h-2.5 rounded-full animate-pulse ${
-                activeForm === 'delivery' ? 'bg-cyan-400' : 'bg-green-400'
-              }`}
-            ></span>
-            <span
-              className={`text-sm font-black uppercase tracking-wider ${
-                activeForm === 'delivery' ? 'text-cyan-400' : 'text-green-400'
-              }`}
-            >
+            <span className={`w-2.5 h-2.5 rounded-full animate-pulse ${activeForm === 'delivery' ? 'bg-sky-600' : 'bg-emerald-600'}`}></span>
+            <span className="text-sm font-black uppercase tracking-wider text-textSlate">
               {activeForm === 'delivery' ? 'Cylinder Delivery Entry Form' : 'Empty Return Collection Form'}
             </span>
           </div>
-          <span className="text-[10px] text-mutedSlate font-bold uppercase tracking-widest bg-darkBg px-2.5 py-1 rounded-md border border-customBorder">
-            Live Database Sync
+          <span className="text-xs text-slate-700 font-bold uppercase tracking-wider bg-white px-3 py-1 rounded-lg border border-customBorder shadow-sm flex items-center gap-1.5">
+            <span>👤 Recorded by:</span>
+            <span className="text-accentCyan font-extrabold">{currentUser}</span>
           </span>
         </div>
 
@@ -79,13 +61,13 @@ export default function AddEntry({ newEntry, setNewEntry, handleAdd, restMap }) 
             
             {/* Batch Number */}
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-black text-mutedSlate uppercase tracking-wider">
+              <label className="block text-xs font-bold text-mutedSlate uppercase tracking-wider">
                 Batch Number <span className="text-accentOrange">*</span>
               </label>
               <input
                 type="number"
-                placeholder="jaise 118"
-                className="w-full bg-darkBg border border-customBorder hover:border-mutedSlate focus:border-accentOrange text-textSlate placeholder-mutedSlate/60 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 outline-none"
+                placeholder="e.g. 118"
+                className="w-full bg-slate-50 border border-customBorder hover:border-slate-300 focus:border-accentCyan text-textSlate placeholder-slate-400 rounded-xl px-4 py-3 text-sm font-semibold transition-all outline-none"
                 value={newEntry.batchNum}
                 onChange={e => setNewEntry(p => ({ ...p, batchNum: e.target.value }))}
               />
@@ -93,13 +75,13 @@ export default function AddEntry({ newEntry, setNewEntry, handleAdd, restMap }) 
 
             {/* Restaurant Name */}
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-black text-mutedSlate uppercase tracking-wider">
+              <label className="block text-xs font-bold text-mutedSlate uppercase tracking-wider">
                 Restaurant Name <span className="text-accentOrange">*</span>
               </label>
               <input
                 list="restaurant-list"
-                placeholder="jaise Sabor Cafe"
-                className="w-full bg-darkBg border border-customBorder hover:border-mutedSlate focus:border-accentOrange text-textSlate placeholder-mutedSlate/60 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 outline-none"
+                placeholder="e.g. Simran Restaurant"
+                className="w-full bg-slate-50 border border-customBorder hover:border-slate-300 focus:border-accentCyan text-textSlate placeholder-slate-400 rounded-xl px-4 py-3 text-sm font-semibold transition-all outline-none"
                 value={newEntry.name}
                 onChange={e => setNewEntry(p => ({ ...p, name: e.target.value }))}
               />
@@ -108,46 +90,46 @@ export default function AddEntry({ newEntry, setNewEntry, handleAdd, restMap }) 
               </datalist>
             </div>
 
-            {/* Cylinder Weight Toggle (19.2 KG vs 21 KG) */}
+            {/* Cylinder Weight Toggle */}
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-black text-mutedSlate uppercase tracking-wider">
+              <label className="block text-xs font-bold text-mutedSlate uppercase tracking-wider">
                 Cylinder Type <span className="text-accentOrange">*</span>
               </label>
-              <div className="flex p-1 bg-darkBg border border-customBorder rounded-xl">
+              <div className="flex p-1 bg-slate-100 border border-customBorder rounded-xl">
                 <button
                   type="button"
-                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all duration-200 ${
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
                     weight === '19.2kg'
-                      ? 'bg-customBorder text-textSlate border border-mutedSlate/20'
-                      : 'text-mutedSlate hover:text-textSlate'
+                      ? 'bg-white text-sky-700 shadow-sm border border-slate-200'
+                      : 'text-slate-500 hover:text-slate-800'
                   }`}
                   onClick={() => setWeight('19.2kg')}
                 >
-                  19.2 KG (Orange)
+                  19.2 KG (Standard)
                 </button>
                 <button
                   type="button"
-                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all duration-200 ${
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
                     weight === '21kg'
-                      ? 'bg-customBorder text-textSlate border border-mutedSlate/20'
-                      : 'text-mutedSlate hover:text-textSlate'
+                      ? 'bg-white text-sky-700 shadow-sm border border-slate-200'
+                      : 'text-slate-500 hover:text-slate-800'
                   }`}
                   onClick={() => setWeight('21kg')}
                 >
-                  21 KG (Blue)
+                  21 KG (Commercial)
                 </button>
               </div>
             </div>
 
             {/* Quantity */}
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-black text-mutedSlate uppercase tracking-wider">
+              <label className="block text-xs font-bold text-mutedSlate uppercase tracking-wider">
                 {activeForm === 'delivery' ? 'Delivery Qty' : 'Collection Qty'} <span className="text-accentOrange">*</span>
               </label>
               <input
                 type="number"
                 min={1}
-                className="w-full bg-darkBg border border-customBorder hover:border-mutedSlate focus:border-accentOrange text-textSlate placeholder-mutedSlate/60 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 outline-none"
+                className="w-full bg-slate-50 border border-customBorder hover:border-slate-300 focus:border-accentCyan text-textSlate placeholder-slate-400 rounded-xl px-4 py-3 text-sm font-semibold transition-all outline-none"
                 value={newEntry.qty}
                 onChange={e => setNewEntry(p => ({ ...p, qty: e.target.value }))}
               />
@@ -155,12 +137,12 @@ export default function AddEntry({ newEntry, setNewEntry, handleAdd, restMap }) 
 
             {/* Date */}
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-black text-mutedSlate uppercase tracking-wider">
+              <label className="block text-xs font-bold text-mutedSlate uppercase tracking-wider">
                 {activeForm === 'delivery' ? 'Delivery Date' : 'Collection Date'} <span className="text-accentOrange">*</span>
               </label>
               <input
                 type="date"
-                className="w-full bg-darkBg border border-customBorder hover:border-mutedSlate focus:border-accentOrange text-textSlate rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 outline-none"
+                className="w-full bg-slate-50 border border-customBorder hover:border-slate-300 focus:border-accentCyan text-textSlate rounded-xl px-4 py-3 text-sm font-semibold transition-all outline-none"
                 value={newEntry.date}
                 onChange={e => setNewEntry(p => ({ ...p, date: e.target.value }))}
               />
@@ -168,12 +150,12 @@ export default function AddEntry({ newEntry, setNewEntry, handleAdd, restMap }) 
 
             {/* Optional Khali Date */}
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-black text-mutedSlate uppercase tracking-wider">
+              <label className="block text-xs font-bold text-mutedSlate uppercase tracking-wider">
                 Batch Khali Date (Optional)
               </label>
               <input
                 type="date"
-                className="w-full bg-darkBg border border-customBorder hover:border-mutedSlate focus:border-accentOrange text-textSlate rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200 outline-none"
+                className="w-full bg-slate-50 border border-customBorder hover:border-slate-300 focus:border-accentCyan text-textSlate rounded-xl px-4 py-3 text-sm font-semibold transition-all outline-none"
                 value={newEntry.khaliDate}
                 onChange={e => setNewEntry(p => ({ ...p, khaliDate: e.target.value }))}
               />
@@ -181,44 +163,21 @@ export default function AddEntry({ newEntry, setNewEntry, handleAdd, restMap }) 
 
           </div>
 
-          {/* Glowing Submit Button */}
+          {/* Submit Button */}
           <div className="pt-2 flex justify-end">
             <button
               type="button"
-              className={`w-full sm:w-auto px-8 py-3.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 active:scale-95 border ${
+              className={`w-full sm:w-auto px-8 py-3.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 text-white ${
                 activeForm === 'delivery'
-                  ? 'bg-cyan-500/10 hover:bg-cyan-500/25 border-cyan-500/30 text-cyan-400 shadow-lg shadow-cyan-500/5'
-                  : 'bg-green-500/10 hover:bg-green-500/25 border-green-500/30 text-green-400 shadow-lg shadow-green-500/5'
+                  ? 'bg-sky-600 hover:bg-sky-700 shadow-soft'
+                  : 'bg-emerald-600 hover:bg-emerald-700 shadow-soft'
               }`}
               onClick={handleAdd}
             >
-              {activeForm === 'delivery' ? '🚚 Add Delivery Entry' : '♻️ Add Empty Collection'}
+              {activeForm === 'delivery' ? '🚚 Save Delivery Entry' : '♻️ Save Empty Collection'}
             </button>
           </div>
 
-        </div>
-      </div>
-
-      {/* Modern High-Density Information Grid */}
-      <div className="bg-cardBg border border-customBorder rounded-2xl overflow-hidden">
-        <div className="bg-[#0b1017] px-6 py-4 border-b border-customBorder flex items-center gap-2">
-          <span className="text-yellow-500">💡</span>
-          <span className="text-xs font-black uppercase tracking-wider text-textSlate">
-            Pro Tips & Data Guidelines
-          </span>
-        </div>
-        <div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { color: 'border-cyan-500/20 text-cyan-400 bg-cyan-950/10', title: "Delivery Data", desc: "Delivery data automatic 'isReturn: false' ke sath save hota hai aur outstanding me judta hai." },
-            { color: 'border-green-500/20 text-green-400 bg-green-950/10', title: "Empty Returns", desc: "Khali tanki return entries automatically outstanding cylinders ko minus/kam kar deti hain." },
-            { color: 'border-yellow-500/20 text-yellow-400 bg-yellow-950/10', title: "Fuzzy Matching", desc: "Ashwini, Moti, Rajwada, Bawarchi jaise names automatically standard spellings me clean ho jate hain." },
-            { color: 'border-purple-500/20 text-purple-400 bg-purple-950/10', title: "Auto Batch Create", desc: "Naya batch number enter karne par database me naya batch auto-create aur sort ho jata hai." },
-          ].map(({ color, title, desc }) => (
-            <div key={title} className={`border rounded-xl p-4 transition-all duration-300 hover:scale-[1.02] ${color}`}>
-              <div className="font-bold text-xs mb-1.5 uppercase tracking-wide">{title}</div>
-              <div className="text-mutedSlate text-[11px] leading-relaxed font-medium">{desc}</div>
-            </div>
-          ))}
         </div>
       </div>
     </div>

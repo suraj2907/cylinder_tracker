@@ -2,23 +2,23 @@ import React from 'react';
 
 export default function RestaurantsList({ restaurants, tot21, tot192, totEmpty, totEmpty21, totEmpty192, totAll, totOutstanding, search, setSearch, sortBy, setSortBy }) {
   return (
-    <div className="bg-cardBg border border-customBorder rounded-xl mb-6 overflow-hidden shadow-lg shadow-black/20">
-      <div className="bg-cardBg2 px-4 py-3.5 border-b border-customBorder flex items-center justify-between flex-wrap gap-3">
+    <div className="bg-white border border-customBorder rounded-2xl mb-6 overflow-hidden shadow-soft fade">
+      <div className="bg-slate-50 px-5 py-4 border-b border-customBorder flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
-          <span className="font-bold text-xs uppercase tracking-wider text-accentCyan">🏪 All Restaurants</span>
-          <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-mutedSlate/20 text-mutedSlate border border-mutedSlate/40">
+          <span className="font-extrabold text-xs uppercase tracking-wider text-sky-700">🏪 All Partner Restaurants</span>
+          <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">
             {restaurants.length}
           </span>
         </div>
         <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
           <input 
-            className="bg-cardBg border border-customBorder rounded-lg px-3 py-2 text-textSlate placeholder-mutedSlate focus:outline-none focus:border-accentCyan text-xs w-full sm:w-40 transition-colors"
+            className="bg-white border border-customBorder rounded-xl px-3.5 py-2 text-textSlate placeholder-slate-400 focus:outline-none focus:border-accentCyan text-xs w-full sm:w-48 shadow-sm transition-all"
             placeholder="Search restaurant..." 
             value={search} 
             onChange={e => setSearch(e.target.value)} 
           />
           <select 
-            className="bg-cardBg border border-customBorder rounded-lg px-3 py-2 text-textSlate focus:outline-none focus:border-accentCyan text-xs w-full sm:w-44 transition-colors"
+            className="bg-white border border-customBorder rounded-xl px-3.5 py-2 text-textSlate focus:outline-none focus:border-accentCyan text-xs w-full sm:w-48 shadow-sm transition-all font-semibold"
             value={sortBy} 
             onChange={e => setSortBy(e.target.value)}
           >
@@ -37,7 +37,7 @@ export default function RestaurantsList({ restaurants, tot21, tot192, totEmpty, 
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-customBorder bg-[#0d1520]">
+            <tr className="border-b border-customBorder bg-slate-50">
               <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">#</th>
               <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Restaurant</th>
               <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Outstanding</th>
@@ -49,59 +49,59 @@ export default function RestaurantsList({ restaurants, tot21, tot192, totEmpty, 
               <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Grand Total Del</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-customBorder/20">
+          <tbody className="divide-y divide-slate-100">
             {restaurants.map((r, i) => (
-              <tr key={r.name} className="hover:bg-white/[0.02] transition-colors">
-                <td className="px-4 py-3 text-xs font-bold text-mutedSlate">{i + 1}</td>
-                <td className="px-4 py-3 text-xs font-semibold text-textSlate">{r.name}</td>
+              <tr key={r.name} className="hover:bg-slate-50 transition-colors">
+                <td className="px-4 py-3 text-xs font-bold text-slate-400">{i + 1}</td>
+                <td className="px-4 py-3 text-xs font-bold text-textSlate">{r.name}</td>
                 <td className="px-4 py-3 text-xs">
-                  <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${r.outstanding > 0 ? 'bg-accentYellow/10 text-accentYellow border-accentYellow/30' : 'bg-green-500/10 text-green-400 border-green-500/30'}`}>
+                  <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${r.outstanding > 0 ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-emerald-100 text-emerald-700 border-emerald-200'}`}>
                     {r.outstanding}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-xs">
-                  <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-accentCyan/10 text-accentCyan border border-accentCyan/30">{r.kg21}</span>
+                  <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-100 text-sky-800 border border-sky-200">{r.kg21}</span>
                 </td>
                 <td className="px-4 py-3 text-xs">
-                  <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-accentBlueGreen/10 text-accentBlueGreen border border-accentBlueGreen/30">{r.kg192}</span>
+                  <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800 border border-teal-200">{r.kg192}</span>
                 </td>
                 <td className="px-4 py-3 text-xs">
-                  <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-accentCyan/10 text-accentCyan border border-accentCyan/30">{r.empty21}</span>
+                  <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-100 text-sky-800 border border-sky-200">{r.empty21}</span>
                 </td>
                 <td className="px-4 py-3 text-xs">
-                  <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-accentBlueGreen/10 text-accentBlueGreen border border-accentBlueGreen/30">{r.empty192}</span>
+                  <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800 border border-teal-200">{r.empty192}</span>
                 </td>
                 <td className="px-4 py-3 text-xs">
-                  <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-mutedSlate/15 text-mutedSlate border border-mutedSlate/30">{r.empty}</span>
+                  <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200">{r.empty}</span>
                 </td>
-                <td className={`px-4 py-3 text-xs font-extrabold ${r.total > 50 ? 'text-accentOrange' : 'text-textSlate'}`}>{r.total}</td>
+                <td className={`px-4 py-3 text-xs font-black ${r.total > 50 ? 'text-amber-600' : 'text-slate-900'}`}>{r.total}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
-            <tr className="border-t border-customBorder bg-[#0d1520]">
-              <td colSpan={2} className="px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-accentOrange">GRAND TOTAL</td>
+            <tr className="border-t border-customBorder bg-slate-50">
+              <td colSpan={2} className="px-4 py-3.5 text-xs font-extrabold uppercase tracking-wider text-slate-900">GRAND TOTAL</td>
               <td className="px-4 py-3.5 text-xs">
-                <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${totOutstanding > 0 ? 'bg-accentYellow/10 text-accentYellow border-accentYellow/30' : 'bg-green-500/10 text-green-400 border-green-500/30'}`}>
+                <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${totOutstanding > 0 ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-emerald-100 text-emerald-700 border-emerald-200'}`}>
                   {totOutstanding}
                 </span>
               </td>
               <td className="px-4 py-3.5 text-xs">
-                <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-accentCyan/10 text-accentCyan border border-accentCyan/30">{tot21}</span>
+                <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-100 text-sky-800 border border-sky-200">{tot21}</span>
               </td>
               <td className="px-4 py-3.5 text-xs">
-                <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-accentBlueGreen/10 text-accentBlueGreen border border-accentBlueGreen/30">{tot192}</span>
+                <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800 border border-teal-200">{tot192}</span>
               </td>
               <td className="px-4 py-3.5 text-xs">
-                <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-accentCyan/10 text-accentCyan border border-accentCyan/30">{totEmpty21}</span>
+                <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-100 text-sky-800 border border-sky-200">{totEmpty21}</span>
               </td>
               <td className="px-4 py-3.5 text-xs">
-                <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-accentBlueGreen/10 text-accentBlueGreen border border-accentBlueGreen/30">{totEmpty192}</span>
+                <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800 border border-teal-200">{totEmpty192}</span>
               </td>
               <td className="px-4 py-3.5 text-xs">
-                <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-mutedSlate/15 text-mutedSlate border border-mutedSlate/30">{totEmpty}</span>
+                <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200">{totEmpty}</span>
               </td>
-              <td className="px-4 py-3.5 text-sm font-black text-accentOrange">{totAll}</td>
+              <td className="px-4 py-3.5 text-xs font-black text-slate-900">{totAll}</td>
             </tr>
           </tfoot>
         </table>
@@ -109,4 +109,3 @@ export default function RestaurantsList({ restaurants, tot21, tot192, totEmpty, 
     </div>
   );
 }
-

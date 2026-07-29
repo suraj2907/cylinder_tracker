@@ -19,81 +19,81 @@ export default function CalendarView({ dateMap, selectedDate, setSelectedDate, h
   }, [dateMap]);
 
   return (
-    <>
-      <div className="bg-cardBg border border-customBorder rounded-xl mb-6 overflow-hidden shadow-lg shadow-black/20">
-        <div className="bg-cardBg2 px-4 py-3.5 border-b border-customBorder flex items-center justify-between flex-wrap gap-3">
-          <span className="font-bold text-xs uppercase tracking-wider text-accentCyan">📅 Delivery Calendar</span>
+    <div className="space-y-6 fade">
+      <div className="bg-white border border-customBorder rounded-2xl overflow-hidden shadow-soft">
+        <div className="bg-slate-50 px-5 py-4 border-b border-customBorder flex items-center justify-between flex-wrap gap-3">
+          <span className="font-extrabold text-xs uppercase tracking-wider text-sky-700">📅 Daily Delivery Calendar</span>
           <div className="flex gap-2 flex-wrap">
-            <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-accentCyan/10 text-accentCyan border border-accentCyan/30">🔵 21kg</span>
-            <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-accentBlueGreen/10 text-accentBlueGreen border border-accentBlueGreen/30">🟢 19.2kg</span>
-            <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-mutedSlate/15 text-mutedSlate border border-mutedSlate/30">⚪ Khali</span>
+            <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-200">🔵 21kg</span>
+            <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800 border border-teal-200">🟢 19.2kg</span>
+            <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">⚪ Khali</span>
           </div>
         </div>
 
         <div>
-          <div className="flex items-center justify-between px-4 py-3 flex-wrap gap-3 border-b border-customBorder/20">
+          <div className="flex items-center justify-between px-5 py-3.5 flex-wrap gap-3 border-b border-customBorder bg-slate-50/50">
             <button 
-              className="px-3 py-1.5 rounded-lg border border-mutedSlate/40 bg-mutedSlate/10 hover:bg-mutedSlate/20 text-mutedSlate text-[11px] font-bold transition-all duration-200 active:scale-95"
+              className="px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all shadow-sm active:scale-95"
               onClick={() => setCal(new Date(yr, mo - 1, 1))}>← Prev</button>
-            <span className="font-bold text-sm text-textSlate">{MFULL[mo]} {yr}</span>
+            <span className="font-black text-sm text-textSlate">{MFULL[mo]} {yr}</span>
             <button 
-              className="px-3 py-1.5 rounded-lg border border-mutedSlate/40 bg-mutedSlate/10 hover:bg-mutedSlate/20 text-mutedSlate text-[11px] font-bold transition-all duration-200 active:scale-95"
+              className="px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all shadow-sm active:scale-95"
               onClick={() => setCal(new Date(yr, mo + 1, 1))}>Next →</button>
           </div>
 
-          <div className="flex gap-1.5 px-4 py-2 border-b border-customBorder/20 flex-wrap items-center overflow-x-auto">
+          <div className="flex gap-1.5 px-4 py-3 border-b border-customBorder flex-wrap items-center overflow-x-auto bg-white">
             {MONTHS.map((m, i) => {
               const key = `${yr}-${String(i + 1).padStart(2, "0")}`;
               const active = activeMonths.has(key);
               return (
                 <button key={m} 
-                  className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 active:scale-95 border ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
                     active 
-                      ? 'border-accentCyan/40 bg-accentCyan/10 text-accentCyan opacity-100 hover:bg-accentCyan/20' 
-                      : 'border-customBorder bg-transparent text-mutedSlate opacity-40 hover:opacity-75'
+                      ? 'border-sky-300 bg-sky-50 text-sky-800 font-extrabold shadow-sm' 
+                      : 'border-slate-200 bg-white text-slate-400 opacity-60 hover:opacity-100'
                   }`}
                   onClick={() => setCal(new Date(yr, i, 1))}>{m}</button>
               );
             })}
             <select 
-              className="bg-cardBg2 border border-customBorder rounded-lg px-2 py-1 text-textSlate focus:outline-none focus:border-accentCyan text-xs w-20 transition-colors"
+              className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-slate-800 font-bold text-xs shadow-sm"
               value={yr}
               onChange={e => setCal(new Date(parseInt(e.target.value), mo, 1))}>
               {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
             </select>
           </div>
 
-          <div className="grid grid-cols-7 gap-1 px-3 py-2 text-center border-b border-customBorder/10 bg-[#0d1520]/20">
-            {DAYS.map(d => <div key={d} className="text-[10px] text-mutedSlate font-bold uppercase tracking-wider">{d}</div>)}
+          <div className="grid grid-cols-7 gap-1 px-3 py-2.5 text-center border-b border-customBorder bg-slate-50">
+            {DAYS.map(d => <div key={d} className="text-[10px] text-mutedSlate font-extrabold uppercase tracking-wider">{d}</div>)}
           </div>
 
-          <div className="grid grid-cols-7 gap-1.5 p-3">
+          <div className="grid grid-cols-7 gap-2 p-4">
             {Array.from({ length: firstDay }).map((_, i) => <div key={`e${i}`} />)}
             {Array.from({ length: daysInMo }).map((_, i) => {
               const d = i + 1, key = fmt(d), data = dateMap[key];
               const isTod = key === today, isSel = key === selectedDate;
               const total21 = (data?.["21kg"] || 0), total192 = (data?.["19.2kg"] || 0), totalEmpty = (data?.["Empty"] || 0);
               
-              let borderClass = 'border-customBorder/20 bg-transparent';
+              let borderClass = 'border-slate-200 bg-white';
               if (isSel) {
-                borderClass = 'border-accentOrange bg-accentOrange/10';
+                borderClass = 'border-sky-500 bg-sky-50 shadow-md ring-2 ring-sky-300';
               } else if (data) {
-                borderClass = 'border-accentCyan/30 bg-accentCyan/[0.03] hover:bg-accentCyan/[0.08] cursor-pointer';
+                borderClass = 'border-sky-200 bg-sky-50/40 hover:bg-sky-50 cursor-pointer shadow-sm';
               }
 
-              let outlineClass = isTod ? 'outline outline-2 outline-accentYellow' : '';
+              let outlineClass = isTod ? 'ring-2 ring-amber-400' : '';
 
               return (
                 <div key={d} onClick={() => data && setSelectedDate(isSel ? null : key)}
-                  className={`rounded-lg border p-1 flex flex-col justify-between min-h-[56px] transition-all duration-200 ${borderClass} ${outlineClass}`}>
-                  <div className={`text-[11px] font-bold text-center ${
-                    isTod ? 'text-accentYellow' : data ? 'text-textSlate' : 'text-mutedSlate/40'
+                  className={`rounded-xl border p-2 flex flex-col justify-between min-h-[64px] transition-all ${borderClass} ${outlineClass}`}>
+                  <div className={`text-xs font-black text-center ${
+                    isTod ? 'text-amber-700 font-black' : data ? 'text-slate-900' : 'text-slate-400'
                   }`}>{d}</div>
                   {data && (
                     <div className="flex flex-col gap-0.5 mt-1">
-                      {total21 > 0 && <div className="text-[9px] font-bold text-accentCyan text-center leading-tight truncate">🔵{total21}</div>}
-                      {total192 > 0 && <div className="text-[9px] font-bold text-accentBlueGreen text-center leading-tight truncate">🟢{total192}</div>}
-                      {totalEmpty > 0 && <div className="text-[9px] font-bold text-mutedSlate text-center leading-tight truncate">⚪{totalEmpty}</div>}
+                      {total21 > 0 && <div className="text-[10px] font-extrabold text-sky-800 text-center leading-tight truncate">🔵 {total21}</div>}
+                      {total192 > 0 && <div className="text-[10px] font-extrabold text-teal-800 text-center leading-tight truncate">🟢 {total192}</div>}
+                      {totalEmpty > 0 && <div className="text-[10px] font-bold text-slate-500 text-center leading-tight truncate">⚪ {totalEmpty}</div>}
                     </div>
                   )}
                 </div>
@@ -103,51 +103,53 @@ export default function CalendarView({ dateMap, selectedDate, setSelectedDate, h
         </div>
       </div>
 
+      {/* Selected Date Drawer Details */}
       {selectedDate && dateMap[selectedDate] && (
-        <div className="bg-cardBg border border-customBorder rounded-xl mb-6 overflow-hidden shadow-lg shadow-black/20 animate-fadeIn">
-          <div className="bg-cardBg2 px-4 py-3.5 border-b border-customBorder flex items-center justify-between flex-wrap gap-3">
-            <span className="font-bold text-xs uppercase tracking-wider text-accentCyan">📋 Details for {selectedDate}</span>
-            <div className="flex gap-2 flex-wrap">
-              <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-accentCyan/10 text-accentCyan border border-accentCyan/30">21kg: {dateMap[selectedDate]["21kg"]}</span>
-              <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-accentBlueGreen/10 text-accentBlueGreen border border-accentBlueGreen/30">19.2kg: {dateMap[selectedDate]["19.2kg"]}</span>
-              <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-mutedSlate/15 text-mutedSlate border border-mutedSlate/30">Khali: {dateMap[selectedDate]["Empty"] || 0}</span>
-              <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-accentYellow/10 text-accentYellow border border-accentYellow/30">Total: {(dateMap[selectedDate]["21kg"] || 0) + (dateMap[selectedDate]["19.2kg"] || 0)}</span>
-            </div>
+        <div className="bg-white border border-customBorder rounded-2xl p-5 shadow-soft space-y-4 fade">
+          <div className="flex items-center justify-between border-b border-customBorder pb-3">
+            <h3 className="text-sm font-extrabold text-textSlate flex items-center gap-2">
+              <span>📅 Entries on {selectedDate}</span>
+              <span className="text-xs font-bold text-mutedSlate">({dateMap[selectedDate].details.length} total entries)</span>
+            </h3>
+            <button
+              onClick={() => setSelectedDate(null)}
+              className="text-xs text-slate-400 hover:text-slate-600 font-bold px-2 py-1 rounded-lg hover:bg-slate-100"
+            >
+              ✕ Close
+            </button>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+
+          <div className="overflow-x-auto border border-customBorder rounded-xl">
+            <table className="w-full text-left">
               <thead>
-                <tr className="border-b border-customBorder bg-[#0d1520]">
-                  <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Restaurant</th>
-                  <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Qty</th>
-                  <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Type</th>
-                  <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Batch</th>
-                  <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Action</th>
+                <tr className="bg-slate-50 border-b border-customBorder">
+                  <th className="py-2.5 px-3 text-[11px] font-bold text-mutedSlate">Restaurant</th>
+                  <th className="py-2.5 px-3 text-[11px] font-bold text-mutedSlate">Qty & Type</th>
+                  <th className="py-2.5 px-3 text-[11px] font-bold text-mutedSlate">Category</th>
+                  <th className="py-2.5 px-3 text-[11px] font-bold text-mutedSlate">Batch #</th>
+                  <th className="py-2.5 px-3 text-[11px] font-bold text-mutedSlate text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-customBorder/20">
-                {dateMap[selectedDate].details.map((d, i) => (
-                  <tr key={i} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="px-4 py-3 text-xs font-semibold text-textSlate">{d.name}</td>
-                    <td className="px-4 py-3 text-xs font-extrabold text-textSlate">{d.qty}</td>
-                    <td className="px-4 py-3 text-xs">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                        d.isReturn
-                          ? 'bg-green-500/10 text-green-400 border-green-500/30'
-                          : d.type === '21kg' 
-                            ? 'bg-accentCyan/10 text-accentCyan border-accentCyan/30' 
-                            : 'bg-accentBlueGreen/10 text-accentBlueGreen border-accentBlueGreen/30'
+              <tbody className="divide-y divide-slate-100">
+                {dateMap[selectedDate].details.map((item, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                    <td className="py-2.5 px-3 text-xs font-bold text-textSlate">{item.name}</td>
+                    <td className="py-2.5 px-3 text-xs font-black text-sky-800">{item.qty}x {item.type}</td>
+                    <td className="py-2.5 px-3 text-xs font-bold">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] ${
+                        item.isReturn ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-sky-100 text-sky-800 border border-sky-200'
                       }`}>
-                        {d.isReturn ? `♻️ Khali (${d.type})` : `🚚 Dena (${d.type})`}
+                        {item.isReturn ? '♻️ Khali Return' : '🚚 Delivery'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-mutedSlate font-bold">#{d.batch}</td>
-                    <td className="px-4 py-3 text-xs">
-                      <button 
-                        className="px-2.5 py-1 bg-red-500/10 hover:bg-red-500/20 active:scale-95 border border-red-500/30 hover:border-red-500/50 text-red-400 font-bold rounded-lg flex items-center gap-1 transition-all duration-200 text-[10px]"
-                        onClick={() => handleDeleteEntry(d.batch, d.originalEntry)}
-                        title="Delete this entry">
-                        🗑️ Delete
+                    <td className="py-2.5 px-3 text-xs font-semibold text-slate-500">#{item.batch}</td>
+                    <td className="py-2.5 px-3 text-xs text-right">
+                      <button
+                        onClick={() => handleDeleteEntry(item.batch, item.originalEntry)}
+                        className="text-red-500 hover:text-red-700 font-bold text-xs p-1 rounded hover:bg-red-50"
+                        title="Delete entry"
+                      >
+                        🗑️
                       </button>
                     </td>
                   </tr>
@@ -157,7 +159,6 @@ export default function CalendarView({ dateMap, selectedDate, setSelectedDate, h
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
-

@@ -1,20 +1,20 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --bg: #0A0E1A;
-  --card: #111827;
-  --card2: #1a2235;
-  --border: #1f2d45;
-  --accent: #FF6B35;
-  --accent2: #4ECDC4;
-  --green: #45B7D1;
-  --yellow: #FFD93D;
-  --purple: #C084FC;
-  --text: #E2E8F0;
+  --bg: #F8FAFC;
+  --card: #FFFFFF;
+  --card2: #F1F5F9;
+  --border: #E2E8F0;
+  --accent: #EA580C;
+  --accent2: #0284C7;
+  --green: #059669;
+  --yellow: #D97706;
+  --purple: #7C3AED;
+  --text: #0F172A;
   --muted: #64748B;
   --white: #ffffff;
 }
@@ -26,8 +26,8 @@
 }
 
 body {
-  background: var(--bg);
-  color: var(--text);
+  background-color: #F8FAFC;
+  color: #0F172A;
   font-family: 'Inter', 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
 }
@@ -37,11 +37,14 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #111;
+  background: #F1F5F9;
 }
 ::-webkit-scrollbar-thumb {
-  background: #334;
-  border-radius: 3px;
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
 }
 
 input, select, textarea {
@@ -56,16 +59,16 @@ table {
 
 th, td {
   text-align: left;
-  padding: 10px 14px;
+  padding: 12px 16px;
 }
 
 th {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: .8px;
-  color: var(--muted);
-  border-bottom: 1px solid var(--border);
-  background: #0d1520;
+  color: #64748B;
+  border-bottom: 1px solid #E2E8F0;
+  background: #F8FAFC;
   position: sticky;
   top: 0;
   z-index: 1;
@@ -73,12 +76,12 @@ th {
 
 td {
   font-size: 13px;
-  border-bottom: 1px solid #1f2d4522;
+  border-bottom: 1px solid #F1F5F9;
   vertical-align: middle;
 }
 
 tr:hover td {
-  background: #ffffff08;
+  background: #F8FAFC;
 }
 
 button {
@@ -87,12 +90,21 @@ button {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.fade {
-  animation: fadeIn 0.25s ease;
+@keyframes pulseGlow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.1); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-pulseGlow {
+  animation: pulseGlow 2s infinite ease-in-out;
 }
 
 @media(max-width: 640px) {

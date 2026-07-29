@@ -1,17 +1,15 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Flame, Calendar, Clock, AlertCircle } from 'lucide-react';
+import { Search, Flame, AlertCircle } from 'lucide-react';
 import { norm } from '../utils/dataUtils';
 
 export default function GasPredictor({ restaurants, batches }) {
   const [search, setSearch] = useState("");
   const [sortOrder, setSortOrder] = useState("asc");
   
-  // Calculate consumption profiles
   const profiles = useMemo(() => {
-    const today = new Date("2026-05-28"); // baseline local date
+    const today = new Date();
     const result = [];
 
-    // Group deliveries by normalized restaurant name in ONE pass (O(B * E))
     const deliveriesMap = {};
     batches.forEach(b => {
       b.entries.forEach(e => {
@@ -30,12 +28,9 @@ export default function GasPredictor({ restaurants, batches }) {
     });
 
     restaurants.forEach(r => {
-      // Find all deliveries for this restaurant in constant time
       const deliveries = deliveriesMap[r.name] || [];
-
       if (deliveries.length === 0) return;
 
-      // Sort deliveries chronologically
       deliveries.sort((a, b) => a.date - b.date);
 
       const totalDelQty = deliveries.reduce((sum, d) => sum + d.qty, 0);
@@ -43,10 +38,9 @@ export default function GasPredictor({ restaurants, batches }) {
       const dLast = deliveries[deliveries.length - 1].date;
       
       let daysSpan = Math.max(30, Math.floor((dLast - dFirst) / (1000 * 60 * 60 * 24)));
-      let rate = totalDelQty / daysSpan; // Cylinders consumed per day
-      if (rate === 0) rate = 0.05; // safe fallback
+      let rate = totalDelQty / daysSpan;
+      if (rate === 0) rate = 0.05;
 
-      // Latest delivery details
       const latest = deliveries[deliveries.length - 1];
       const daysSinceLast = Math.max(0, Math.floor((today - latest.date) / (1000 * 60 * 60 * 24)));
       
@@ -66,7 +60,7 @@ export default function GasPredictor({ restaurants, batches }) {
       result.push({
         name: r.name,
         totalDelivered: totalDelQty,
-        rate: rate * 7, // convert rate to cylinders per week for easier readability
+        rate: rate * 7,
         lastDelDate: latest.dateStr,
         lastDelQty: latest.qty,
         daysSinceLast,
@@ -100,58 +94,58 @@ export default function GasPredictor({ restaurants, batches }) {
   }, [profiles]);
 
   return (
-    <div className="animate-fadeIn">
+    <div className="space-y-6 fade">
       {/* Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-cardBg border border-red-500/20 rounded-xl p-4 flex items-center gap-3.5 shadow-lg shadow-black/10">
-          <div className="p-3 rounded-lg bg-red-500/10 text-red-400">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white border border-red-200 rounded-2xl p-4 flex items-center gap-3.5 shadow-soft">
+          <div className="p-3 rounded-xl bg-red-50 text-red-600">
             <Flame size={24} />
           </div>
           <div>
-            <div className="text-2xl font-black text-red-400">{stats.depleted}</div>
-            <div className="text-[10px] font-bold text-mutedSlate uppercase tracking-wider mt-0.5">Critical / Gas Empty</div>
+            <div className="text-2xl font-black text-red-600">{stats.depleted}</div>
+            <div className="text-xs font-bold text-mutedSlate uppercase tracking-wider mt-0.5">Critical / Gas Empty</div>
           </div>
         </div>
         
-        <div className="bg-cardBg border border-accentYellow/20 rounded-xl p-4 flex items-center gap-3.5 shadow-lg shadow-black/10">
-          <div className="p-3 rounded-lg bg-accentYellow/10 text-accentYellow">
+        <div className="bg-white border border-amber-200 rounded-2xl p-4 flex items-center gap-3.5 shadow-soft">
+          <div className="p-3 rounded-xl bg-amber-50 text-amber-600">
             <AlertCircle size={24} />
           </div>
           <div>
-            <div className="text-2xl font-black text-accentYellow">{stats.low}</div>
-            <div className="text-[10px] font-bold text-mutedSlate uppercase tracking-wider mt-0.5">Running Low (&lt;2.5 Days)</div>
+            <div className="text-2xl font-black text-amber-600">{stats.low}</div>
+            <div className="text-xs font-bold text-mutedSlate uppercase tracking-wider mt-0.5">Running Low (&lt;2.5 Days)</div>
           </div>
         </div>
 
-        <div className="bg-cardBg border border-green-500/20 rounded-xl p-4 flex items-center gap-3.5 shadow-lg shadow-black/10">
-          <div className="p-3 rounded-lg bg-green-500/10 text-green-400">
+        <div className="bg-white border border-emerald-200 rounded-2xl p-4 flex items-center gap-3.5 shadow-soft">
+          <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600">
             <Flame size={24} />
           </div>
           <div>
-            <div className="text-2xl font-black text-green-400">{stats.stocked}</div>
-            <div className="text-[10px] font-bold text-mutedSlate uppercase tracking-wider mt-0.5">Stocked &amp; Safe</div>
+            <div className="text-2xl font-black text-emerald-600">{stats.stocked}</div>
+            <div className="text-xs font-bold text-mutedSlate uppercase tracking-wider mt-0.5">Stocked &amp; Safe</div>
           </div>
         </div>
       </div>
 
       {/* Main Table */}
-      <div className="bg-cardBg border border-customBorder rounded-xl overflow-hidden shadow-lg shadow-black/20">
-        <div className="bg-cardBg2 px-4 py-3.5 border-b border-customBorder flex items-center justify-between flex-wrap gap-3">
-          <span className="font-bold text-xs uppercase tracking-wider text-accentCyan">🔮 Gas Depletion Predictor</span>
+      <div className="bg-white border border-customBorder rounded-2xl overflow-hidden shadow-soft">
+        <div className="bg-slate-50 px-5 py-4 border-b border-customBorder flex items-center justify-between flex-wrap gap-3">
+          <span className="font-extrabold text-xs uppercase tracking-wider text-sky-700">🔮 Gas Depletion Predictor</span>
           <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
-            <div className="relative w-full sm:w-44">
+            <div className="relative w-full sm:w-48">
               <input 
-                className="bg-cardBg border border-customBorder rounded-lg pl-9 pr-3 py-2 text-textSlate placeholder-mutedSlate focus:outline-none focus:border-accentCyan text-xs w-full transition-colors"
+                className="bg-white border border-customBorder rounded-xl pl-9 pr-3 py-2 text-textSlate placeholder-slate-400 focus:outline-none focus:border-accentCyan text-xs w-full shadow-sm transition-all"
                 placeholder="Search restaurant..." 
                 value={search} 
                 onChange={e => setSearch(e.target.value)} 
               />
-              <Search className="absolute left-3 top-2.5 text-mutedSlate" size={14} />
+              <Search className="absolute left-3 top-2.5 text-slate-400" size={14} />
             </div>
             <select
               value={sortOrder}
               onChange={e => setSortOrder(e.target.value)}
-              className="bg-cardBg border border-customBorder rounded-lg px-3 py-2 text-textSlate focus:outline-none focus:border-accentCyan text-xs w-full sm:w-48 transition-colors font-semibold"
+              className="bg-white border border-customBorder rounded-xl px-3.5 py-2 text-textSlate focus:outline-none focus:border-accentCyan text-xs w-full sm:w-52 shadow-sm transition-all font-semibold"
             >
               <option value="asc">Sort: Days Left (Low to High)</option>
               <option value="desc">Sort: Days Left (High to Low)</option>
@@ -162,7 +156,7 @@ export default function GasPredictor({ restaurants, batches }) {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-customBorder bg-[#0d1520]">
+              <tr className="border-b border-customBorder bg-slate-50">
                 <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Restaurant</th>
                 <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Usage Rate</th>
                 <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Last Delivery</th>
@@ -171,7 +165,7 @@ export default function GasPredictor({ restaurants, batches }) {
                 <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-customBorder/20">
+            <tbody className="divide-y divide-slate-100">
               {profiles.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-xs text-mutedSlate font-semibold">
@@ -180,24 +174,24 @@ export default function GasPredictor({ restaurants, batches }) {
                 </tr>
               ) : (
                 profiles.map((p) => (
-                  <tr key={p.name} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="px-4 py-3 text-xs font-semibold text-textSlate">{p.name}</td>
-                    <td className="px-4 py-3 text-xs text-textSlate font-bold">
+                  <tr key={p.name} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-4 py-3 text-xs font-bold text-textSlate">{p.name}</td>
+                    <td className="px-4 py-3 text-xs text-slate-700 font-bold">
                       {p.rate.toFixed(1)} cylinders / week
                     </td>
-                    <td className="px-4 py-3 text-xs text-mutedSlate font-bold">
+                    <td className="px-4 py-3 text-xs text-slate-500 font-bold">
                       {p.lastDelQty} cylinders ({p.lastDelDate})
                     </td>
-                    <td className="px-4 py-3 text-xs text-textSlate font-semibold">
+                    <td className="px-4 py-3 text-xs text-slate-700 font-semibold">
                       {p.daysSinceLast} days ago
                     </td>
                     <td className="px-4 py-3 text-xs">
                       {p.remainingDays <= 0 ? (
-                        <span className="text-red-400 font-extrabold text-xs">
+                        <span className="text-red-600 font-extrabold text-xs">
                           🔥 Gas Depleted! ({Math.abs(p.remainingDays)} days ago)
                         </span>
                       ) : (
-                        <span className={`font-extrabold text-xs ${p.severity === 'yellow' ? 'text-accentYellow' : 'text-green-400'}`}>
+                        <span className={`font-extrabold text-xs ${p.severity === 'yellow' ? 'text-amber-600' : 'text-emerald-600'}`}>
                           ⏳ {p.remainingDays} days left
                         </span>
                       )}
@@ -205,10 +199,10 @@ export default function GasPredictor({ restaurants, batches }) {
                     <td className="px-4 py-3 text-xs">
                       <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
                         p.severity === 'red' 
-                          ? 'bg-red-500/10 text-red-400 border-red-500/30' 
+                          ? 'bg-red-100 text-red-800 border-red-200' 
                           : p.severity === 'yellow'
-                            ? 'bg-accentYellow/10 text-accentYellow border-accentYellow/30'
-                            : 'bg-green-500/10 text-green-400 border-green-500/30'
+                            ? 'bg-amber-100 text-amber-800 border-amber-200'
+                            : 'bg-emerald-100 text-emerald-800 border-emerald-200'
                       }`}>
                         {p.statusText}
                       </span>
