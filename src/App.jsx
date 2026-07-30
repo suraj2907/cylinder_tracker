@@ -863,8 +863,11 @@ export default function App() {
               <div className="p-3.5 rounded-2xl bg-sky-50 border border-sky-100 flex items-start gap-3">
                 <span className="text-xl">🤖</span>
                 <div className="text-xs space-y-1">
-                  <span className="font-extrabold text-sky-950 block">Android Mobile / Chrome Browser</span>
-                  <p className="text-sky-800">1. Top-right me <strong>3 dots (⋮)</strong> menu button par tap karein.<br/>2. <strong>"Install App"</strong> ya <strong>"Add to Home Screen"</strong> select karein.</p>
+                  <span className="font-extrabold text-sky-950 block">Android Chrome (Aapka Mobile)</span>
+                  <p className="text-sky-800 leading-relaxed">
+                    1. 3 Dots (⋮) menu me <strong>"Share..."</strong> par tap karein.<br/>
+                    2. Share list me <strong>"Add to Home Screen" (➕)</strong> ya <strong>"Install App"</strong> select karein!
+                  </p>
                 </div>
               </div>
 
@@ -872,7 +875,10 @@ export default function App() {
                 <span className="text-xl">🍏</span>
                 <div className="text-xs space-y-1">
                   <span className="font-extrabold text-amber-950 block">iPhone / iOS Safari Browser</span>
-                  <p className="text-amber-900">1. Bottom menu me <strong>Share button (⎋)</strong> par tap karein.<br/>2. Niche scroll karke <strong>"Add to Home Screen (➕)"</strong> select karein.</p>
+                  <p className="text-amber-900 leading-relaxed">
+                    1. Safari bottom menu me <strong>Share button (⎋)</strong> par tap karein.<br/>
+                    2. <strong>"Add to Home Screen (➕)"</strong> select karein.
+                  </p>
                 </div>
               </div>
             </div>
