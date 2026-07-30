@@ -13,7 +13,9 @@ self.addEventListener('install', event => {
     caches.open(CACHE_NAME)
       .then(cache => {
         return Promise.allSettled(
-          ASSETS_TO_CACHE.map(asset => cache.add(asset).catch(e => console.warn('PWA Asset cache skip:', asset, e)))
+          ASSETS_TO_CACHE.map(asset => 
+            cache.add(asset).catch(e => console.warn('PWA Asset cache skip:', asset, e))
+          )
         );
       })
       .then(() => self.skipWaiting())
@@ -40,10 +42,10 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(event.request.url);
 
-  // Bypass non-origin requests (e.g., Supabase API calls)
+  // Bypass external APIs (e.g., Supabase)
   if (url.origin !== self.location.origin) return;
 
-  // Network-First for HTML navigation
+  // Network-First strategy for HTML / Navigations
   if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('.html')) {
     event.respondWith(
       fetch(event.request)
@@ -54,12 +56,14 @@ self.addEventListener('fetch', event => {
           }
           return response;
         })
-        .catch(() => caches.match(event.request))
+        .catch(() => {
+          return caches.match(event.request).then(cached => cached || caches.match('/index.html'));
+        })
     );
     return;
   }
 
-  // Cache-First for local static assets
+  // Cache-First strategy for static local assets
   event.respondWith(
     caches.match(event.request).then(cachedResponse => {
       if (cachedResponse) return cachedResponse;
@@ -70,7 +74,14 @@ self.addEventListener('fetch', event => {
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
         }
         return networkResponse;
-      }).catch(() => {});
+      }).catch(err => {
+        console.warn('Network request failed for:', event.request.url, err);
+        // Fallback response instead of undefined
+        return new Response('Network error occurred', {
+          status: 488,
+          headers: { 'Content-Type': 'text/plain' }
+        });
+      });
     })
   );
 });
