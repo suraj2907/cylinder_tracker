@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cylinder-tracker-v4';
+const CACHE_NAME = 'cylinder-tracker-v5';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -9,6 +9,7 @@ const ASSETS_TO_CACHE = [
 ];
 
 self.addEventListener('install', event => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
@@ -18,7 +19,6 @@ self.addEventListener('install', event => {
           )
         );
       })
-      .then(() => self.skipWaiting())
   );
 });
 
@@ -76,7 +76,6 @@ self.addEventListener('fetch', event => {
         return networkResponse;
       }).catch(err => {
         console.warn('Network request failed for:', event.request.url, err);
-        // Fallback response instead of undefined
         return new Response('Network error occurred', {
           status: 488,
           headers: { 'Content-Type': 'text/plain' }
