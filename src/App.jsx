@@ -93,22 +93,40 @@ export default function App() {
       setIsInstallable(true);
     };
 
+    const handleAppInstalled = () => {
+      setDeferredPrompt(null);
+      setIsInstallable(false);
+      setShowAutoBanner(false);
+      showToast("🎉 PWA App Installed Successfully!");
+    };
+
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
 
   function handleInstallClick() {
     if (deferredPrompt) {
+      // Native Browser Prompt Open Karein
       deferredPrompt.prompt();
+
+      // User ka choice check karein (Accepted ya Dismissed)
       deferredPrompt.userChoice.then((choiceResult) => {
         if (choiceResult.outcome === 'accepted') {
+          console.log('User accepted the PWA install');
           showToast("🎉 App Install Shuru Ho Gaya!");
+        } else {
+          console.log('User dismissed the PWA install');
         }
         setDeferredPrompt(null);
       });
     } else {
+      // Agar native prompt ready nahi hai ya browser support nahi karta (e.g. iOS Safari)
+      // Tab hi instruction modal popup dikhayein
       setShowInstallGuide(true);
     }
   }
