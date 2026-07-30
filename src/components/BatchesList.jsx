@@ -15,6 +15,7 @@ export default function BatchesList({
   const [selectedBatchForPayment, setSelectedBatchForPayment] = useState(null);
   const [editingCostBatch, setEditingCostBatch] = useState(null);
   const [tempCost, setTempCost] = useState("");
+  const [expandedEntriesBatch, setExpandedEntriesBatch] = useState(null);
 
   const [paymentForm, setPaymentForm] = useState({
     restaurantName: "",
@@ -63,6 +64,13 @@ export default function BatchesList({
     setSelectedBatchForPayment(null);
   }
 
+  // Active batch object for payment modal
+  const activeBatchObj = filteredBatches.find(b => b.batch === selectedBatchForPayment);
+  const activeBatchPayments = payments.filter(p => (p.batch_num || p.batchNum) === selectedBatchForPayment);
+  const activeBatchTotalCash = activeBatchPayments.filter(p => (p.payment_mode || p.paymentMode) === 'Cash').reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+  const activeBatchTotalUPI = activeBatchPayments.filter(p => (p.payment_mode || p.paymentMode) === 'UPI').reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+  const activeBatchTotalCollected = activeBatchTotalCash + activeBatchTotalUPI;
+
   return (
     <div className="space-y-6 fade">
       {/* Header & Search */}
@@ -72,7 +80,7 @@ export default function BatchesList({
             <span>📦 Cylinder Batches & Booking Cashflow</span>
           </h2>
           <p className="text-xs text-mutedSlate">
-            Track date-wise payment collections vs agency booking cost per batch (e.g. Batch #128 onwards).
+            Track date-wise payment collections & partner user entries (Suraj ↔ Shivam).
           </p>
         </div>
 
@@ -101,6 +109,7 @@ export default function BatchesList({
           const bookingCost = parseFloat(b.bookingCost || b.booking_cost || 0);
           const netPosition = totalCollected - bookingCost;
           const isProfit = netPosition >= 0;
+          const isEntriesExpanded = expandedEntriesBatch === b.batch;
 
           return (
             <div key={b.batch} className="bg-white border border-customBorder rounded-2xl shadow-soft overflow-hidden hover:shadow-md transition-all">
@@ -123,6 +132,13 @@ export default function BatchesList({
                 </div>
 
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setExpandedEntriesBatch(isEntriesExpanded ? null : b.batch)}
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all shadow-sm flex items-center gap-1"
+                  >
+                    <span>{isEntriesExpanded ? "🔼 Hide Deliveries" : "🚚 Show Deliveries (" + (b.entries ? b.entries.length : 0) + ")"}</span>
+                  </button>
+
                   <button
                     onClick={() => setSelectedBatchForPayment(b.batch)}
                     className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center gap-1"
@@ -245,10 +261,60 @@ export default function BatchesList({
                 </div>
               </div>
 
+              {/* Collapsible Delivery Entries List */}
+              {isEntriesExpanded && (
+                <div className="p-4 bg-slate-50 border-b border-customBorder space-y-2">
+                  <div className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                    <span>🚚 Cylinder Delivery & Collection Entries for Batch #{b.batch}</span>
+                    <span className="text-[11px] font-semibold text-slate-500">{b.entries ? b.entries.length : 0} entries</span>
+                  </div>
+                  {(!b.entries || b.entries.length === 0) ? (
+                    <div className="text-xs text-slate-400 font-semibold text-center py-3 bg-white rounded-xl border">
+                      No cylinder entries found for this batch.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto border border-customBorder rounded-xl bg-white">
+                      <table className="w-full text-left">
+                        <thead>
+                          <tr className="bg-slate-100 border-b border-customBorder">
+                            <th className="py-2 px-3 text-[10px] font-bold text-mutedSlate">Date</th>
+                            <th className="py-2 px-3 text-[10px] font-bold text-mutedSlate">Restaurant</th>
+                            <th className="py-2 px-3 text-[10px] font-bold text-mutedSlate">Qty & Type</th>
+                            <th className="py-2 px-3 text-[10px] font-bold text-mutedSlate">Category</th>
+                            <th className="py-2 px-3 text-[10px] font-bold text-mutedSlate">Recorded By</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {b.entries.map((e, idx) => (
+                            <tr key={e.id || idx} className="hover:bg-slate-50">
+                              <td className="py-2 px-3 text-xs font-medium text-slate-600">{e.date || "-"}</td>
+                              <td className="py-2 px-3 text-xs font-bold text-slate-900">{e.name}</td>
+                              <td className="py-2 px-3 text-xs font-black text-sky-800">{e.qty}x {e.type}</td>
+                              <td className="py-2 px-3 text-xs font-bold">
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] ${
+                                  e.isReturn ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-sky-100 text-sky-800 border border-sky-200'
+                                }`}>
+                                  {e.isReturn ? '♻️ Khali Return' : '🚚 Delivery'}
+                                </span>
+                              </td>
+                              <td className="py-2 px-3 text-xs font-semibold text-slate-600">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 text-[10px] font-bold text-slate-700">
+                                  👤 {e.user_name || "Suraj"}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Date-wise Payments List for Batch */}
               <div className="p-4 bg-white">
                 <div className="text-xs font-bold text-slate-700 mb-2 flex items-center justify-between">
-                  <span>📅 Date-wise Payment Entries for Batch #{b.batch}</span>
+                  <span>💳 Date-wise Payment Collection Entries for Batch #{b.batch}</span>
                   <span className="text-[11px] font-semibold text-slate-500">{batchPayments.length} entries</span>
                 </div>
 
@@ -265,7 +331,7 @@ export default function BatchesList({
                           <th className="py-2 px-3 text-[10px] font-bold text-mutedSlate">Restaurant</th>
                           <th className="py-2 px-3 text-[10px] font-bold text-mutedSlate">Amount</th>
                           <th className="py-2 px-3 text-[10px] font-bold text-mutedSlate">Mode</th>
-                          <th className="py-2 px-3 text-[10px] font-bold text-mutedSlate">Recorded By</th>
+                          <th className="py-2 px-3 text-[10px] font-bold text-mutedSlate">Recorded By (Partner)</th>
                           <th className="py-2 px-3 text-[10px] font-bold text-mutedSlate text-right">Action</th>
                         </tr>
                       </thead>
@@ -285,7 +351,7 @@ export default function BatchesList({
                               </span>
                             </td>
                             <td className="py-2 px-3 text-xs font-semibold text-slate-600">
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 text-[10px] font-bold">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-slate-100 text-[10px] font-bold text-slate-800 border border-slate-200">
                                 👤 {p.user_name || "Suraj"}
                               </span>
                             </td>
@@ -312,14 +378,19 @@ export default function BatchesList({
         })}
       </div>
 
-      {/* Add Payment Modal for Selected Batch */}
+      {/* Add Payment Modal for Selected Batch with In-Modal History & Summary */}
       {selectedBatchForPayment && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-2xl border border-customBorder shadow-glass max-w-md w-full p-6 space-y-4">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
+          <div className="bg-white rounded-2xl border border-customBorder shadow-glass max-w-lg w-full p-6 space-y-4 my-8">
             <div className="flex items-center justify-between border-b border-customBorder pb-3">
-              <h3 className="text-base font-bold text-textSlate flex items-center gap-2">
-                <span>➕ Record Payment for Batch #{selectedBatchForPayment}</span>
-              </h3>
+              <div>
+                <h3 className="text-base font-bold text-textSlate flex items-center gap-2">
+                  <span>➕ Record Payment for Batch #{selectedBatchForPayment}</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  View past collection entries for Batch #{selectedBatchForPayment} & add new payment
+                </p>
+              </div>
               <button 
                 onClick={() => setSelectedBatchForPayment(null)}
                 className="text-slate-400 hover:text-slate-600 font-bold text-lg"
@@ -328,6 +399,44 @@ export default function BatchesList({
               </button>
             </div>
 
+            {/* In-Modal Batch History Summary */}
+            <div className="bg-slate-50 p-3.5 rounded-xl border border-customBorder space-y-2 text-xs">
+              <div className="flex items-center justify-between font-bold text-slate-700">
+                <span>Batch #{selectedBatchForPayment} Total Collection So Far:</span>
+                <span className="text-emerald-700 font-black">₹{activeBatchTotalCollected.toLocaleString()}</span>
+              </div>
+              <div className="text-[11px] text-slate-500 font-medium flex items-center justify-between">
+                <span>Cash: ₹{activeBatchTotalCash.toLocaleString()} | UPI: ₹{activeBatchTotalUPI.toLocaleString()}</span>
+                <span>{activeBatchPayments.length} previous payment entries</span>
+              </div>
+
+              {activeBatchPayments.length > 0 && (
+                <div className="mt-2 max-h-36 overflow-y-auto border border-slate-200 rounded-lg bg-white">
+                  <table className="w-full text-left text-[11px]">
+                    <thead>
+                      <tr className="bg-slate-100 border-b border-slate-200">
+                        <th className="py-1 px-2 font-bold text-slate-600">Date</th>
+                        <th className="py-1 px-2 font-bold text-slate-600">Restaurant</th>
+                        <th className="py-1 px-2 font-bold text-slate-600">Amount</th>
+                        <th className="py-1 px-2 font-bold text-slate-600">By</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {activeBatchPayments.map((p, idx) => (
+                        <tr key={idx}>
+                          <td className="py-1 px-2 font-medium text-slate-600">{p.date}</td>
+                          <td className="py-1 px-2 font-bold text-slate-800">{p.restaurant_name || p.restaurantName}</td>
+                          <td className="py-1 px-2 font-black text-emerald-600">₹{parseFloat(p.amount).toLocaleString()} ({p.payment_mode || p.paymentMode})</td>
+                          <td className="py-1 px-2 font-bold text-slate-700">👤 {p.user_name || "Suraj"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Payment Input Form */}
             <form onSubmit={handlePaymentSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-mutedSlate uppercase mb-1">
@@ -337,7 +446,7 @@ export default function BatchesList({
                   type="text"
                   required
                   list="restaurant-payment-list-batch"
-                  placeholder="e.g. Simran Restaurant"
+                  placeholder="Type or select restaurant..."
                   value={paymentForm.restaurantName}
                   onChange={e => setPaymentForm({ ...paymentForm, restaurantName: e.target.value })}
                   className="w-full px-3 py-2 rounded-xl border border-customBorder text-xs font-semibold focus:border-accentCyan text-textSlate"
@@ -393,7 +502,7 @@ export default function BatchesList({
 
                 <div>
                   <label className="block text-xs font-bold text-mutedSlate uppercase mb-1">
-                    Recorded By
+                    Recorded By (Partner)
                   </label>
                   <input
                     type="text"

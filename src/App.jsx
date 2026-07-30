@@ -191,9 +191,20 @@ export default function App() {
 
           const sortedBatches = Object.values(batchesMap).sort((a, b) => b.batch - a.batch);
           setBatches(sortedBatches);
-          if (dbPayments.length > 0) {
-            setPayments(dbPayments);
-          }
+          
+          // Merge DB payments with any unsynced local payments so entries never disappear
+          setPayments(prev => {
+            const mergedMap = new Map();
+            (prev || []).forEach(p => {
+              const key = p.id || `${p.batch_num || p.batchNum}_${p.restaurant_name || p.restaurantName}_${p.amount}_${p.date}`;
+              mergedMap.set(key, p);
+            });
+            (dbPayments || []).forEach(p => {
+              const key = p.id || `${p.batch_num || p.batchNum}_${p.restaurant_name || p.restaurantName}_${p.amount}_${p.date}`;
+              mergedMap.set(key, p);
+            });
+            return Array.from(mergedMap.values());
+          });
 
           showToast("⚡ Supabase Connected & Real-time Live!");
         } catch (err) {
@@ -509,38 +520,49 @@ export default function App() {
 
   // Add Payment Handler
   async function handleAddPayment(paymentData) {
+    const activeUser = paymentData.user_name || currentUser;
+    const localPayment = {
+      id: 'pay_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
+      batch_num: paymentData.batchNum,
+      batchNum: paymentData.batchNum,
+      restaurant_name: paymentData.restaurantName,
+      restaurantName: paymentData.restaurantName,
+      amount: parseFloat(paymentData.amount) || 0,
+      payment_mode: paymentData.paymentMode,
+      paymentMode: paymentData.paymentMode,
+      user_name: activeUser,
+      date: paymentData.date || new Date().toISOString().split('T')[0],
+      note: paymentData.note || ""
+    };
+
+    // Immediately update state and LocalStorage so it never vanishes
+    setPayments(prev => [localPayment, ...prev]);
+
     if (isSupabaseConfigured) {
       try {
-        setLoading(true);
         const { data, error } = await supabase.from('payments').insert({
-          restaurant_name: paymentData.restaurantName,
           batch_num: paymentData.batchNum,
-          amount: paymentData.amount,
+          restaurant_name: paymentData.restaurantName,
+          amount: parseFloat(paymentData.amount) || 0,
           payment_mode: paymentData.paymentMode,
-          user_name: currentUser,
+          user_name: activeUser,
           date: paymentData.date,
           note: paymentData.note
         }).select();
 
-        if (error && error.code !== '42P01') {
-          console.warn("Payments table error", error);
+        if (error) {
+          console.warn("Supabase payments insert warning/error:", error);
+        } else if (data && data[0]) {
+          // Update temp local payment with DB inserted object
+          setPayments(prev => prev.map(p => p.id === localPayment.id ? data[0] : p));
         }
-
-        const inserted = data?.[0] || { ...paymentData, id: Date.now() };
-        setPayments(prev => [inserted, ...prev]);
-        addActivity("Payment Recorded", `₹${paymentData.amount} (${paymentData.paymentMode}) for ${paymentData.restaurantName}`);
-        showToast(`💳 Payment ₹${paymentData.amount} for ${paymentData.restaurantName} saved!`);
       } catch (err) {
-        console.error("Payment save error:", err);
-        setPayments(prev => [{ ...paymentData, id: Date.now() }, ...prev]);
-        showToast("💳 Payment saved in local mode!");
-      } finally {
-        setLoading(false);
+        console.warn("Supabase payments exception:", err);
       }
-    } else {
-      setPayments(prev => [{ ...paymentData, id: Date.now() }, ...prev]);
-      showToast("💳 Payment saved (Local Mode)!");
     }
+
+    addActivity("Payment Recorded", `₹${paymentData.amount} (${paymentData.paymentMode}) for ${paymentData.restaurantName} (Batch #${paymentData.batchNum})`, activeUser);
+    showToast(`💳 Payment ₹${paymentData.amount} for ${paymentData.restaurantName} saved!`);
   }
 
   // Delete Payment Handler
