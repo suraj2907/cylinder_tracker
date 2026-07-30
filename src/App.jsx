@@ -377,27 +377,7 @@ export default function App() {
     localStorage.setItem('cylinder_payments', JSON.stringify(payments));
   }, [payments]);
 
-  // PWA Prompt Handler
-  useEffect(() => {
-    const handler = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setIsInstallable(true);
-    };
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, []);
 
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      console.log('User installed the PWA');
-    }
-    setDeferredPrompt(null);
-    setIsInstallable(false);
-  };
 
   // Download Backup Helper
   function handleDownload() {
