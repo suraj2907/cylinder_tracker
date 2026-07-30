@@ -1,11 +1,31 @@
-import React from 'react';
+import React, { useState } from 'react';
+import RestaurantStatementModal from './RestaurantStatementModal';
 
-export default function RestaurantsList({ restaurants, tot21, tot192, totEmpty, totEmpty21, totEmpty192, totAll, totOutstanding, search, setSearch, sortBy, setSortBy }) {
+export default function RestaurantsList({ 
+  restaurants, 
+  tot21, 
+  tot192, 
+  totEmpty, 
+  totEmpty21, 
+  totEmpty192, 
+  totAll, 
+  totOutstanding, 
+  search, 
+  setSearch, 
+  sortBy, 
+  setSortBy,
+  batches = [],
+  payments = [],
+  handleDeleteEntry,
+  onDeletePayment
+}) {
+  const [selectedHotelForPassbook, setSelectedHotelForPassbook] = useState(null);
+
   return (
-    <div className="bg-white border border-customBorder rounded-2xl mb-6 overflow-hidden shadow-soft fade">
+    <div className="bg-white border border-customBorder rounded-2xl mb-6 overflow-hidden shadow-soft fade space-y-4">
       <div className="bg-slate-50 px-5 py-4 border-b border-customBorder flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
-          <span className="font-extrabold text-xs uppercase tracking-wider text-sky-700">🏪 All Partner Restaurants</span>
+          <span className="font-extrabold text-xs uppercase tracking-wider text-sky-700">🏪 All Partner Restaurants & Hotel Passbooks</span>
           <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">
             {restaurants.length}
           </span>
@@ -34,6 +54,7 @@ export default function RestaurantsList({ restaurants, tot21, tot192, totEmpty, 
           </select>
         </div>
       </div>
+
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -47,13 +68,21 @@ export default function RestaurantsList({ restaurants, tot21, tot192, totEmpty, 
               <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">🟢 19.2 KG Khali</th>
               <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">⚪ Total Khali</th>
               <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Grand Total Del</th>
+              <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3 text-right">Passbook</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {restaurants.map((r, i) => (
               <tr key={r.name} className="hover:bg-slate-50 transition-colors">
                 <td className="px-4 py-3 text-xs font-bold text-slate-400">{i + 1}</td>
-                <td className="px-4 py-3 text-xs font-bold text-textSlate">{r.name}</td>
+                <td className="px-4 py-3 text-xs font-bold text-textSlate">
+                  <button
+                    onClick={() => setSelectedHotelForPassbook(r.name)}
+                    className="hover:underline hover:text-sky-700 text-left font-extrabold"
+                  >
+                    {r.name}
+                  </button>
+                </td>
                 <td className="px-4 py-3 text-xs">
                   <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${r.outstanding > 0 ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-emerald-100 text-emerald-700 border-emerald-200'}`}>
                     {r.outstanding}
@@ -75,6 +104,14 @@ export default function RestaurantsList({ restaurants, tot21, tot192, totEmpty, 
                   <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200">{r.empty}</span>
                 </td>
                 <td className={`px-4 py-3 text-xs font-black ${r.total > 50 ? 'text-amber-600' : 'text-slate-900'}`}>{r.total}</td>
+                <td className="px-4 py-3 text-xs text-right">
+                  <button
+                    onClick={() => setSelectedHotelForPassbook(r.name)}
+                    className="px-2.5 py-1 rounded-lg bg-sky-50 border border-sky-200 text-sky-800 hover:bg-sky-100 text-[11px] font-bold transition-all shadow-xs"
+                  >
+                    📜 Passbook
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -102,10 +139,23 @@ export default function RestaurantsList({ restaurants, tot21, tot192, totEmpty, 
                 <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200">{totEmpty}</span>
               </td>
               <td className="px-4 py-3.5 text-xs font-black text-slate-900">{totAll}</td>
+              <td className="px-4 py-3.5"></td>
             </tr>
           </tfoot>
         </table>
       </div>
+
+      {/* Render Statement Modal when a hotel is selected */}
+      {selectedHotelForPassbook && (
+        <RestaurantStatementModal
+          restaurantName={selectedHotelForPassbook}
+          onClose={() => setSelectedHotelForPassbook(null)}
+          batches={batches}
+          payments={payments}
+          handleDeleteEntry={handleDeleteEntry}
+          onDeletePayment={onDeletePayment}
+        />
+      )}
     </div>
   );
 }

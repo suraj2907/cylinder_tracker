@@ -13,7 +13,30 @@ import { useUser } from './context/UserContext';
 
 export default function App() {
   const { currentUser, setCurrentUser } = useUser();
-  const [tab, setTab] = useState("dashboard");
+  
+  // Active Tab persistence across refreshes
+  const [tab, setTab] = useState(() => {
+    try {
+      const hash = window.location.hash.replace('#', '');
+      if (hash && ['dashboard', 'batches', 'payments', 'calendar', 'restaurants', 'gasPredictor', 'add'].includes(hash)) {
+        return hash;
+      }
+      const savedTab = localStorage.getItem('cylinder_active_tab');
+      if (savedTab) return savedTab;
+    } catch (e) {
+      console.error('Error loading tab state', e);
+    }
+    return "dashboard";
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('cylinder_active_tab', tab);
+      window.location.hash = tab;
+    } catch (e) {
+      console.error('Error saving tab state', e);
+    }
+  }, [tab]);
 
   // Local & Supabase state
   const [batches, setBatches] = useState(() => {
@@ -166,31 +189,56 @@ export default function App() {
             };
           });
 
-          dbEntries.forEach(e => {
-            const entryObj = {
-              id: e.id,
-              name: e.name,
-              qty: e.qty,
-              type: e.type,
-              date: e.date || "",
-              isReturn: e.is_return,
-              user_name: e.user_name || 'Suraj'
-            };
-            
-            if (batchesMap[e.batch_num]) {
-              batchesMap[e.batch_num].entries.push(entryObj);
-            } else {
-              batchesMap[e.batch_num] = {
-                batch: e.batch_num,
-                khaliDate: e.date || "",
-                note: "",
-                entries: [entryObj]
-              };
-            }
-          });
+          // Merge DB entries with local entries so unsynced entries are never wiped out
+          setBatches(prev => {
+            const entryMap = new Map();
 
-          const sortedBatches = Object.values(batchesMap).sort((a, b) => b.batch - a.batch);
-          setBatches(sortedBatches);
+            // First load existing local entries
+            (prev || []).forEach(b => {
+              (b.entries || []).forEach(e => {
+                const key = e.id || `${b.batch}_${e.name}_${e.qty}_${e.type}_${e.date}`;
+                entryMap.set(key, { ...e, batchNum: b.batch });
+              });
+            });
+
+            // Merge DB entries (DB takes precedence if same id/key)
+            dbEntries.forEach(e => {
+              const localKey = e.id || `${e.batch_num}_${e.name}_${e.qty}_${e.type}_${e.date}`;
+              const localEx = entryMap.get(localKey);
+              const entryObj = {
+                id: e.id,
+                name: e.name,
+                qty: e.qty,
+                type: e.type,
+                date: e.date || (localEx ? localEx.date : "") || "",
+                isReturn: e.is_return,
+                user_name: e.user_name || (localEx ? localEx.user_name : 'Suraj')
+              };
+              entryMap.set(localKey, { ...entryObj, batchNum: e.batch_num });
+            });
+
+            // Group all entries into batchesMap
+            entryMap.forEach(e => {
+              const bNum = e.batchNum;
+              const cleanEntry = { ...e };
+              delete cleanEntry.batchNum;
+
+              if (!batchesMap[bNum]) {
+                batchesMap[bNum] = {
+                  batch: bNum,
+                  khaliDate: cleanEntry.date || "",
+                  note: "",
+                  entries: []
+                };
+              }
+              // Prevent duplicate insertions inside same batch
+              if (!batchesMap[bNum].entries.some(item => item.id === cleanEntry.id)) {
+                batchesMap[bNum].entries.push(cleanEntry);
+              }
+            });
+
+            return Object.values(batchesMap).sort((a, b) => b.batch - a.batch);
+          });
           
           // Merge DB payments with any unsynced local payments so entries never disappear
           setPayments(prev => {
@@ -406,114 +454,95 @@ export default function App() {
       parsedType = type;
     }
 
+    const localId = 'entry_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+    const effectiveDate = (date && date.trim()) ? date.trim() : new Date().toISOString().split('T')[0];
     const entry = { 
+      id: localId,
       name: name.trim(), 
       qty: parseInt(qty) || 1, 
       type: parsedType, 
-      date,
+      date: effectiveDate,
       ...(isReturn ? { isReturn: true } : {}),
       user_name: currentUser
     };
     
+    // Always update local state & LocalStorage immediately so entry is never rejected
+    setBatches(prev => {
+      const ex = prev.find(b => b.batch === num);
+      if (ex) {
+        return prev.map(b => b.batch === num ? { ...b, entries: [...b.entries, entry] } : b);
+      } else {
+        return [...prev, { batch: num, khaliDate: khaliDate || effectiveDate, note: "", entries: [entry] }].sort((a, b) => b.batch - a.batch);
+      }
+    });
+
+    addActivity("Added Entry", `${qty}x ${parsedType} ${isReturn ? 'Return' : 'Delivery'} for ${name} (Batch #${num})`, currentUser);
+    showToast(`✅ ${name} - ${qty} ${parsedType} ${isReturn ? 'Khali Return' : 'Delivery'} batch #${num} me add ho gaya!`);
+    setNewEntry(p => ({ ...p, name: "", qty: 1 }));
+
+    // Sync to Supabase in background
     if (isSupabaseConfigured) {
       try {
-        setLoading(true);
         const ex = batches.find(b => b.batch === num);
-
-        const { error: batchErr } = await supabase.from('batches').upsert({
+        await supabase.from('batches').upsert({
           batch_num: num,
-          khali_date: ex ? (ex.khaliDate || null) : (khaliDate || date || null),
+          khali_date: (ex && ex.khaliDate) ? ex.khaliDate : (khaliDate || effectiveDate),
           note: ex ? (ex.note || null) : null
         });
-        if (batchErr) throw batchErr;
 
         const { data: insertedData, error: entryErr } = await supabase.from('entries').insert({
           batch_num: num,
           name: name.trim(),
           qty: parseInt(qty) || 1,
           type: parsedType,
-          date: date || null,
-          is_return: isReturn,
+          date: effectiveDate,
+          is_return: !!isReturn,
           user_name: currentUser
         }).select();
-        if (entryErr) throw entryErr;
 
-        const insertedId = insertedData?.[0]?.id;
-        const entryWithId = { ...entry, id: insertedId };
-
-        setBatches(prev => {
-          const ex = prev.find(b => b.batch === num);
-          if (ex) {
-            return prev.map(b => b.batch === num ? { ...b, entries: [...b.entries, entryWithId] } : b);
-          } else {
-            return [...prev, { batch: num, khaliDate: khaliDate || date, note: "", entries: [entryWithId] }].sort((a, b) => b.batch - a.batch);
-          }
-        });
-
-        addActivity("Added Entry", `${qty}x ${parsedType} ${isReturn ? 'Return' : 'Delivery'} for ${name} (Batch #${num})`);
-        showToast(`✅ ${name} - ${qty} ${parsedType} ${isReturn ? 'Khali Return' : 'Delivery'} batch #${num} me add ho gaya!`);
-        setNewEntry(p => ({ ...p, name: "", qty: 1 }));
-      } catch (err) {
-        console.error("Supabase write error:", err);
-        showToast("Supabase save error ❌", false);
-      } finally {
-        setLoading(false);
-      }
-    } else {
-      setBatches(prev => {
-        const ex = prev.find(b => b.batch === num);
-        if (ex) {
-          return prev.map(b => b.batch === num ? { ...b, entries: [...b.entries, entry] } : b);
-        } else {
-          return [...prev, { batch: num, khaliDate: khaliDate || date, note: "", entries: [entry] }].sort((a, b) => b.batch - a.batch);
+        if (entryErr) {
+          console.warn("Supabase entry insert warning:", entryErr);
+        } else if (insertedData && insertedData[0]) {
+          const dbId = insertedData[0].id;
+          setBatches(prev => prev.map(b => b.batch === num ? {
+            ...b,
+            entries: b.entries.map(e => e.id === localId ? { ...e, id: dbId } : e)
+          } : b));
         }
-      });
-      addActivity("Added Entry (Local)", `${qty}x ${parsedType} for ${name} (Batch #${num})`);
-      showToast(`✅ ${name} - ${qty} ${parsedType} added (Local Mode)!`);
-      setNewEntry(p => ({ ...p, name: "", qty: 1 }));
+      } catch (err) {
+        console.warn("Supabase sync background exception:", err);
+      }
     }
   }
 
   // Delete Entry Handler
   async function handleDeleteEntry(batchNum, originalEntry) {
     if (window.confirm("Sach me ye entry delete karni hai?")) {
+      // Immediately remove from local state
+      setBatches(prev => prev.map(b => {
+        if (b.batch === batchNum) {
+          return { ...b, entries: b.entries.filter(e => e !== originalEntry) };
+        }
+        return b;
+      }));
+
+      addActivity("Deleted Entry", `Entry for ${originalEntry.name} from Batch #${batchNum}`, currentUser);
+      showToast("🗑️ Entry delete ho gayi!");
+
       if (isSupabaseConfigured) {
         try {
-          setLoading(true);
           if (originalEntry.id) {
-            const { error } = await supabase.from('entries').delete().eq('id', originalEntry.id);
-            if (error) throw error;
+            await supabase.from('entries').delete().eq('id', originalEntry.id);
           } else {
-            const { error } = await supabase.from('entries').delete()
+            await supabase.from('entries').delete()
               .eq('batch_num', batchNum)
               .eq('name', originalEntry.name)
               .eq('qty', originalEntry.qty)
               .eq('type', originalEntry.type);
-            if (error) throw error;
           }
-
-          setBatches(prev => prev.map(b => {
-            if (b.batch === batchNum) {
-              return { ...b, entries: b.entries.filter(e => e !== originalEntry) };
-            }
-            return b;
-          }));
-          addActivity("Deleted Entry", `Entry for ${originalEntry.name} from Batch #${batchNum}`);
-          showToast("🗑️ Entry delete ho gayi!");
         } catch (err) {
-          console.error("Supabase delete error:", err);
-          showToast("Delete error ❌", false);
-        } finally {
-          setLoading(false);
+          console.warn("Supabase delete background exception:", err);
         }
-      } else {
-        setBatches(prev => prev.map(b => {
-          if (b.batch === batchNum) {
-            return { ...b, entries: b.entries.filter(e => e !== originalEntry) };
-          }
-          return b;
-        }));
-        showToast("🗑️ Delete local mode!");
       }
     }
   }
@@ -599,10 +628,10 @@ export default function App() {
 
   const TABS = [
     { id: "dashboard", label: "📊 Dashboard" },
+    { id: "batches", label: "📦 Batches & Supply" },
+    { id: "payments", label: "💰 Cashflow & Wallet" },
+    { id: "calendar", label: "📅 Calendar Log" },
     { id: "restaurants", label: "🏪 Restaurants" },
-    { id: "payments", label: "💰 Batch Cashflow & Wallet" },
-    { id: "calendar", label: "📅 Calendar" },
-    { id: "batches", label: "📦 Batches & Cashflow" },
     { id: "gasPredictor", label: "🔮 Gas Predictor" },
     { id: "add", label: "➕ Add Entry" },
   ];
@@ -639,9 +668,37 @@ export default function App() {
           
           {/* Brand & Partner Identity */}
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulseGlow"></span>
-              <span className="text-base font-black text-textSlate tracking-tight">Cylinder Tracker</span>
+            <div className="flex items-center gap-3">
+              {/* LPG Cylinder Icon Badge */}   
+              <div className="w-10 h-10 rounded-2xl bg-white p-1 shadow-md border border-emerald-500/40 flex items-center justify-center">
+                <svg viewBox="0 0 512 512" className="w-full h-full">
+                  <path d="M 190 75 C 190 60 205 50 225 50 L 287 50 C 307 50 322 60 322 75 L 322 110 L 190 110 Z" fill="none" stroke="#dc2626" strokeWidth="24" strokeLinecap="round" strokeLinejoin="round"/>
+                  <rect x="236" y="75" width="40" height="35" rx="6" fill="#fbbf24"/>
+                  <path d="M 165 190 C 165 125 202 112 256 112 C 310 112 347 125 347 190 L 347 205 L 165 205 Z" fill="#10b981"/>
+                  <path d="M 165 205 L 347 205 L 347 345 C 347 385 312 400 256 400 C 200 400 165 385 165 345 Z" fill="#ef4444"/>
+                  <path d="M 190 400 L 322 400 C 322 420 305 430 285 430 L 227 430 C 207 430 190 420 190 400 Z" fill="#ffffff"/>
+                  <path d="M 256 165 C 256 165 298 215 298 255 C 298 280 279 300 256 300 C 233 300 214 280 214 255 C 214 215 256 165 256 165 Z" fill="#ffffff"/>
+                  <path d="M 256 200 C 256 200 280 230 280 255 C 280 270 270 280 256 280 C 242 280 232 270 232 255 C 232 230 256 200 256 200 Z" fill="#1d4ed8"/>
+                  <path d="M 256 230 C 256 230 268 245 268 255 C 268 262 262 268 256 268 C 250 268 244 262 244 255 C 244 245 256 230 256 230 Z" fill="#f59e0b"/>
+                  <g transform="translate(36, 420)">
+                    <rect x="0" y="0" width="440" height="60" rx="16" fill="#FFFFFF"/>
+                    <text x="200" y="40" font-family="'Arial Black', 'Inter', sans-serif" fontWeight="900" fontSize="20" fill="#0b1329" textAnchor="middle" letterSpacing="2">SHREE BALAJI AGENCIES</text>
+                  </g>
+                </svg>
+              </div>
+              
+              {/* Full Agency & Gaspoint Branding */}
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-base font-black text-slate-900 tracking-tight">M/S. SHREE BALAJI AGENCIES</span>
+                  <span className="px-2 py-0.5 rounded-lg text-xs font-black bg-red-50 text-red-700 border border-red-200 tracking-wide">
+                    🔥 GAS POINT
+                  </span>
+                </div>
+                <span className="text-xs font-extrabold text-sky-700 tracking-wide mt-0.5">
+                  Cylinder Tracker & Partner Passbook Portal
+                </span>
+              </div>
             </div>
 
             {/* Active User Switcher Pill (Suraj vs Shivam) */}
@@ -751,10 +808,10 @@ export default function App() {
             className="bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none text-xs font-bold flex-1"
           >
             <option value="dashboard">📊 Dashboard</option>
+            <option value="batches">📦 Batches & Supply</option>
+            <option value="payments">💰 Cashflow & Wallet</option>
+            <option value="calendar">📅 Calendar Log</option>
             <option value="restaurants">🏪 Restaurants</option>
-            <option value="payments">💰 Batch Cashflow & Wallet</option>
-            <option value="calendar">📅 Calendar</option>
-            <option value="batches">📦 Batches & Cashflow</option>
             <option value="gasPredictor">🔮 Gas Predictor</option>
           </select>
 
@@ -802,10 +859,10 @@ export default function App() {
         {/* ACTIVE TAB CONTENT */}
         <div key={tab} className="animate-fadeIn">
           {tab === "dashboard" && <Dashboard restaurants={restaurants} batchStats={batchStats} restMap={restMap} totAll={totAll} tot21={tot21} tot192={tot192} totEmpty={totEmpty} totOutstanding={totOutstanding} />}
-          {tab === "restaurants" && <RestaurantsList restaurants={restaurants} tot21={tot21} tot192={tot192} totEmpty={totEmpty} totEmpty21={totEmpty21} totEmpty192={totEmpty192} totAll={totAll} totOutstanding={totOutstanding} search={search} setSearch={setSearch} sortBy={sortBy} setSortBy={setSortBy} />}
+          {tab === "restaurants" && <RestaurantsList restaurants={restaurants} tot21={tot21} tot192={tot192} totEmpty={totEmpty} totEmpty21={totEmpty21} totEmpty192={totEmpty192} totAll={totAll} totOutstanding={totOutstanding} search={search} setSearch={setSearch} sortBy={sortBy} setSortBy={setSortBy} batches={batches} payments={payments} handleDeleteEntry={handleDeleteEntry} onDeletePayment={handleDeletePayment} />}
           {tab === "payments" && <PaymentLedger payments={payments} onAddPayment={handleAddPayment} onDeletePayment={handleDeletePayment} batches={batches} onUpdateBatchCost={handleUpdateBatchCost} restMap={restMap} />}
-          {tab === "calendar" && <CalendarView dateMap={dateMap} selectedDate={selectedDate} setSelectedDate={setSelectedDate} handleDeleteEntry={handleDeleteEntry} />}
-          {tab === "batches" && <BatchesList filteredBatches={filteredBatches} batchSearch={batchSearch} setBatchSearch={setBatchSearch} payments={payments} onUpdateBatchCost={handleUpdateBatchCost} onAddPayment={handleAddPayment} onDeletePayment={handleDeletePayment} restMap={restMap} />}
+          {tab === "calendar" && <CalendarView dateMap={dateMap} selectedDate={selectedDate} setSelectedDate={setSelectedDate} handleDeleteEntry={handleDeleteEntry} payments={payments} batches={batches} onDeletePayment={handleDeletePayment} />}
+          {tab === "batches" && <BatchesList filteredBatches={filteredBatches} batchSearch={batchSearch} setBatchSearch={setBatchSearch} />}
           {tab === "add" && <AddEntry newEntry={newEntry} setNewEntry={setNewEntry} handleAdd={handleAdd} restMap={restMap} isInstallable={isInstallable} handleInstallClick={handleInstallClick} />}
           {tab === "gasPredictor" && <GasPredictor restaurants={restaurants} batches={batches} />}
         </div>

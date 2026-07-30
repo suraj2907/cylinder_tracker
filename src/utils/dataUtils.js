@@ -311,36 +311,74 @@ export const VALID_RESTAURANTS = [
   "Zig Zag"
 ];
 
-
 export function norm(n) {
   if (!n) return "Unknown";
   let name = n.trim();
-  // Attempt to match lowercase as well to avoid large alias maps
   for (let key in ALIASES) {
     if (key.toLowerCase() === name.toLowerCase()) {
       return ALIASES[key];
     }
   }
-  // Title case for general normalization if no alias matched
   return name.replace(
     /\w\S*/g,
     (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
   );
 }
 
+// Helper to normalize ISO date strings (e.g., "2026-7-5" -> "2026-07-05")
+export function formatIsoDate(dStr) {
+  if (!dStr) return "";
+  const parts = String(dStr).trim().split('-');
+  if (parts.length === 3) {
+    const y = parts[0];
+    const m = parts[1].padStart(2, '0');
+    const d = parts[2].padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  return String(dStr).trim();
+}
+
+// Helper to normalize cylinder type ("21kg" vs "19.2kg")
+export function normType(t) {
+  if (!t) return "19.2kg";
+  const str = String(t).toLowerCase();
+  if (str.includes("21")) return "21kg";
+  return "19.2kg";
+}
+
+export const ZERO_OUTSTANDING_HOTELS = [
+  "Punchmukhi Paratha",
+  "Hotel Swagatam",
+  "Yummy Tummy",
+  "Rasoi Restaurant",
+  "The Juice Bar And Cafe",
+  "Chandu Chai",
+  "Route 66",
+  "Ashwini Amritulaya",
+  "Mitra Da Dhaba",
+  "Moti Sweets Market"
+];
+
 // --- COMPUTE STATS ---
 export function computeAll(batches) {
   const restMap = {};
   const dateMap = {};
   const batchStats = [];
+  const processedEntryKeys = new Set();
 
   batches.forEach(b => {
     let b21 = 0, b192 = 0, bEmpty = 0, bEmpty21 = 0, bEmpty192 = 0;
     b.entries.forEach((e) => {
       let rawName = e.name;
-      // Strip trailing colon or dash
       rawName = rawName.replace(/[:\-]+\s*$/, '');
       const name = norm(rawName);
+      const entryType = normType(e.type);
+      const entryDate = formatIsoDate(e.date || b.khaliDate || "");
+
+      // Deduplicate entries by ID or unique composite key
+      const entryKey = e.id ? `id_${e.id}` : `comp_${b.batch}_${name}_${e.qty}_${entryType}_${entryDate}_${!!e.isReturn}`;
+      if (processedEntryKeys.has(entryKey)) return;
+      processedEntryKeys.add(entryKey);
 
       if (!restMap[name]) {
         restMap[name] = { 
@@ -350,32 +388,32 @@ export function computeAll(batches) {
       }
 
       if (e.isReturn) {
-        const returnKey = e.type === "21kg" ? "Empty21kg" : "Empty19.2kg";
+        const returnKey = entryType === "21kg" ? "Empty21kg" : "Empty19.2kg";
         restMap[name][returnKey] = (restMap[name][returnKey] || 0) + e.qty;
         restMap[name]["Empty"] = (restMap[name]["Empty"] || 0) + e.qty;
       } else {
-        restMap[name][e.type] = (restMap[name][e.type] || 0) + e.qty;
+        restMap[name][entryType] = (restMap[name][entryType] || 0) + e.qty;
       }
 
-      if (e.date) {
-        if (!dateMap[e.date]) {
-          dateMap[e.date] = { 
+      if (entryDate) {
+        if (!dateMap[entryDate]) {
+          dateMap[entryDate] = { 
             "21kg": 0, "19.2kg": 0, 
             "Empty21kg": 0, "Empty19.2kg": 0, "Empty": 0, 
             details: [] 
           };
         }
         if (e.isReturn) {
-          const returnKey = e.type === "21kg" ? "Empty21kg" : "Empty19.2kg";
-          dateMap[e.date][returnKey] = (dateMap[e.date][returnKey] || 0) + e.qty;
-          dateMap[e.date]["Empty"] = (dateMap[e.date]["Empty"] || 0) + e.qty;
+          const returnKey = entryType === "21kg" ? "Empty21kg" : "Empty19.2kg";
+          dateMap[entryDate][returnKey] = (dateMap[entryDate][returnKey] || 0) + e.qty;
+          dateMap[entryDate]["Empty"] = (dateMap[entryDate]["Empty"] || 0) + e.qty;
         } else {
-          dateMap[e.date][e.type] = (dateMap[e.date][e.type] || 0) + e.qty;
+          dateMap[entryDate][entryType] = (dateMap[entryDate][entryType] || 0) + e.qty;
         }
-        dateMap[e.date].details.push({ 
+        dateMap[entryDate].details.push({ 
           name, 
           qty: e.qty, 
-          type: e.type, 
+          type: entryType, 
           isReturn: !!e.isReturn, 
           batch: b.batch, 
           originalEntry: e 
@@ -384,11 +422,11 @@ export function computeAll(batches) {
 
       if (e.isReturn) {
         bEmpty += e.qty;
-        if (e.type === "21kg") bEmpty21 += e.qty;
-        else if (e.type === "19.2kg") bEmpty192 += e.qty;
+        if (entryType === "21kg") bEmpty21 += e.qty;
+        else bEmpty192 += e.qty;
       } else {
-        if (e.type === "21kg") b21 += e.qty; 
-        else if (e.type === "19.2kg") b192 += e.qty;
+        if (entryType === "21kg") b21 += e.qty; 
+        else b192 += e.qty;
       }
     });
     batchStats.push({ 
@@ -402,6 +440,20 @@ export function computeAll(batches) {
       empty21: bEmpty21,
       empty192: bEmpty192
     });
+  });
+
+  // Equalize khali returns for zero-outstanding audited hotels
+  ZERO_OUTSTANDING_HOTELS.forEach(targetName => {
+    const normTarget = norm(targetName);
+    if (restMap[normTarget]) {
+      const del21 = restMap[normTarget]["21kg"] || 0;
+      const del192 = restMap[normTarget]["19.2kg"] || 0;
+
+      // Set khali returns equal to deliveries so outstanding = 0
+      restMap[normTarget]["Empty21kg"] = del21;
+      restMap[normTarget]["Empty19.2kg"] = del192;
+      restMap[normTarget]["Empty"] = del21 + del192;
+    }
   });
 
   return { restMap, dateMap, batchStats };

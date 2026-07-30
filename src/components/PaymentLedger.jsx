@@ -12,8 +12,10 @@ export function PaymentLedger({
 }) {
   const { currentUser } = useUser();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedBatchForPayment, setSelectedBatchForPayment] = useState(128);
+  const [editingCostBatch, setEditingCostBatch] = useState(null);
+  const [tempCost, setTempCost] = useState("");
   const [search, setSearch] = useState("");
-  const [modeFilter, setModeFilter] = useState("all");
 
   const [form, setForm] = useState({
     batchNum: "128",
@@ -23,6 +25,18 @@ export function PaymentLedger({
     date: new Date().toISOString().split('T')[0],
     note: ""
   });
+
+  function handleSaveCost(batchNum) {
+    const val = parseFloat(tempCost);
+    if (isNaN(val) || val < 0) {
+      alert("Please enter a valid booking cost amount!");
+      return;
+    }
+    if (onUpdateBatchCost) {
+      onUpdateBatchCost(batchNum, val);
+    }
+    setEditingCostBatch(null);
+  }
 
   // Calculate Batch Cashflow summaries
   const batchSummaries = useMemo(() => {
@@ -47,8 +61,7 @@ export function PaymentLedger({
         totalCollected,
         netPosition,
         isProfit,
-        paymentCount: bPayments.length,
-        entriesCount: b.entries ? b.entries.length : 0
+        bPayments
       };
     }).sort((a, b) => b.batchNum - a.batchNum);
   }, [batches, payments]);
@@ -59,25 +72,6 @@ export function PaymentLedger({
   const totalCashAll = useMemo(() => batchSummaries.reduce((s, b) => s + b.totalCash, 0), [batchSummaries]);
   const totalUPIAll = useMemo(() => batchSummaries.reduce((s, b) => s + b.totalUPI, 0), [batchSummaries]);
   const netWalletBalance = totalCollectedAll - totalCostAll;
-
-  // Filter payments table
-  const filteredPayments = useMemo(() => {
-    return payments.filter(p => {
-      const nameMatch = !search || (p.restaurant_name || p.restaurantName || "").toLowerCase().includes(search.toLowerCase()) || String(p.batch_num || p.batchNum || "").includes(search);
-      const modeMatch = modeFilter === "all" || (p.payment_mode || p.paymentMode) === modeFilter;
-      return nameMatch && modeMatch;
-    }).sort((a, b) => new Date(b.date || b.created_at) - new Date(a.date || a.created_at));
-  }, [payments, search, modeFilter]);
-
-  // Modal active batch details
-  const modalBatchNum = parseInt(form.batchNum) || 128;
-  const modalBatchPayments = useMemo(() => {
-    return payments.filter(p => (p.batch_num || p.batchNum) === modalBatchNum);
-  }, [payments, modalBatchNum]);
-
-  const modalTotalCash = useMemo(() => modalBatchPayments.filter(p => (p.payment_mode || p.paymentMode) === 'Cash').reduce((s, p) => s + (parseFloat(p.amount) || 0), 0), [modalBatchPayments]);
-  const modalTotalUPI = useMemo(() => modalBatchPayments.filter(p => (p.payment_mode || p.paymentMode) === 'UPI').reduce((s, p) => s + (parseFloat(p.amount) || 0), 0), [modalBatchPayments]);
-  const modalTotalCollected = modalTotalCash + modalTotalUPI;
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -97,7 +91,7 @@ export function PaymentLedger({
     });
 
     setForm({
-      batchNum: "128",
+      batchNum: form.batchNum || "128",
       restaurantName: "",
       amount: "",
       paymentMode: "Cash",
@@ -105,6 +99,11 @@ export function PaymentLedger({
       note: ""
     });
     setShowAddModal(false);
+  }
+
+  function openPaymentModalForBatch(bNum) {
+    setForm(prev => ({ ...prev, batchNum: String(bNum) }));
+    setShowAddModal(true);
   }
 
   return (
@@ -116,12 +115,12 @@ export function PaymentLedger({
             <span>💰 Batch Cashflow & Wallet Manager</span>
           </h2>
           <p className="text-xs font-medium text-mutedSlate mt-1">
-            Track date-wise collections per batch & compare with booking cost (Suraj & Shivam).
+            Track date-wise collections per batch & compare with booking cost (Suraj ↔ Shivam).
           </p>
         </div>
 
         <button
-          onClick={() => setShowAddModal(true)}
+          onClick={() => openPaymentModalForBatch(128)}
           className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-bold shadow-soft hover:bg-emerald-700 active:scale-95 transition-all flex items-center gap-2 justify-center"
         >
           <span>➕ Record Payment Collection</span>
@@ -159,163 +158,200 @@ export function PaymentLedger({
         </div>
       </div>
 
-      {/* Batch Cashflow Summary Table */}
-      <div className="bg-white rounded-2xl border border-customBorder shadow-soft overflow-hidden">
-        <div className="p-4 border-b border-customBorder flex items-center justify-between flex-wrap gap-3 bg-slate-50">
+      {/* Batch Financial Cards Section */}
+      <div className="space-y-5">
+        <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-textSlate flex items-center gap-2">
-            <span>📦 Batch-Wise Cashflow & Booking Balance Summary</span>
+            <span>📦 Batch Financial Cashflow Cards (Starting #128)</span>
           </h3>
-          <div className="text-xs text-mutedSlate font-semibold">
-            {batchSummaries.length} Active Batches
-          </div>
+          <input
+            type="text"
+            placeholder="Search hotel or batch..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="px-3 py-1.5 rounded-xl border border-customBorder bg-white text-xs font-semibold focus:border-accentCyan w-48 shadow-sm"
+          />
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 border-b border-customBorder">
-                <th className="py-3 px-4 text-xs font-bold text-mutedSlate uppercase">Batch #</th>
-                <th className="py-3 px-4 text-xs font-bold text-mutedSlate uppercase">Booking Cost</th>
-                <th className="py-3 px-4 text-xs font-bold text-mutedSlate uppercase">Total Collection</th>
-                <th className="py-3 px-4 text-xs font-bold text-mutedSlate uppercase">Cash / UPI Breakup</th>
-                <th className="py-3 px-4 text-xs font-bold text-mutedSlate uppercase text-right">Agla Batch Booking Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {batchSummaries.map((b) => (
-                <tr key={b.batchNum} className="hover:bg-slate-50 transition-colors">
-                  <td className="py-3 px-4 font-black text-amber-600 text-xs">#{b.batchNum}</td>
-                  <td className="py-3 px-4 text-xs font-bold text-slate-800">
-                    {b.bookingCost > 0 ? `₹${b.bookingCost.toLocaleString()}` : <span className="text-slate-400 italic">Not set</span>}
-                  </td>
-                  <td className="py-3 px-4 text-xs font-black text-emerald-600">
-                    ₹{b.totalCollected.toLocaleString()}
-                  </td>
-                  <td className="py-3 px-4 text-[11px] text-slate-500 font-medium">
+        {batchSummaries.map((b) => {
+          const filteredBatchPayments = b.bPayments.filter(p => {
+            if (!search) return true;
+            return (p.restaurant_name || p.restaurantName || "").toLowerCase().includes(search.toLowerCase()) || String(p.batch_num || p.batchNum).includes(search);
+          }).sort((x, y) => new Date(y.date) - new Date(x.date));
+
+          return (
+            <div key={b.batchNum} className="bg-white border border-customBorder rounded-2xl shadow-soft overflow-hidden hover:shadow-md transition-all">
+              {/* Batch Card Header */}
+              <div className="bg-slate-50 px-5 py-4 border-b border-customBorder flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-black text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1 rounded-xl">
+                    Batch #{b.batchNum}
+                  </span>
+                  {b.khaliDate && (
+                    <span className="text-xs text-slate-500 font-semibold">
+                      Khali Date: <span className="font-bold text-slate-700">{b.khaliDate}</span>
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => openPaymentModalForBatch(b.batchNum)}
+                  className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center gap-1"
+                >
+                  <span>➕ Add Payment (#{b.batchNum})</span>
+                </button>
+              </div>
+
+              {/* Financial Strip */}
+              <div className="p-4 bg-slate-50/50 border-b border-customBorder grid grid-cols-1 sm:grid-cols-4 gap-3">
+                {/* 1. Booking Cost */}
+                <div className="bg-white p-3 rounded-xl border border-customBorder shadow-sm flex flex-col justify-between">
+                  <div className="text-[10px] font-bold text-mutedSlate uppercase tracking-wider flex items-center justify-between">
+                    <span>Agency Booking Cost</span>
+                    <button 
+                      onClick={() => {
+                        setEditingCostBatch(b.batchNum);
+                        setTempCost(b.bookingCost || "");
+                      }}
+                      className="text-sky-600 hover:text-sky-800 text-[10px] font-bold underline"
+                    >
+                      {editingCostBatch === b.batchNum ? "Cancel" : "Edit Cost"}
+                    </button>
+                  </div>
+
+                  {editingCostBatch === b.batchNum ? (
+                    <div className="mt-1 flex items-center gap-1">
+                      <input
+                        type="number"
+                        placeholder="e.g. 50000"
+                        value={tempCost}
+                        onChange={e => setTempCost(e.target.value)}
+                        className="w-full px-2 py-1 border border-sky-400 rounded-lg text-xs font-bold"
+                      />
+                      <button
+                        onClick={() => handleSaveCost(b.batchNum)}
+                        className="px-2.5 py-1 bg-sky-600 text-white rounded-lg text-xs font-bold"
+                      >
+                        Save
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-base font-black text-slate-800 mt-1">
+                      ₹{b.bookingCost.toLocaleString()}
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Total Collection */}
+                <div className="bg-white p-3 rounded-xl border border-customBorder shadow-sm">
+                  <div className="text-[10px] font-bold text-mutedSlate uppercase tracking-wider">Total Collection</div>
+                  <div className="text-base font-black text-emerald-600 mt-1">₹{b.totalCollected.toLocaleString()}</div>
+                  <div className="text-[10px] text-slate-500 font-semibold mt-0.5">
                     Cash: ₹{b.totalCash.toLocaleString()} | UPI: ₹{b.totalUPI.toLocaleString()}
-                  </td>
-                  <td className="py-3 px-4 text-xs font-black text-right">
+                  </div>
+                </div>
+
+                {/* 3. Batch Profit / Pocket Position */}
+                <div className="bg-white p-3 rounded-xl border border-customBorder shadow-sm sm:col-span-2">
+                  <div className="text-[10px] font-bold text-mutedSlate uppercase tracking-wider">
+                    Agla Batch Booking Status
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
                     {b.bookingCost === 0 ? (
-                      <span className="inline-flex px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                        Enter Cost in Batches Tab
+                      <span className="text-xs text-slate-500 font-semibold italic">
+                        Enter booking cost to calculate profit/pocket balance
                       </span>
                     ) : b.isProfit ? (
-                      <span className="inline-flex px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200">
-                        🟢 Profit: +₹{b.netPosition.toLocaleString()}
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black bg-emerald-100 text-emerald-800 border border-emerald-200">
+                        <span>🟢 Profit / Surplus:</span>
+                        <span>+₹{b.netPosition.toLocaleString()} (Paisa bacha hai!)</span>
                       </span>
                     ) : (
-                      <span className="inline-flex px-2.5 py-1 rounded-full text-[10px] font-black bg-amber-100 text-amber-900 border border-amber-300">
-                        🔴 Pocket se: -₹{Math.abs(b.netPosition).toLocaleString()}
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-black bg-amber-100 text-amber-900 border border-amber-300">
+                        <span>🔴 Pocket Se Daalna Padega:</span>
+                        <span>-₹{Math.abs(b.netPosition).toLocaleString()} (Agency booking me kam hai)</span>
                       </span>
                     )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Date-wise Collections Table */}
+              <div className="p-4 bg-white space-y-2">
+                <div className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                  <span>📜 Date-wise Collections Recorded for Batch #{b.batchNum}</span>
+                  <span className="text-[11px] font-semibold text-slate-500">{filteredBatchPayments.length} entries</span>
+                </div>
+
+                {filteredBatchPayments.length === 0 ? (
+                  <div className="text-center py-4 text-xs text-slate-400 font-semibold bg-slate-50 rounded-xl border border-dashed">
+                    No payment entries recorded for Batch #{b.batchNum} yet. Click "+ Add Payment" to record.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto border border-customBorder rounded-xl">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-customBorder">
+                          <th className="py-2.5 px-3 text-[10px] font-bold text-mutedSlate uppercase">Date</th>
+                          <th className="py-2.5 px-3 text-[10px] font-bold text-mutedSlate uppercase">Restaurant / Hotel Name</th>
+                          <th className="py-2.5 px-3 text-[10px] font-bold text-mutedSlate uppercase">Amount</th>
+                          <th className="py-2.5 px-3 text-[10px] font-bold text-mutedSlate uppercase">Mode</th>
+                          <th className="py-2.5 px-3 text-[10px] font-bold text-mutedSlate uppercase">Recorded By</th>
+                          <th className="py-2.5 px-3 text-[10px] font-bold text-mutedSlate uppercase text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {filteredBatchPayments.map((p, idx) => (
+                          <tr key={p.id || idx} className="hover:bg-slate-50 transition-colors">
+                            <td className="py-2.5 px-3 text-xs font-medium text-slate-600">{p.date || "N/A"}</td>
+                            <td className="py-2.5 px-3 text-xs font-extrabold text-slate-900">{p.restaurant_name || p.restaurantName}</td>
+                            <td className="py-2.5 px-3 text-xs font-black text-emerald-600">₹{parseFloat(p.amount).toLocaleString()}</td>
+                            <td className="py-2.5 px-3 text-xs font-bold">
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] ${
+                                (p.payment_mode || p.paymentMode) === 'UPI' 
+                                  ? 'bg-sky-100 text-sky-700 border border-sky-200' 
+                                  : 'bg-amber-100 text-amber-800 border border-amber-200'
+                              }`}>
+                                {(p.payment_mode || p.paymentMode) === 'UPI' ? '📱 UPI' : '💵 Cash'}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-xs font-semibold text-slate-600">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-slate-100 text-[10px] font-bold text-slate-800 border border-slate-200">
+                                👤 {p.user_name || "Suraj"}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-xs text-right">
+                              {onDeletePayment && (
+                                <button
+                                  onClick={() => onDeletePayment(p)}
+                                  className="text-red-500 hover:text-red-700 font-bold p-1 text-xs"
+                                  title="Delete entry"
+                                >
+                                  🗑️
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Recent Date-wise Payment Entries Log */}
-      <div className="bg-white rounded-2xl border border-customBorder shadow-soft p-5 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <h3 className="text-sm font-bold text-textSlate flex items-center gap-2">
-            <span>📜 Date-wise Payment Collections Log</span>
-          </h3>
-
-          <div className="flex items-center gap-3">
-            <input
-              type="text"
-              placeholder="Search restaurant or batch..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="px-3 py-1.5 rounded-xl border border-customBorder bg-slate-50 text-xs font-semibold focus:border-accentCyan w-48 transition-all"
-            />
-
-            <select
-              value={modeFilter}
-              onChange={e => setModeFilter(e.target.value)}
-              className="px-3 py-1.5 rounded-xl border border-customBorder bg-slate-50 text-xs font-semibold focus:border-accentCyan transition-all"
-            >
-              <option value="all">All Modes</option>
-              <option value="Cash">💵 Cash Only</option>
-              <option value="UPI">📱 UPI Only</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto border border-customBorder rounded-xl">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="bg-slate-50 border-b border-customBorder">
-                <th className="py-2.5 px-3 text-[11px] font-bold text-mutedSlate">Date</th>
-                <th className="py-2.5 px-3 text-[11px] font-bold text-mutedSlate">Batch #</th>
-                <th className="py-2.5 px-3 text-[11px] font-bold text-mutedSlate">Restaurant</th>
-                <th className="py-2.5 px-3 text-[11px] font-bold text-mutedSlate">Amount</th>
-                <th className="py-2.5 px-3 text-[11px] font-bold text-mutedSlate">Mode</th>
-                <th className="py-2.5 px-3 text-[11px] font-bold text-mutedSlate">Recorded By (Partner)</th>
-                <th className="py-2.5 px-3 text-[11px] font-bold text-mutedSlate text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredPayments.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-8 text-xs text-mutedSlate font-semibold">
-                    No payment collection entries recorded yet. Click "Record Payment Collection" to add one.
-                  </td>
-                </tr>
-              ) : (
-                filteredPayments.map((p, idx) => (
-                  <tr key={p.id || idx} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-2.5 px-3 text-xs font-medium text-slate-600">{p.date || "N/A"}</td>
-                    <td className="py-2.5 px-3 text-xs font-black text-amber-600">#{p.batch_num || p.batchNum || 128}</td>
-                    <td className="py-2.5 px-3 text-xs font-bold text-textSlate">{p.restaurant_name || p.restaurantName}</td>
-                    <td className="py-2.5 px-3 text-xs font-black text-emerald-600">₹{parseFloat(p.amount).toLocaleString()}</td>
-                    <td className="py-2.5 px-3 text-xs font-bold">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] ${
-                        (p.payment_mode || p.paymentMode) === 'UPI' 
-                          ? 'bg-sky-100 text-sky-700 border border-sky-200' 
-                          : 'bg-amber-100 text-amber-800 border border-amber-200'
-                      }`}>
-                        {(p.payment_mode || p.paymentMode) === 'UPI' ? '📱 UPI' : '💵 Cash'}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3 text-xs font-semibold text-slate-600">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-slate-100 text-[10px] font-bold text-slate-800 border border-slate-200">
-                        👤 {p.user_name || "Suraj"}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-3 text-xs text-right">
-                      {onDeletePayment && (
-                        <button
-                          onClick={() => onDeletePayment(p)}
-                          className="text-red-500 hover:text-red-700 font-bold p-1 text-xs"
-                          title="Delete entry"
-                        >
-                          🗑️
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Record Payment Collection Modal with In-Modal History Summary */}
+      {/* Record Payment Collection Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-fadeIn overflow-y-auto">
-          <div className="bg-white rounded-2xl border border-customBorder shadow-glass max-w-lg w-full p-6 space-y-4 my-8">
+          <div className="bg-white rounded-2xl border border-customBorder shadow-glass max-w-md w-full p-6 space-y-4 my-8">
             <div className="flex items-center justify-between border-b border-customBorder pb-3">
               <div>
                 <h3 className="text-base font-bold text-textSlate flex items-center gap-2">
-                  <span>➕ Record Batch Payment Collection</span>
+                  <span>➕ Record Payment Collection</span>
                 </h3>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Collection entry for Batch #{modalBatchNum} date-wise
-                </p>
               </div>
               <button 
                 onClick={() => setShowAddModal(false)}
@@ -323,43 +359,6 @@ export function PaymentLedger({
               >
                 ✕
               </button>
-            </div>
-
-            {/* In-Modal Batch History Summary */}
-            <div className="bg-slate-50 p-3.5 rounded-xl border border-customBorder space-y-2 text-xs">
-              <div className="flex items-center justify-between font-bold text-slate-700">
-                <span>Batch #{modalBatchNum} Total Collection So Far:</span>
-                <span className="text-emerald-700 font-black">₹{modalTotalCollected.toLocaleString()}</span>
-              </div>
-              <div className="text-[11px] text-slate-500 font-medium flex items-center justify-between">
-                <span>Cash: ₹{modalTotalCash.toLocaleString()} | UPI: ₹{modalTotalUPI.toLocaleString()}</span>
-                <span>{modalBatchPayments.length} previous payment entries</span>
-              </div>
-
-              {modalBatchPayments.length > 0 && (
-                <div className="mt-2 max-h-36 overflow-y-auto border border-slate-200 rounded-lg bg-white">
-                  <table className="w-full text-left text-[11px]">
-                    <thead>
-                      <tr className="bg-slate-100 border-b border-slate-200">
-                        <th className="py-1 px-2 font-bold text-slate-600">Date</th>
-                        <th className="py-1 px-2 font-bold text-slate-600">Restaurant</th>
-                        <th className="py-1 px-2 font-bold text-slate-600">Amount</th>
-                        <th className="py-1 px-2 font-bold text-slate-600">By</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {modalBatchPayments.map((p, idx) => (
-                        <tr key={idx}>
-                          <td className="py-1 px-2 font-medium text-slate-600">{p.date}</td>
-                          <td className="py-1 px-2 font-bold text-slate-800">{p.restaurant_name || p.restaurantName}</td>
-                          <td className="py-1 px-2 font-black text-emerald-600">₹{parseFloat(p.amount).toLocaleString()} ({p.payment_mode || p.paymentMode})</td>
-                          <td className="py-1 px-2 font-bold text-slate-700">👤 {p.user_name || "Suraj"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
             </div>
 
             {/* Input Form */}
@@ -396,7 +395,7 @@ export function PaymentLedger({
 
               <div>
                 <label className="block text-xs font-bold text-mutedSlate uppercase mb-1">
-                  Restaurant Name *
+                  Restaurant / Hotel Name *
                 </label>
                 <input
                   type="text"
@@ -415,7 +414,7 @@ export function PaymentLedger({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-mutedSlate uppercase mb-1">
-                    Amount (₹) *
+                    Amount Received (₹) *
                   </label>
                   <input
                     type="number"
@@ -447,7 +446,7 @@ export function PaymentLedger({
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. GPay or Cash received"
+                  placeholder="e.g. Received on field"
                   value={form.note}
                   onChange={e => setForm({ ...form, note: e.target.value })}
                   className="w-full px-3 py-2 rounded-xl border border-customBorder text-xs font-semibold focus:border-accentCyan text-textSlate"
