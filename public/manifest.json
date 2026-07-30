@@ -1,7 +1,13 @@
 {
-  "short_name": "Balaji Tracker",
+  "short_name": "Balaji Cylinder Tracker",
   "name": "Shree Balaji Cylinder Tracker",
   "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    },
     {
       "src": "icon-192.png",
       "type": "image/png",
