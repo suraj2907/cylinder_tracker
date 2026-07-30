@@ -14,7 +14,7 @@ self.addEventListener('install', event => {
     caches.open(CACHE_NAME)
       .then(cache => {
         return Promise.allSettled(
-          ASSETS_TO_CACHE.map(asset => 
+          ASSETS_TO_CACHE.map(asset =>
             cache.add(asset).catch(e => console.warn('PWA Asset cache skip:', asset, e))
           )
         );

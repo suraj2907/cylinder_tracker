@@ -2,6 +2,7 @@
   "short_name": "SBA Cyl Tracker",
   "name": "Shree Balaji Cylinder Tracker",
   "id": "shree-balaji-cylinder-tracker",
+  "description": "Cylinder Tracker & Partner Passbook Portal - Shree Balaji Agencies",
   "start_url": "/?utm_source=pwa",
   "scope": "/",
   "display": "standalone",
