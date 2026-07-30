@@ -208,65 +208,67 @@ export default function App() {
           ]);
 
           const batchesMap = {};
-          dbBatches.forEach(b => {
-            batchesMap[b.batch_num] = {
-              batch: b.batch_num,
-              khaliDate: b.khali_date || "",
+
+          // 1. Load historical base batches (#1 to #120) from INITIAL_DATA
+          (INITIAL_DATA || []).forEach(b => {
+            batchesMap[b.batch] = {
+              batch: b.batch,
+              khaliDate: b.khaliDate || "",
               note: b.note || "",
-              entries: []
+              entries: (b.entries || []).map(e => ({ ...e }))
             };
           });
 
-          // Merge DB entries with local entries so unsynced entries are never wiped out
-          setBatches(prev => {
-            const entryMap = new Map();
-
-            // First load existing local entries
-            (prev || []).forEach(b => {
-              (b.entries || []).forEach(e => {
-                const key = e.id || `${b.batch}_${e.name}_${e.qty}_${e.type}_${e.date}`;
-                entryMap.set(key, { ...e, batchNum: b.batch });
-              });
-            });
-
-            // Merge DB entries (DB takes precedence if same id/key)
-            dbEntries.forEach(e => {
-              const localKey = e.id || `${e.batch_num}_${e.name}_${e.qty}_${e.type}_${e.date}`;
-              const localEx = entryMap.get(localKey);
-              const entryObj = {
-                id: e.id,
-                name: e.name,
-                qty: e.qty,
-                type: e.type,
-                date: e.date || (localEx ? localEx.date : "") || "",
-                isReturn: e.is_return,
-                user_name: e.user_name || (localEx ? localEx.user_name : 'Suraj')
+          // 2. Load DB batches (#117 to #128)
+          dbBatches.forEach(b => {
+            if (!batchesMap[b.batch_num]) {
+              batchesMap[b.batch_num] = {
+                batch: b.batch_num,
+                khaliDate: b.khali_date || "",
+                note: b.note || "",
+                entries: []
               };
-              entryMap.set(localKey, { ...entryObj, batchNum: e.batch_num });
-            });
-
-            // Group all entries into batchesMap
-            entryMap.forEach(e => {
-              const bNum = e.batchNum;
-              const cleanEntry = { ...e };
-              delete cleanEntry.batchNum;
-
-              if (!batchesMap[bNum]) {
-                batchesMap[bNum] = {
-                  batch: bNum,
-                  khaliDate: cleanEntry.date || "",
-                  note: "",
-                  entries: []
-                };
-              }
-              // Prevent duplicate insertions inside same batch
-              if (!batchesMap[bNum].entries.some(item => item.id === cleanEntry.id)) {
-                batchesMap[bNum].entries.push(cleanEntry);
-              }
-            });
-
-            return Object.values(batchesMap).sort((a, b) => b.batch - a.batch);
+            } else {
+              if (b.khali_date) batchesMap[b.batch_num].khaliDate = b.khali_date;
+              if (b.note) batchesMap[b.batch_num].note = b.note;
+            }
           });
+
+          // 3. Clear entries for active DB batches so DB entries are authoritative
+          const dbBatchNums = new Set(dbBatches.map(b => b.batch_num));
+          dbBatchNums.forEach(bNum => {
+            if (batchesMap[bNum]) {
+              batchesMap[bNum].entries = [];
+            }
+          });
+
+          // 4. Populate DB entries cleanly
+          dbEntries.forEach(e => {
+            const bNum = e.batch_num;
+            if (!batchesMap[bNum]) {
+              batchesMap[bNum] = {
+                batch: bNum,
+                khaliDate: e.date || "",
+                note: "",
+                entries: []
+              };
+            }
+            batchesMap[bNum].entries.push({
+              id: e.id,
+              name: e.name,
+              qty: e.qty,
+              type: e.type,
+              date: e.date || "",
+              isReturn: !!e.is_return,
+              user_name: e.user_name || 'Suraj'
+            });
+          });
+
+          const finalBatches = Object.values(batchesMap).sort((a, b) => b.batch - a.batch);
+          setBatches(finalBatches);
+          try {
+            localStorage.setItem('cylinder_data', JSON.stringify(finalBatches));
+          } catch (e) {}
           
           // Merge DB payments with any unsynced local payments so entries never disappear
           setPayments(prev => {
