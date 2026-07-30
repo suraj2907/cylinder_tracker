@@ -79,7 +79,35 @@ export default function App() {
 
   // PWA states
   const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [isInstallable, setIsInstallable] = useState(false);
+  const [isInstallable, setIsInstallable] = useState(true);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  function handleInstallClick() {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+          showToast("🎉 App Install Shuru Ho Gaya!");
+        }
+        setDeferredPrompt(null);
+      });
+    } else {
+      setShowInstallGuide(true);
+    }
+  }
 
   const isSupabaseConfigured = useMemo(() => {
     const url = import.meta.env.VITE_SUPABASE_URL;
@@ -817,11 +845,64 @@ export default function App() {
 
           <button 
             onClick={() => setTab("add")}
-            className="px-4 py-2 rounded-xl text-xs font-black bg-sky-600 text-white shadow-soft flex items-center gap-1">
+            className="px-3.5 py-2 rounded-xl text-xs font-black bg-sky-600 text-white shadow-soft flex items-center gap-1">
             ➕ Add Entry
+          </button>
+
+          <button 
+            onClick={handleInstallClick}
+            className="px-3 py-2 rounded-xl text-xs font-bold border border-sky-300 bg-sky-50 text-sky-800 flex items-center gap-1">
+            📲 Install
           </button>
         </div>
       </div>
+
+      {/* PWA Mobile Installation Guide Modal */}
+      {showInstallGuide && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">📲</span>
+                <h3 className="text-base font-black text-slate-900">Mobile App Install Guide</h3>
+              </div>
+              <button 
+                onClick={() => setShowInstallGuide(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 font-bold hover:bg-slate-200">
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 font-medium">
+              Is app ko apne mobile ki <strong>Home Screen</strong> par install karne ke liye browser menu ka use karein:
+            </p>
+
+            <div className="space-y-3 pt-1">
+              <div className="p-3.5 rounded-2xl bg-sky-50 border border-sky-100 flex items-start gap-3">
+                <span className="text-xl">🤖</span>
+                <div className="text-xs space-y-1">
+                  <span className="font-extrabold text-sky-950 block">Android Mobile / Chrome Browser</span>
+                  <p className="text-sky-800">1. Top-right me <strong>3 dots (⋮)</strong> menu button par tap karein.<br/>2. <strong>"Install App"</strong> ya <strong>"Add to Home Screen"</strong> select karein.</p>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-100 flex items-start gap-3">
+                <span className="text-xl">🍏</span>
+                <div className="text-xs space-y-1">
+                  <span className="font-extrabold text-amber-950 block">iPhone / iOS Safari Browser</span>
+                  <p className="text-amber-900">1. Bottom menu me <strong>Share button (⎋)</strong> par tap karein.<br/>2. Niche scroll karke <strong>"Add to Home Screen (➕)"</strong> select karein.</p>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowInstallGuide(false)}
+              className="w-full py-3 rounded-2xl bg-slate-900 text-white font-extrabold text-xs shadow-md hover:bg-slate-800 transition-all">
+              Samajh Gaya (Close)
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Activity Feed Drawer Popup */}
       {showActivityFeed && (
