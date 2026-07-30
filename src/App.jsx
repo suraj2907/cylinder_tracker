@@ -81,6 +81,10 @@ export default function App() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstallable, setIsInstallable] = useState(true);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
+  const [showAutoBanner, setShowAutoBanner] = useState(() => {
+    const isStandalone = typeof window !== 'undefined' && (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true);
+    return !isStandalone;
+  });
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e) => {
@@ -888,6 +892,40 @@ export default function App() {
               className="w-full py-3 rounded-2xl bg-slate-900 text-white font-extrabold text-xs shadow-md hover:bg-slate-800 transition-all">
               Samajh Gaya (Close)
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Auto-Install Banner for Mobile Refresh */}
+      {showAutoBanner && (
+        <div className="fixed bottom-4 left-4 right-4 z-40 animate-slideUp">
+          <div className="bg-slate-950/95 text-white backdrop-blur-md rounded-2xl p-3.5 shadow-2xl border border-sky-500/30 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-sky-500/20 border border-sky-400/40 p-1 flex items-center justify-center shrink-0">
+                <svg viewBox="0 0 512 512" className="w-full h-full">
+                  <path d="M 190 75 C 190 60 205 50 225 50 L 287 50 C 307 50 322 60 322 75 L 322 110 L 190 110 Z" fill="none" stroke="#dc2626" strokeWidth="24"/>
+                  <path d="M 165 190 C 165 125 202 112 256 112 C 310 112 347 125 347 190 L 347 205 L 165 205 Z" fill="#10b981"/>
+                  <path d="M 165 205 L 347 205 L 347 345 C 347 385 312 400 256 400 C 200 400 165 385 165 345 Z" fill="#ef4444"/>
+                </svg>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-black text-white">Shree Balaji App Install Karein</span>
+                <span className="text-[10px] text-slate-300">Fast access & instant passbook updates</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button 
+                onClick={handleInstallClick}
+                className="px-3 py-1.5 rounded-xl bg-sky-500 text-white text-xs font-black shadow-md hover:bg-sky-400">
+                📲 Install
+              </button>
+              <button 
+                onClick={() => setShowAutoBanner(false)}
+                className="w-7 h-7 rounded-full bg-slate-800 text-slate-400 font-bold hover:bg-slate-700 text-xs flex items-center justify-center">
+                ✕
+              </button>
+            </div>
           </div>
         </div>
       )}
