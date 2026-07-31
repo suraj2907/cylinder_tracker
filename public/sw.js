@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cylinder-tracker-v5';
+const CACHE_NAME = 'cylinder-tracker-v6';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -59,7 +59,7 @@ self.addEventListener('fetch', event => {
         .catch(() => {
           return caches.match(event.request).then(cached => cached || caches.match('/index.html'));
         })
-    );
+      );
     return;
   }
 
