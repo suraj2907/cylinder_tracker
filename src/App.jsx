@@ -77,60 +77,6 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
-  // PWA states
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [isInstallable, setIsInstallable] = useState(true);
-  const [showInstallGuide, setShowInstallGuide] = useState(false);
-  const [showAutoBanner, setShowAutoBanner] = useState(() => {
-    const isStandalone = typeof window !== 'undefined' && (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true);
-    return !isStandalone;
-  });
-
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setIsInstallable(true);
-    };
-
-    const handleAppInstalled = () => {
-      setDeferredPrompt(null);
-      setIsInstallable(false);
-      setShowAutoBanner(false);
-      showToast("🎉 PWA App Installed Successfully!");
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    window.addEventListener('appinstalled', handleAppInstalled);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
-    };
-  }, []);
-
-  function handleInstallClick() {
-    if (deferredPrompt) {
-      // Native Browser Prompt Open Karein
-      deferredPrompt.prompt();
-
-      // User ka choice check karein (Accepted ya Dismissed)
-      deferredPrompt.userChoice.then((choiceResult) => {
-        if (choiceResult.outcome === 'accepted') {
-          console.log('User accepted the PWA install');
-          showToast("🎉 App Install Shuru Ho Gaya!");
-        } else {
-          console.log('User dismissed the PWA install');
-        }
-        setDeferredPrompt(null);
-      });
-    } else {
-      // Agar native prompt ready nahi hai ya browser support nahi karta (e.g. iOS Safari)
-      // Tab hi instruction modal popup dikhayein
-      setShowInstallGuide(true);
-    }
-  }
-
   const isSupabaseConfigured = useMemo(() => {
     const url = import.meta.env.VITE_SUPABASE_URL;
     const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -211,7 +157,7 @@ export default function App() {
             return dbEntries;
           };
 
-          // Fetch payments
+          // Fetch payments gracefully
           const fetchPayments = async () => {
             const { data, error } = await supabase
               .from('payments')
@@ -229,9 +175,7 @@ export default function App() {
             fetchPayments()
           ]);
 
-          // Capture any unsynced local entries (from localStorage state) BEFORE
-          // they get overwritten below, so a failed Supabase insert never
-          // silently disappears on refresh.
+          // Capture any unsynced local entries BEFORE they get overwritten below
           const localUnsyncedEntries = [];
           (batches || []).forEach(b => {
             (b.entries || []).forEach(e => {
@@ -317,8 +261,7 @@ export default function App() {
             });
           });
 
-          // Re-inject any unsynced local entries that never made it into Supabase,
-          // avoiding duplicates if a matching record already came from the DB.
+          // Re-inject any unsynced local entries that never made it into Supabase
           localUnsyncedEntries.forEach(({ batchNum, entry }) => {
             if (!batchesMap[batchNum]) {
               batchesMap[batchNum] = { batch: batchNum, khaliDate: entry.date || "", note: "", entries: [] };
@@ -344,7 +287,8 @@ export default function App() {
               try {
                 const validKhaliDate = entry.date && entry.date.trim() ? entry.date.trim() : new Date().toISOString().split('T')[0];
                 await supabase.from('batches').upsert({ batch_num: batchNum, khali_date: validKhaliDate });
-                const { data: retryData, error: retryErr } = await supabase.from('entries').insert({
+                
+                const entryPayload = {
                   batch_num: batchNum,
                   name: entry.name,
                   qty: entry.qty,
@@ -352,7 +296,9 @@ export default function App() {
                   date: validKhaliDate,
                   is_return: !!entry.isReturn,
                   user_name: entry.user_name || currentUser
-                }).select();
+                };
+
+                let { data: retryData, error: retryErr } = await supabase.from('entries').insert(entryPayload).select();
 
                 if (retryErr) {
                   console.error("Retry sync failed for entry:", entry, retryErr);
@@ -961,14 +907,6 @@ export default function App() {
               title="Download backup data">
               💾 Backup
             </button>
-
-            {isInstallable && (
-              <button 
-                className="px-3 py-2 rounded-xl text-xs font-bold border border-sky-300 bg-sky-50 hover:bg-sky-100 text-sky-800 transition-all"
-                onClick={handleInstallClick}>
-                📲 Install App
-              </button>
-            )}
           </div>
 
         </div>
@@ -993,101 +931,8 @@ export default function App() {
             className="px-3.5 py-2 rounded-xl text-xs font-black bg-sky-600 text-white shadow-soft flex items-center gap-1">
             ➕ Add Entry
           </button>
-
-          <button 
-            onClick={handleInstallClick}
-            className="px-3 py-2 rounded-xl text-xs font-bold border border-sky-300 bg-sky-50 text-sky-800 flex items-center gap-1">
-            📲 Install
-          </button>
         </div>
       </div>
-
-      {/* PWA Mobile Installation Guide Modal */}
-      {showInstallGuide && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">📲</span>
-                <h3 className="text-base font-black text-slate-900">Mobile App Install Guide</h3>
-              </div>
-              <button 
-                onClick={() => setShowInstallGuide(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 font-bold hover:bg-slate-200">
-                ✕
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-600 font-medium">
-              Is app ko apne mobile ki <strong>Home Screen</strong> par install karne ke liye browser menu ka use karein:
-            </p>
-
-            <div className="space-y-3 pt-1">
-              <div className="p-3.5 rounded-2xl bg-sky-50 border border-sky-100 flex items-start gap-3">
-                <span className="text-xl">🤖</span>
-                <div className="text-xs space-y-1">
-                  <span className="font-extrabold text-sky-950 block">Android Chrome (Aapka Mobile)</span>
-                  <p className="text-sky-800 leading-relaxed">
-                    1. 3 Dots (⋮) menu me <strong>"Share..."</strong> par tap karein.<br/>
-                    2. Share list me <strong>"Add to Home Screen" (➕)</strong> ya <strong>"Install App"</strong> select karein!
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-100 flex items-start gap-3">
-                <span className="text-xl">🍏</span>
-                <div className="text-xs space-y-1">
-                  <span className="font-extrabold text-amber-950 block">iPhone / iOS Safari Browser</span>
-                  <p className="text-amber-900 leading-relaxed">
-                    1. Safari bottom menu me <strong>Share button (⎋)</strong> par tap karein.<br/>
-                    2. <strong>"Add to Home Screen (➕)"</strong> select karein.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setShowInstallGuide(false)}
-              className="w-full py-3 rounded-2xl bg-slate-900 text-white font-extrabold text-xs shadow-md hover:bg-slate-800 transition-all">
-              Samajh Gaya (Close)
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Floating Auto-Install Banner for Mobile Refresh */}
-      {showAutoBanner && (
-        <div className="fixed bottom-4 left-4 right-4 z-40 animate-slideUp">
-          <div className="bg-slate-950/95 text-white backdrop-blur-md rounded-2xl p-3.5 shadow-2xl border border-sky-500/30 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-sky-500/20 border border-sky-400/40 p-1 flex items-center justify-center shrink-0">
-                <svg viewBox="0 0 512 512" className="w-full h-full">
-                  <path d="M 190 75 C 190 60 205 50 225 50 L 287 50 C 307 50 322 60 322 75 L 322 110 L 190 110 Z" fill="none" stroke="#dc2626" strokeWidth="24"/>
-                  <path d="M 165 190 C 165 125 202 112 256 112 C 310 112 347 125 347 190 L 347 205 L 165 205 Z" fill="#10b981"/>
-                  <path d="M 165 205 L 347 205 L 347 345 C 347 385 312 400 256 400 C 200 400 165 385 165 345 Z" fill="#ef4444"/>
-                </svg>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs font-black text-white">Shree Balaji App Install Karein</span>
-                <span className="text-[10px] text-slate-300">Fast access & instant passbook updates</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button 
-                onClick={handleInstallClick}
-                className="px-3 py-1.5 rounded-xl bg-sky-500 text-white text-xs font-black shadow-md hover:bg-sky-400">
-                📲 Install
-              </button>
-              <button 
-                onClick={() => setShowAutoBanner(false)}
-                className="w-7 h-7 rounded-full bg-slate-800 text-slate-400 font-bold hover:bg-slate-700 text-xs flex items-center justify-center">
-                ✕
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Activity Feed Drawer Popup */}
       {showActivityFeed && (
@@ -1129,7 +974,7 @@ export default function App() {
           {tab === "payments" && <PaymentLedger payments={payments} onAddPayment={handleAddPayment} onDeletePayment={handleDeletePayment} batches={batches} onUpdateBatchCost={handleUpdateBatchCost} restMap={restMap} />}
           {tab === "calendar" && <CalendarView dateMap={dateMap} selectedDate={selectedDate} setSelectedDate={setSelectedDate} handleDeleteEntry={handleDeleteEntry} payments={payments} batches={batches} onDeletePayment={handleDeletePayment} />}
           {tab === "batches" && <BatchesList filteredBatches={filteredBatches} batchSearch={batchSearch} setBatchSearch={setBatchSearch} />}
-          {tab === "add" && <AddEntry newEntry={newEntry} setNewEntry={setNewEntry} handleAdd={handleAdd} restMap={restMap} isInstallable={isInstallable} handleInstallClick={handleInstallClick} />}
+          {tab === "add" && <AddEntry newEntry={newEntry} setNewEntry={setNewEntry} handleAdd={handleAdd} restMap={restMap} />}
           {tab === "gasPredictor" && <GasPredictor restaurants={restaurants} batches={batches} />}
         </div>
       </div>
