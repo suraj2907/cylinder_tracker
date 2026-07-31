@@ -241,6 +241,14 @@ export default function App() {
             });
           });
 
+          // Capture any unsynced local payments
+          const localUnsyncedPayments = [];
+          (payments || []).forEach(p => {
+            if (p.unsynced || (typeof p.id === 'string' && p.id.startsWith('pay_'))) {
+              localUnsyncedPayments.push(p);
+            }
+          });
+
           const batchesMap = {};
 
           // 1. Load historical base batches (#1 to #120) from INITIAL_DATA
@@ -249,22 +257,31 @@ export default function App() {
               batch: b.batch,
               khaliDate: b.khaliDate || "",
               note: b.note || "",
+              bookingCost: b.bookingCost || b.booking_cost || 0,
+              booking_cost: b.bookingCost || b.booking_cost || 0,
               entries: (b.entries || []).map(e => ({ ...e }))
             };
           });
 
-          // 2. Load DB batches (#117 to #128)
+          // 2. Load DB batches (#117 to #128) - INCLUDING booking_cost mapping!
           dbBatches.forEach(b => {
+            const bCost = parseFloat(b.booking_cost || b.bookingCost) || 0;
             if (!batchesMap[b.batch_num]) {
               batchesMap[b.batch_num] = {
                 batch: b.batch_num,
                 khaliDate: b.khali_date || "",
                 note: b.note || "",
+                bookingCost: bCost,
+                booking_cost: bCost,
                 entries: []
               };
             } else {
               if (b.khali_date) batchesMap[b.batch_num].khaliDate = b.khali_date;
               if (b.note) batchesMap[b.batch_num].note = b.note;
+              if (bCost > 0 || b.booking_cost !== undefined) {
+                batchesMap[b.batch_num].bookingCost = bCost;
+                batchesMap[b.batch_num].booking_cost = bCost;
+              }
             }
           });
 
@@ -284,6 +301,8 @@ export default function App() {
                 batch: bNum,
                 khaliDate: e.date || "",
                 note: "",
+                bookingCost: 0,
+                booking_cost: 0,
                 entries: []
               };
             }
@@ -350,19 +369,44 @@ export default function App() {
             }
           }
           
-          // Merge DB payments with any unsynced local payments so entries never disappear
+          // Merge DB payments with any unsynced local payments so payments never disappear
           setPayments(prev => {
             const mergedMap = new Map();
-            (prev || []).forEach(p => {
-              const key = p.id || `${p.batch_num || p.batchNum}_${p.restaurant_name || p.restaurantName}_${p.amount}_${p.date}`;
-              mergedMap.set(key, p);
-            });
             (dbPayments || []).forEach(p => {
               const key = p.id || `${p.batch_num || p.batchNum}_${p.restaurant_name || p.restaurantName}_${p.amount}_${p.date}`;
               mergedMap.set(key, p);
             });
+            (localUnsyncedPayments || []).forEach(p => {
+              const key = p.id || `${p.batch_num || p.batchNum}_${p.restaurant_name || p.restaurantName}_${p.amount}_${p.date}`;
+              if (!mergedMap.has(key)) {
+                mergedMap.set(key, p);
+              }
+            });
             return Array.from(mergedMap.values());
           });
+
+          // Retry pushing unsynced payments to Supabase sequentially
+          if (localUnsyncedPayments.length > 0) {
+            for (const p of localUnsyncedPayments) {
+              try {
+                const { data: retryPay, error: retryPayErr } = await supabase.from('payments').insert({
+                  batch_num: p.batch_num || p.batchNum,
+                  restaurant_name: p.restaurant_name || p.restaurantName,
+                  amount: parseFloat(p.amount) || 0,
+                  payment_mode: p.payment_mode || p.paymentMode,
+                  user_name: p.user_name || currentUser,
+                  date: p.date,
+                  note: p.note
+                }).select();
+
+                if (!retryPayErr && retryPay && retryPay[0]) {
+                  setPayments(prev => prev.map(pay => pay.id === p.id ? { ...retryPay[0], unsynced: false } : pay));
+                }
+              } catch (e) {
+                console.error("Retry payment sync exception:", e);
+              }
+            }
+          }
 
           showToast("⚡ Supabase Connected & Real-time Live!");
         } catch (err) {
@@ -439,6 +483,25 @@ export default function App() {
             } else if (payload.eventType === 'DELETE') {
               const oldId = payload.old.id;
               setPayments(prev => prev.filter(p => p !== oldId));
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'batches' },
+          (payload) => {
+            console.log('⚡ Realtime Batches Event:', payload);
+            if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+              const updatedBatch = payload.new;
+              const bNum = updatedBatch.batch_num;
+              const bCost = parseFloat(updatedBatch.booking_cost) || 0;
+              setBatches(prev => prev.map(b => b.batch === bNum ? {
+                ...b,
+                khaliDate: updatedBatch.khali_date || b.khaliDate,
+                note: updatedBatch.note || b.note,
+                bookingCost: bCost,
+                booking_cost: bCost
+              } : b));
             }
           }
         )
@@ -657,7 +720,8 @@ export default function App() {
       paymentMode: paymentData.paymentMode,
       user_name: activeUser,
       date: paymentData.date || new Date().toISOString().split('T')[0],
-      note: paymentData.note || ""
+      note: paymentData.note || "",
+      unsynced: true
     };
 
     // Immediately update state and LocalStorage so it never vanishes
@@ -677,17 +741,21 @@ export default function App() {
 
         if (error) {
           console.warn("Supabase payments insert warning/error:", error);
+          showToast(`⚠️ Payment DB Sync Fail: ${error.message || 'Error'}. Local me safe hai!`, false);
         } else if (data && data[0]) {
           // Update temp local payment with DB inserted object
-          setPayments(prev => prev.map(p => p.id === localPayment.id ? data[0] : p));
+          setPayments(prev => prev.map(p => p.id === localPayment.id ? { ...data[0], unsynced: false } : p));
+          showToast(`💳 Payment ₹${paymentData.amount} for ${paymentData.restaurantName} DB me save ho gaya!`);
         }
       } catch (err) {
         console.warn("Supabase payments exception:", err);
+        showToast(`⚠️ Payment Sync Error: ${err.message}. Local me safe hai.`, false);
       }
+    } else {
+      showToast(`💳 Payment ₹${paymentData.amount} for ${paymentData.restaurantName} saved!`);
     }
 
     addActivity("Payment Recorded", `₹${paymentData.amount} (${paymentData.paymentMode}) for ${paymentData.restaurantName} (Batch #${paymentData.batchNum})`, activeUser);
-    showToast(`💳 Payment ₹${paymentData.amount} for ${paymentData.restaurantName} saved!`);
   }
 
   // Delete Payment Handler
@@ -707,19 +775,28 @@ export default function App() {
 
   // Update Batch Booking Cost Handler
   async function handleUpdateBatchCost(batchNum, cost) {
+    setBatches(prev => prev.map(b => b.batch === batchNum ? { ...b, bookingCost: cost, booking_cost: cost } : b));
+    addActivity("Batch Cost Updated", `Batch #${batchNum} booking cost set to ₹${cost.toLocaleString()}`);
+
     if (isSupabaseConfigured) {
       try {
-        await supabase.from('batches').upsert({
+        const { error } = await supabase.from('batches').upsert({
           batch_num: batchNum,
           booking_cost: cost
         });
+        if (error) {
+          console.warn("Batch cost save error:", error);
+          showToast(`⚠️ Booking cost DB Sync Fail: ${error.message}`, false);
+        } else {
+          showToast(`💰 Batch #${batchNum} booking cost set to ₹${cost.toLocaleString()}!`);
+        }
       } catch (e) {
         console.error("Batch cost save error", e);
+        showToast(`⚠️ Sync Error: ${e.message}`, false);
       }
+    } else {
+      showToast(`💰 Batch #${batchNum} booking cost set to ₹${cost.toLocaleString()}!`);
     }
-    setBatches(prev => prev.map(b => b.batch === batchNum ? { ...b, bookingCost: cost, booking_cost: cost } : b));
-    addActivity("Batch Cost Updated", `Batch #${batchNum} booking cost set to ₹${cost.toLocaleString()}`);
-    showToast(`💰 Batch #${batchNum} booking cost set to ₹${cost.toLocaleString()}!`);
   }
 
   const TABS = [
