@@ -131,120 +131,120 @@ export default function RestaurantStatementModal({
   }, [allRestaurantActivities, currentMonthStr]);
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[99999] flex items-center justify-center p-3 sm:p-5 animate-fadeIn overflow-y-auto">
-      <div className="bg-white rounded-2xl border border-customBorder shadow-glass max-w-4xl w-full p-5 sm:p-6 space-y-5 my-6 max-h-[92vh] flex flex-col justify-between">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[99999] flex items-center justify-center p-2.5 sm:p-5 animate-fadeIn">
+      <div className="bg-white rounded-3xl border border-customBorder shadow-2xl max-w-4xl w-full p-4 sm:p-6 space-y-4 my-auto max-h-[95vh] flex flex-col justify-between overflow-hidden">
         
         {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-customBorder pb-4 flex-wrap gap-3">
+        <div className="flex items-center justify-between border-b border-customBorder pb-3 flex-wrap gap-2">
           <div>
             <span className="text-[10px] font-black text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-md uppercase tracking-wider">
               🏪 Hotel Passbook Statement
             </span>
-            <h2 className="text-xl font-black text-textSlate mt-1 flex items-center gap-2">
-              <span>{restaurantName}</span>
+            <h2 className="text-lg sm:text-xl font-black text-textSlate mt-0.5">
+              {restaurantName}
             </h2>
           </div>
 
-          {/* Period Filter Selector */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-1.5 p-1 bg-slate-100 border border-slate-200 rounded-xl">
-              <button
-                onClick={() => setRangeMode(false)}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                  !rangeMode ? 'bg-white text-slate-900 shadow-sm font-extrabold' : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                Month View
-              </button>
-              <button
-                onClick={() => setRangeMode(true)}
-                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                  rangeMode ? 'bg-white text-slate-900 shadow-sm font-extrabold' : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                Date Range
-              </button>
-            </div>
+          <button
+            onClick={onClose}
+            className="w-9 h-9 rounded-full bg-slate-100 text-slate-500 font-bold hover:bg-slate-200 text-lg flex items-center justify-center shrink-0"
+          >
+            ✕
+          </button>
+        </div>
 
-            {!rangeMode ? (
-              <select
-                value={filterPeriod}
-                onChange={e => setFilterPeriod(e.target.value)}
-                className="bg-white border border-customBorder rounded-xl px-3 py-1.5 text-xs font-bold text-slate-800 shadow-sm focus:border-accentCyan"
-              >
-                <option value="all">All Time (All History)</option>
-                {availableMonths.map(mStr => {
-                  const [y, m] = mStr.split('-');
-                  const mName = MFULL[parseInt(m) - 1] || mStr;
-                  return (
-                    <option key={mStr} value={mStr}>{mName} {y}</option>
-                  );
-                })}
-              </select>
-            ) : (
-              <div className="flex items-center gap-2">
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={e => setStartDate(e.target.value)}
-                  className="px-2.5 py-1 rounded-xl border text-xs font-bold"
-                />
-                <span className="text-xs text-slate-400">to</span>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={e => setEndDate(e.target.value)}
-                  className="px-2.5 py-1 rounded-xl border text-xs font-bold"
-                />
-              </div>
-            )}
-
+        {/* Filter Period Controls */}
+        <div className="flex items-center justify-between gap-2 flex-wrap bg-slate-50 p-2.5 rounded-2xl border border-slate-200">
+          <div className="flex items-center gap-1.5 p-1 bg-white border border-slate-200 rounded-xl">
             <button
-              onClick={onClose}
-              className="text-slate-400 hover:text-slate-600 font-extrabold text-xl px-2 py-1 rounded-xl hover:bg-slate-100"
+              onClick={() => setRangeMode(false)}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                !rangeMode ? 'bg-sky-600 text-white shadow-sm font-extrabold' : 'text-slate-600 hover:text-slate-900'
+              }`}
             >
-              ✕
+              Month View
+            </button>
+            <button
+              onClick={() => setRangeMode(true)}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                rangeMode ? 'bg-sky-600 text-white shadow-sm font-extrabold' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Date Range
             </button>
           </div>
+
+          {!rangeMode ? (
+            <select
+              value={filterPeriod}
+              onChange={e => setFilterPeriod(e.target.value)}
+              className="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-black text-slate-800 shadow-sm focus:border-sky-500"
+            >
+              <option value="all">All Time (Complete History)</option>
+              {availableMonths.map(mStr => {
+                const [y, m] = mStr.split('-');
+                const mName = MFULL[parseInt(m) - 1] || mStr;
+                return (
+                  <option key={mStr} value={mStr}>{mName} {y}</option>
+                );
+              })}
+            </select>
+          ) : (
+            <div className="flex items-center gap-2 flex-wrap">
+              <input
+                type="date"
+                value={startDate}
+                onChange={e => setStartDate(e.target.value)}
+                className="px-2.5 py-1 rounded-xl border border-slate-300 bg-white text-xs font-bold"
+              />
+              <span className="text-xs text-slate-400 font-bold">to</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={e => setEndDate(e.target.value)}
+                className="px-2.5 py-1 rounded-xl border border-slate-300 bg-white text-xs font-bold"
+              />
+            </div>
+          )}
         </div>
 
         {/* Summary KPIs Strip for this Hotel */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
           {/* Delivered Card */}
-          <div className="bg-sky-50/60 p-3.5 rounded-xl border border-sky-200">
+          <div className="bg-sky-50/70 p-3 rounded-2xl border border-sky-200">
             <div className="text-[10px] font-bold text-sky-800 uppercase tracking-wider">📦 Total Delivered</div>
-            <div className="text-xl font-black text-sky-900 mt-1">{stats.totalDel} units</div>
-            <div className="text-[10px] text-sky-700 font-bold mt-0.5">
+            <div className="text-lg font-black text-sky-950 mt-0.5">{stats.totalDel} units</div>
+            <div className="text-[10px] text-sky-800 font-bold mt-0.5">
               19.2kg: {stats.del192} | 21kg: {stats.del21}
             </div>
           </div>
 
           {/* Khali Returned Card */}
-          <div className="bg-teal-50/60 p-3.5 rounded-xl border border-teal-200">
+          <div className="bg-teal-50/70 p-3 rounded-2xl border border-teal-200">
             <div className="text-[10px] font-bold text-teal-800 uppercase tracking-wider">♻️ Khali Returned</div>
-            <div className="text-xl font-black text-teal-900 mt-1">{stats.totalRet} units</div>
-            <div className="text-[10px] text-teal-700 font-bold mt-0.5">
+            <div className="text-lg font-black text-teal-950 mt-0.5">{stats.totalRet} units</div>
+            <div className="text-[10px] text-teal-800 font-bold mt-0.5">
               19.2kg: {stats.ret192} | 21kg: {stats.ret21}
             </div>
           </div>
 
           {/* Outstanding Empty Card */}
-          <div className={`p-3.5 rounded-xl border ${
-            stats.totalOut > 0 ? 'bg-amber-50/70 border-amber-300' : 'bg-emerald-50/70 border-emerald-200'
+          <div className={`p-3 rounded-2xl border ${
+            stats.totalOut > 0 ? 'bg-amber-50/80 border-amber-300' : 'bg-emerald-50/80 border-emerald-200'
           }`}>
             <div className="text-[10px] font-bold uppercase tracking-wider text-slate-700">⚠️ Outstanding Khali</div>
-            <div className={`text-xl font-black mt-1 ${stats.totalOut > 0 ? 'text-amber-900' : 'text-emerald-800'}`}>
+            <div className={`text-lg font-black mt-0.5 ${stats.totalOut > 0 ? 'text-amber-950' : 'text-emerald-900'}`}>
               {stats.totalOut} cylinders
             </div>
-            <div className="text-[10px] font-bold mt-0.5 text-slate-600">
+            <div className="text-[10px] font-bold mt-0.5 text-slate-700">
               19.2kg: {stats.out192} | 21kg: {stats.out21}
             </div>
           </div>
 
           {/* Total Payments Card */}
-          <div className="bg-emerald-50/60 p-3.5 rounded-xl border border-emerald-200">
-            <div className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">💰 Total Payment Received</div>
-            <div className="text-xl font-black text-emerald-700 mt-1">₹{stats.totalPaid.toLocaleString()}</div>
+          <div className="bg-emerald-50/70 p-3 rounded-2xl border border-emerald-200">
+            <div className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">💰 Payment Received</div>
+            <div className="text-lg font-black text-emerald-700 mt-0.5">₹{stats.totalPaid.toLocaleString()}</div>
             <div className="text-[10px] text-emerald-800 font-bold mt-0.5">
               Cash: ₹{stats.paidCash.toLocaleString()} | UPI: ₹{stats.paidUPI.toLocaleString()}
             </div>
@@ -254,18 +254,86 @@ export default function RestaurantStatementModal({
         {/* Date-Wise Complete Passbook Table */}
         <div className="space-y-2 flex-1 overflow-hidden flex flex-col min-h-[220px]">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              📜 Date-Wise Complete Passbook Entries ({filteredActivities.length} entries)
+            <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
+              📜 Passbook History Log ({filteredActivities.length} entries)
             </h3>
           </div>
 
           {filteredActivities.length === 0 ? (
-            <div className="text-center py-10 text-xs text-slate-400 font-semibold bg-slate-50 rounded-xl border border-dashed my-auto">
+            <div className="text-center py-10 text-xs text-slate-400 font-semibold bg-slate-50 rounded-2xl border border-dashed my-auto">
               No activity entries recorded for {restaurantName} in this period.
             </div>
           ) : (
-            <div className="overflow-y-auto border border-customBorder rounded-xl max-h-[420px] bg-white">
-              <table className="w-full text-left border-collapse">
+            <div className="overflow-y-auto border border-slate-200 rounded-2xl max-h-[380px] bg-white">
+              
+              {/* MOBILE CARDS VIEW (Clean & Spacious on Mobile Screens) */}
+              <div className="block md:hidden divide-y divide-slate-100">
+                {filteredActivities.map((item, idx) => (
+                  <div key={item.id || idx} className="p-3.5 space-y-2 hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-extrabold text-slate-900">{item.date}</span>
+                        <span className="text-[11px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                          #{item.batchNum}
+                        </span>
+                      </div>
+                      
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
+                        item.kind === 'cylinder'
+                          ? (item.isReturn ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-sky-100 text-sky-800 border border-sky-200')
+                          : (item.paymentMode === 'UPI' ? 'bg-sky-100 text-sky-700 border border-sky-200' : 'bg-amber-100 text-amber-800 border border-amber-200')
+                      }`}>
+                        {item.kind === 'cylinder'
+                          ? (item.isReturn ? '♻️ Khali Return' : '🚚 Delivery')
+                          : `💳 Payment (${item.paymentMode})`}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-0.5">
+                      <div>
+                        {item.kind === 'cylinder' ? (
+                          <div className="text-sm font-black text-slate-900">
+                            {item.qty}x {item.type} {item.isReturn ? 'Khali' : 'Cylinder'}
+                          </div>
+                        ) : (
+                          <div className="text-sm font-black text-emerald-600">
+                            ₹{item.amount.toLocaleString()} <span className="text-xs text-slate-500 font-semibold">Received</span>
+                          </div>
+                        )}
+                        {item.note && <div className="text-[11px] text-slate-500 italic mt-0.5">{item.note}</div>}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                          👤 {item.userName || "Suraj"}
+                        </span>
+
+                        {item.kind === 'cylinder' && handleDeleteEntry && (
+                          <button
+                            onClick={() => handleDeleteEntry(item.batchNum, item.originalEntry)}
+                            className="text-red-500 hover:text-red-700 font-bold p-1 text-xs"
+                            title="Delete entry"
+                          >
+                            🗑️
+                          </button>
+                        )}
+                        {item.kind === 'payment' && onDeletePayment && (
+                          <button
+                            onClick={() => onDeletePayment(item.rawPaymentObj)}
+                            className="text-red-500 hover:text-red-700 font-bold p-1 text-xs"
+                            title="Delete payment"
+                          >
+                            🗑️
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* DESKTOP TABLE VIEW (Clean 6-Column Layout for Desktop Screens) */}
+              <table className="hidden md:table w-full text-left border-collapse">
                 <thead className="sticky top-0 bg-slate-100 border-b border-customBorder z-10">
                   <tr>
                     <th className="py-2.5 px-3.5 text-[10px] font-bold text-mutedSlate uppercase">Date</th>
@@ -332,6 +400,7 @@ export default function RestaurantStatementModal({
                   ))}
                 </tbody>
               </table>
+
             </div>
           )}
         </div>
@@ -339,11 +408,11 @@ export default function RestaurantStatementModal({
         {/* Modal Footer */}
         <div className="pt-3 border-t border-customBorder flex items-center justify-between">
           <span className="text-xs font-semibold text-slate-500">
-            Statement generated for {restaurantName}
+            Statement for {restaurantName}
           </span>
           <button
             onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-slate-800 text-white text-xs font-bold hover:bg-slate-900 active:scale-95 transition-all"
+            className="px-5 py-2 rounded-xl bg-slate-900 text-white text-xs font-extrabold hover:bg-slate-800 active:scale-95 transition-all shadow-md"
           >
             Close Passbook
           </button>

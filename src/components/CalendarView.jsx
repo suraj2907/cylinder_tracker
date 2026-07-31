@@ -132,83 +132,6 @@ export default function CalendarView({
     }).sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [combinedEntries, rangeMode, startDate, endDate, selectedDate, yr, mo, selectedBatchFilter, searchQuery, activityTypeFilter]);
 
-  // Hotel-Wise Audit Summary Breakdown for Selected Month / Range
-  const hotelAuditBreakdown = useMemo(() => {
-    const map = {};
-    filteredTimeline.forEach(item => {
-      const hName = item.restaurantName || "Unknown";
-      if (!map[hName]) {
-        map[hName] = {
-          name: hName,
-          del192: 0,
-          del21: 0,
-          totalDel: 0,
-          ret192: 0,
-          ret21: 0,
-          totalRet: 0,
-          paidAmount: 0
-        };
-      }
-
-      if (item.kind === 'cylinder') {
-        const is21 = item.type === "21kg";
-        if (item.isReturn) {
-          if (is21) map[hName].ret21 += item.qty;
-          else map[hName].ret192 += item.qty;
-          map[hName].totalRet += item.qty;
-        } else {
-          if (is21) map[hName].del21 += item.qty;
-          else map[hName].del192 += item.qty;
-          map[hName].totalDel += item.qty;
-        }
-      } else if (item.kind === 'payment') {
-        map[hName].paidAmount += item.amount;
-      }
-    });
-
-    return Object.values(map).sort((a, b) => b.totalDel - a.totalDel);
-  }, [filteredTimeline]);
-
-  // Batch breakdown in current filtered view
-  const activeBatchesInFilter = useMemo(() => {
-    const map = {};
-    filteredTimeline.forEach(item => {
-      const bNum = item.batchNum;
-      if (!map[bNum]) {
-        map[bNum] = {
-          batch: bNum,
-          delivered: 0,
-          returned: 0,
-          cashCollected: 0,
-          upiCollected: 0,
-          totalCollected: 0,
-          restaurants: new Set()
-        };
-      }
-
-      if (item.restaurantName) {
-        map[bNum].restaurants.add(item.restaurantName);
-      }
-
-      if (item.kind === 'cylinder') {
-        if (item.isReturn) {
-          map[bNum].returned += item.qty;
-        } else {
-          map[bNum].delivered += item.qty;
-        }
-      } else if (item.kind === 'payment') {
-        if (item.paymentMode === 'UPI') {
-          map[bNum].upiCollected += item.amount;
-        } else {
-          map[bNum].cashCollected += item.amount;
-        }
-        map[bNum].totalCollected += item.amount;
-      }
-    });
-
-    return Object.values(map).sort((a, b) => b.batch - a.batch);
-  }, [filteredTimeline]);
-
   // Total summary numbers for current filter with 21kg & 19.2kg breakdown
   const filterStats = useMemo(() => {
     let del21 = 0, del192 = 0;
@@ -458,90 +381,6 @@ export default function CalendarView({
         </div>
       </div>
 
-      {/* Monthly Hotel-Wise Cylinder Delivery Audit Breakdown Table */}
-      {hotelAuditBreakdown.length > 0 && (
-        <div className="bg-white border border-customBorder rounded-2xl p-5 shadow-soft space-y-3">
-          <div className="flex items-center justify-between flex-wrap gap-2 border-b border-customBorder pb-3">
-            <h3 className="text-xs font-black text-textSlate uppercase tracking-wider flex items-center gap-2">
-              <span>🏪 Hotel-Wise Cylinder Delivery Audit ({MFULL[mo]} {yr})</span>
-            </h3>
-            <span className="text-xs font-bold text-slate-600">
-              Total {filterStats.totDel} Units ({filterStats.del192}x 19.2kg + {filterStats.del21}x 21kg) across {hotelAuditBreakdown.length} Hotels
-            </span>
-          </div>
-
-          <div className="overflow-x-auto border border-customBorder rounded-xl">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-slate-50 border-b border-customBorder">
-                  <th className="py-2.5 px-3 text-[10px] font-bold text-mutedSlate uppercase">Hotel / Restaurant Name</th>
-                  <th className="py-2.5 px-3 text-[10px] font-bold text-mutedSlate uppercase">🟢 19.2 KG Del</th>
-                  <th className="py-2.5 px-3 text-[10px] font-bold text-mutedSlate uppercase">🔵 21 KG Del</th>
-                  <th className="py-2.5 px-3 text-[10px] font-bold text-mutedSlate uppercase">Total Delivered</th>
-                  <th className="py-2.5 px-3 text-[10px] font-bold text-mutedSlate uppercase">Total Khali Return</th>
-                  <th className="py-2.5 px-3 text-[10px] font-bold text-mutedSlate uppercase text-right">Total Payment</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {hotelAuditBreakdown.map((h, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-2.5 px-3 text-xs font-extrabold text-slate-900">
-                      <button
-                        onClick={() => setSelectedPassbookHotel(h.name)}
-                        className="hover:underline hover:text-sky-700 text-left font-extrabold flex items-center gap-1"
-                        title="Click to view hotel passbook statement"
-                      >
-                        <span>📜 {h.name}</span>
-                      </button>
-                    </td>
-                    <td className="py-2.5 px-3 text-xs font-black text-teal-800">{h.del192 > 0 ? `${h.del192} units` : '-'}</td>
-                    <td className="py-2.5 px-3 text-xs font-black text-sky-800">{h.del21 > 0 ? `${h.del21} units` : '-'}</td>
-                    <td className="py-2.5 px-3 text-xs font-black text-slate-900 bg-slate-50/50">{h.totalDel} units</td>
-                    <td className="py-2.5 px-3 text-xs font-bold text-slate-500">{h.totalRet > 0 ? `${h.totalRet} khali` : '-'}</td>
-                    <td className="py-2.5 px-3 text-xs font-black text-emerald-600 text-right">
-                      {h.paidAmount > 0 ? `₹${h.paidAmount.toLocaleString()}` : '-'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Active Batches Breakdown Summary Box */}
-      {activeBatchesInFilter.length > 0 && (
-        <div className="bg-white border border-customBorder rounded-2xl p-5 shadow-soft space-y-3">
-          <h3 className="text-xs font-black text-textSlate uppercase tracking-wider flex items-center gap-2">
-            <span>📦 Batches Active in Selected Period ({activeBatchesInFilter.length} Batches)</span>
-          </h3>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {activeBatchesInFilter.map(b => (
-              <div key={b.batch} className="p-3.5 rounded-xl border border-customBorder bg-slate-50/60 space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-black text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md">
-                    Batch #{b.batch}
-                  </span>
-                  <span className="text-[11px] font-bold text-emerald-700">
-                    ₹{b.totalCollected.toLocaleString()}
-                  </span>
-                </div>
-
-                <div className="text-[11px] text-slate-600 font-medium flex items-center justify-between">
-                  <span>Delivered: <strong>{b.delivered}</strong> | Khali: <strong>{b.returned}</strong></span>
-                  <span>Cash: ₹{b.cashCollected.toLocaleString()}</span>
-                </div>
-
-                <div className="text-[10px] text-slate-500 font-semibold truncate" title={Array.from(b.restaurants).join(', ')}>
-                  Hotels: {Array.from(b.restaurants).slice(0, 3).join(', ')}{b.restaurants.size > 3 ? ` +${b.restaurants.size - 3} more` : ''}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Master Date-Wise & Hotel-Wise Timeline Table WITH IN-HEADER SEARCH & FILTERS */}
       <div className="bg-white border border-customBorder rounded-2xl p-5 shadow-soft space-y-4">
         {/* Timeline Header with Integrated Search & Activity Filter */}
@@ -635,7 +474,15 @@ export default function CalendarView({
                   <tr key={item.id || idx} className="hover:bg-slate-50 transition-colors">
                     <td className="py-3 px-4 text-xs font-bold text-slate-700">{item.date}</td>
                     <td className="py-3 px-4 text-xs font-black text-amber-600">#{item.batchNum}</td>
-                    <td className="py-3 px-4 text-xs font-extrabold text-slate-900">{item.restaurantName}</td>
+                    <td className="py-3 px-4 text-xs font-extrabold text-slate-900">
+                      <button
+                        onClick={() => setSelectedPassbookHotel(item.restaurantName)}
+                        className="hover:underline hover:text-sky-700 text-left font-extrabold"
+                        title="Click to view hotel passbook statement"
+                      >
+                        📜 {item.restaurantName}
+                      </button>
+                    </td>
                     <td className="py-3 px-4 text-xs">
                       {item.kind === 'cylinder' ? (
                         <div className="flex items-center gap-2">
