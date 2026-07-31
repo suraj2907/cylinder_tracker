@@ -142,7 +142,7 @@ export default function App() {
   // Toast helper
   function showToast(msg, ok = true) { 
     setToast({ msg, ok }); 
-    setTimeout(() => setToast(null), 3500); 
+    setTimeout(() => setToast(null), 4000); 
   }
 
   // Activity logger helper
@@ -229,6 +229,18 @@ export default function App() {
             fetchPayments()
           ]);
 
+          // Capture any unsynced local entries (from localStorage state) BEFORE
+          // they get overwritten below, so a failed Supabase insert never
+          // silently disappears on refresh.
+          const localUnsyncedEntries = [];
+          (batches || []).forEach(b => {
+            (b.entries || []).forEach(e => {
+              if (e.unsynced || (typeof e.id === 'string' && e.id.startsWith('entry_'))) {
+                localUnsyncedEntries.push({ batchNum: b.batch, entry: e });
+              }
+            });
+          });
+
           const batchesMap = {};
 
           // 1. Load historical base batches (#1 to #120) from INITIAL_DATA
@@ -286,11 +298,57 @@ export default function App() {
             });
           });
 
+          // Re-inject any unsynced local entries that never made it into Supabase,
+          // avoiding duplicates if a matching record already came from the DB.
+          localUnsyncedEntries.forEach(({ batchNum, entry }) => {
+            if (!batchesMap[batchNum]) {
+              batchesMap[batchNum] = { batch: batchNum, khaliDate: entry.date || "", note: "", entries: [] };
+            }
+            const alreadyExists = batchesMap[batchNum].entries.some(e =>
+              e.name === entry.name && e.qty === entry.qty && e.type === entry.type && e.date === entry.date
+            );
+            if (!alreadyExists) {
+              batchesMap[batchNum].entries.push(entry);
+            }
+          });
+
           const finalBatches = Object.values(batchesMap).sort((a, b) => b.batch - a.batch);
           setBatches(finalBatches);
           try {
             localStorage.setItem('cylinder_data', JSON.stringify(finalBatches));
           } catch (e) {}
+
+          // Auto-retry pushing any recovered unsynced entries to Supabase sequentially
+          if (localUnsyncedEntries.length > 0) {
+            showToast(`🔄 ${localUnsyncedEntries.length} unsynced entries mile, sync dobara try ho raha hai...`, false);
+            for (const { batchNum, entry } of localUnsyncedEntries) {
+              try {
+                const validKhaliDate = entry.date && entry.date.trim() ? entry.date.trim() : new Date().toISOString().split('T')[0];
+                await supabase.from('batches').upsert({ batch_num: batchNum, khali_date: validKhaliDate });
+                const { data: retryData, error: retryErr } = await supabase.from('entries').insert({
+                  batch_num: batchNum,
+                  name: entry.name,
+                  qty: entry.qty,
+                  type: entry.type,
+                  date: validKhaliDate,
+                  is_return: !!entry.isReturn,
+                  user_name: entry.user_name || currentUser
+                }).select();
+
+                if (retryErr) {
+                  console.error("Retry sync failed for entry:", entry, retryErr);
+                } else if (retryData && retryData[0]) {
+                  setBatches(prev => prev.map(b => b.batch === batchNum ? {
+                    ...b,
+                    entries: b.entries.map(e => e.id === entry.id ? { ...e, id: retryData[0].id, unsynced: false } : e)
+                  } : b));
+                  showToast(`✅ ${entry.name} ka entry ab database me sync ho gaya!`);
+                }
+              } catch (err) {
+                console.error("Retry sync exception:", err);
+              }
+            }
+          }
           
           // Merge DB payments with any unsynced local payments so entries never disappear
           setPayments(prev => {
@@ -344,6 +402,8 @@ export default function App() {
               setBatches(prev => {
                 const ex = prev.find(b => b.batch === newRec.batch_num);
                 if (ex) {
+                  const exists = ex.entries.some(e => e.id === newRec.id);
+                  if (exists) return prev;
                   return prev.map(b => b.batch === newRec.batch_num ? { ...b, entries: [...b.entries, entryObj] } : b);
                 } else {
                   return [...prev, { batch: newRec.batch_num, khaliDate: newRec.date || "", note: "", entries: [entryObj] }].sort((a, b) => b.batch - a.batch);
@@ -378,7 +438,7 @@ export default function App() {
               addActivity("Payment Recorded", `₹${newPay.amount} (${newPay.payment_mode}) for ${newPay.restaurant_name}`, partner);
             } else if (payload.eventType === 'DELETE') {
               const oldId = payload.old.id;
-              setPayments(prev => prev.filter(p => p.id !== oldId));
+              setPayments(prev => prev.filter(p => p !== oldId));
             }
           }
         )
@@ -400,8 +460,6 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('cylinder_payments', JSON.stringify(payments));
   }, [payments]);
-
-
 
   // Download Backup Helper
   function handleDownload() {
@@ -495,7 +553,8 @@ export default function App() {
       type: parsedType, 
       date: effectiveDate,
       ...(isReturn ? { isReturn: true } : {}),
-      user_name: currentUser
+      user_name: currentUser,
+      unsynced: true
     };
     
     // Always update local state & LocalStorage immediately so entry is never rejected
@@ -509,16 +568,16 @@ export default function App() {
     });
 
     addActivity("Added Entry", `${qty}x ${parsedType} ${isReturn ? 'Return' : 'Delivery'} for ${name} (Batch #${num})`, currentUser);
-    showToast(`✅ ${name} - ${qty} ${parsedType} ${isReturn ? 'Khali Return' : 'Delivery'} batch #${num} me add ho gaya!`);
     setNewEntry(p => ({ ...p, name: "", qty: 1 }));
 
     // Sync to Supabase in background
     if (isSupabaseConfigured) {
       try {
         const ex = batches.find(b => b.batch === num);
+        const validKhaliDate = (ex && ex.khaliDate && ex.khaliDate.trim()) ? ex.khaliDate.trim() : (khaliDate && khaliDate.trim() ? khaliDate.trim() : effectiveDate);
         await supabase.from('batches').upsert({
           batch_num: num,
-          khali_date: (ex && ex.khaliDate) ? ex.khaliDate : (khaliDate || effectiveDate),
+          khali_date: validKhaliDate,
           note: ex ? (ex.note || null) : null
         });
 
@@ -534,16 +593,21 @@ export default function App() {
 
         if (entryErr) {
           console.warn("Supabase entry insert warning:", entryErr);
+          showToast(`⚠️ DB Sync Fail: ${entryErr.message || 'Error'}. Entry local me safe hai, reload na karein!`, false);
         } else if (insertedData && insertedData[0]) {
           const dbId = insertedData[0].id;
           setBatches(prev => prev.map(b => b.batch === num ? {
             ...b,
-            entries: b.entries.map(e => e.id === localId ? { ...e, id: dbId } : e)
+            entries: b.entries.map(e => e.id === localId ? { ...e, id: dbId, unsynced: false } : e)
           } : b));
+          showToast(`✅ ${name} - ${qty} ${parsedType} ${isReturn ? 'Khali Return' : 'Delivery'} DB me save ho gaya!`);
         }
       } catch (err) {
         console.warn("Supabase sync background exception:", err);
+        showToast(`⚠️ Sync Error: ${err.message || 'Network issue'}. Entry local me safe hai.`, false);
       }
+    } else {
+      showToast(`✅ ${name} - ${qty} ${parsedType} ${isReturn ? 'Khali Return' : 'Delivery'} batch #${num} me add ho gaya!`);
     }
   }
 
@@ -563,7 +627,7 @@ export default function App() {
 
       if (isSupabaseConfigured) {
         try {
-          if (originalEntry.id) {
+          if (originalEntry.id && typeof originalEntry.id !== 'string') {
             await supabase.from('entries').delete().eq('id', originalEntry.id);
           } else {
             await supabase.from('entries').delete()
