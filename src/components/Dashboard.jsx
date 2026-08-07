@@ -6,20 +6,20 @@ export default function Dashboard({ restaurants, batchStats, restMap, totAll, to
   return (
     <div className="space-y-6 fade">
       {/* Export Action Buttons */}
-      <div className="flex flex-wrap justify-between items-center gap-3 bg-white p-4 rounded-2xl border border-customBorder shadow-soft">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white p-4 rounded-2xl border border-customBorder shadow-soft">
         <div>
           <h2 className="text-base font-extrabold text-textSlate">📊 Executive Operations Dashboard</h2>
           <p className="text-xs text-mutedSlate">Real-time LPG Cylinder Distribution & Outstanding Summary</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
           <button 
             onClick={() => exportToPDF(restaurants, tot21, tot192, totAll)}
-            className="px-3.5 py-2 bg-orange-600 hover:bg-orange-700 active:scale-95 text-white font-bold rounded-xl flex items-center gap-2 transition-all text-xs shadow-soft">
+            className="flex-1 sm:flex-initial px-3.5 py-2 bg-orange-600 hover:bg-orange-700 active:scale-95 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all text-xs shadow-soft">
             <Download size={14} /> PDF Report
           </button>
           <button 
             onClick={() => exportToExcel(restaurants, batchStats)}
-            className="px-3.5 py-2 bg-sky-600 hover:bg-sky-700 active:scale-95 text-white font-bold rounded-xl flex items-center gap-2 transition-all text-xs shadow-soft">
+            className="flex-1 sm:flex-initial px-3.5 py-2 bg-sky-600 hover:bg-sky-700 active:scale-95 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all text-xs shadow-soft">
             <Download size={14} /> Excel Report
           </button>
         </div>

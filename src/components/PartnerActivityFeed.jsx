@@ -41,7 +41,7 @@ export function PartnerActivityFeed({ activities = [], onClose }) {
             return (
               <div 
                 key={act.id || index}
-                className={`p-3 rounded-xl border transition-all text-xs flex items-start justify-between gap-3 ${
+                className={`p-3 rounded-xl border transition-all text-xs flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-3 ${
                   isCurrentUser 
                     ? 'bg-slate-50 border-slate-200' 
                     : 'bg-sky-50/60 border-sky-200 shadow-sm'
@@ -68,7 +68,7 @@ export function PartnerActivityFeed({ activities = [], onClose }) {
                   </div>
                 </div>
 
-                <div className="text-[10px] font-semibold text-slate-400 shrink-0">
+                <div className="text-[10px] font-semibold text-slate-400 shrink-0 self-end sm:self-start">
                   {act.timestamp}
                 </div>
               </div>

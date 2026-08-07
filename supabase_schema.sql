@@ -5,7 +5,7 @@
 -- 1. Create Batches Table
 CREATE TABLE IF NOT EXISTS public.batches (
     batch_num BIGINT PRIMARY KEY,
-    khali_date TEXT,
+    khali_date DATE,
     note TEXT,
     booking_cost DECIMAL(10,2) DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS public.entries (
     name TEXT NOT NULL,
     qty INT NOT NULL DEFAULT 1,
     type TEXT NOT NULL DEFAULT '19.2kg',
-    date TEXT,
+    date DATE,
     is_return BOOLEAN DEFAULT false,
     user_name TEXT DEFAULT 'Suraj',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
@@ -43,24 +43,24 @@ END $$;
 -- 3. Create Payments Table
 CREATE TABLE IF NOT EXISTS public.payments (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    batch_num BIGINT,
+    batch_num BIGINT REFERENCES public.batches(batch_num) ON DELETE CASCADE,
     restaurant_name TEXT NOT NULL,
     amount DECIMAL(10,2) NOT NULL DEFAULT 0,
     payment_mode TEXT NOT NULL DEFAULT 'Cash', -- 'Cash' or 'UPI'
     user_name TEXT DEFAULT 'Suraj', -- 'Suraj' or 'Shivam'
-    date TEXT,
+    date DATE,
     note TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 4. Enable Row Level Security (RLS) & Public Access Policies
+-- 4. Enable Row Level Security (RLS) & Authenticated Access Policies
 ALTER TABLE public.batches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow public read/write on batches" ON public.batches FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow public read/write on entries" ON public.entries FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow public read/write on payments" ON public.payments FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Authenticated users only - batches" ON public.batches TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Authenticated users only - entries" ON public.entries TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Authenticated users only - payments" ON public.payments TO authenticated USING (true) WITH CHECK (true);
 
 -- 5. Enable Supabase Realtime Replication
 ALTER PUBLICATION supabase_realtime ADD TABLE public.batches;

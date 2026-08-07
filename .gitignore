@@ -25,3 +25,8 @@ dist-ssr
 *.sln
 *.sw?
 
+# Database caches and sensitive CSV reports
+src/data.json
+src/data_cleaned.json
+import_report.js
+public/*.csv

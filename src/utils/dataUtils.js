@@ -1,4 +1,3 @@
-import allData from '../data.json';
 
 // --- FUZZY NAME NORMALIZER ---
 export const ALIASES = {
@@ -459,4 +458,4 @@ export function computeAll(batches) {
   return { restMap, dateMap, batchStats };
 }
 
-export const INITIAL_DATA = allData;
+export const INITIAL_DATA = [];
