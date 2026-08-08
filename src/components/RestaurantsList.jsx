@@ -20,7 +20,9 @@ export default function RestaurantsList({
   handleDeleteEntry,
   onDeletePayment,
   restaurantProfiles = {},
-  onSaveRestaurantProfile
+  onSaveRestaurantProfile,
+  bills = [],
+  deleteBill
 }) {
   const [selectedHotelForPassbook, setSelectedHotelForPassbook] = useState(null);
   const [editingRestaurant, setEditingRestaurant] = useState(null);
@@ -168,6 +170,8 @@ export default function RestaurantsList({
           payments={payments}
           handleDeleteEntry={handleDeleteEntry}
           onDeletePayment={onDeletePayment}
+          bills={bills}
+          deleteBill={deleteBill}
         />
       )}
 

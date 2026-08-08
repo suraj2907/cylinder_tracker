@@ -10,7 +10,9 @@ export default function RestaurantStatementModal({
   batches = [],
   payments = [],
   handleDeleteEntry,
-  onDeletePayment
+  onDeletePayment,
+  bills = [],
+  deleteBill
 }) {
   const today = new Date().toISOString().slice(0, 10);
   const currentMonthStr = today.slice(0, 7);
@@ -19,6 +21,25 @@ export default function RestaurantStatementModal({
   const [rangeMode, setRangeMode] = useState(false);
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
+
+  const [activeSection, setActiveSection] = useState('passbook'); // 'passbook' | 'invoices'
+  const [selectedBillForPrint, setSelectedBillForPrint] = useState(null);
+
+  const restaurantBills = useMemo(() => {
+    if (!restaurantName) return [];
+    const normTarget = restaurantName.trim().toLowerCase();
+    return bills.filter(b => (b.restaurant_name || "").trim().toLowerCase() === normTarget);
+  }, [bills, restaurantName]);
+
+  const handleDeleteBill = async (billId) => {
+    if (window.confirm(`Kya aap sach me Invoice INV-${String(billId).padStart(3, '0')} delete karna chahte hain?`)) {
+      try {
+        await deleteBill(billId);
+      } catch (e) {
+        alert('Delete nahi hua: ' + e.message);
+      }
+    }
+  };
 
   // Extract all activity entries (Deliveries, Khali Returns, Payments) for this restaurant
   const allRestaurantActivities = useMemo(() => {
@@ -251,174 +272,369 @@ export default function RestaurantStatementModal({
           </div>
         </div>
 
-        {/* Date-Wise Complete Passbook Table */}
-        <div className="space-y-2 flex-1 overflow-hidden flex flex-col min-h-[220px]">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
-              📜 Passbook History Log ({filteredActivities.length} entries)
-            </h3>
+        {/* Date-Wise Complete Passbook Table / Invoices List */}
+        <div className="space-y-3 flex-1 overflow-hidden flex flex-col min-h-[220px]">
+          
+          {/* Tab Switcher */}
+          <div className="flex bg-slate-100 rounded-xl p-1 max-w-[280px] no-print">
+            <button
+              onClick={() => setActiveSection('passbook')}
+              className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeSection === 'passbook' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              📜 Ledger History
+            </button>
+            <button
+              onClick={() => setActiveSection('invoices')}
+              className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                activeSection === 'invoices' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              🧾 Invoices ({restaurantBills.length})
+            </button>
           </div>
 
-          {filteredActivities.length === 0 ? (
-            <div className="text-center py-10 text-xs text-slate-400 font-semibold bg-slate-50 rounded-2xl border border-dashed my-auto">
-              No activity entries recorded for {restaurantName} in this period.
-            </div>
-          ) : (
-            <div className="overflow-y-auto border border-slate-200 rounded-2xl max-h-[380px] bg-white">
-              
-              {/* MOBILE CARDS VIEW (Clean & Spacious on Mobile Screens) */}
-              <div className="block md:hidden divide-y divide-slate-100">
-                {filteredActivities.map((item, idx) => (
-                  <div key={item.id || idx} className="p-3.5 space-y-2 hover:bg-slate-50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-extrabold text-slate-900">{item.date}</span>
-                        <span className="text-[11px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                          #{item.batchNum}
-                        </span>
-                      </div>
-                      
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
-                        item.kind === 'cylinder'
-                          ? (item.isReturn ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-sky-100 text-sky-800 border border-sky-200')
-                          : (item.paymentMode === 'UPI' ? 'bg-sky-100 text-sky-700 border border-sky-200' : 'bg-amber-100 text-amber-800 border border-amber-200')
-                      }`}>
-                        {item.kind === 'cylinder'
-                          ? (item.isReturn ? '♻️ Khali Return' : '🚚 Delivery')
-                          : `💳 Payment (${item.paymentMode})`}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-0.5">
-                      <div>
-                        {item.kind === 'cylinder' ? (
-                          <div className="text-sm font-black text-slate-900">
-                            {item.qty}x {item.type} {item.isReturn ? 'Khali' : 'Cylinder'}
-                          </div>
-                        ) : (
-                          <div className="text-sm font-black text-emerald-600">
-                            ₹{item.amount.toLocaleString()} <span className="text-xs text-slate-500 font-semibold">Received</span>
-                          </div>
-                        )}
-                        {item.note && <div className="text-[11px] text-slate-500 italic mt-0.5">{item.note}</div>}
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
-                          👤 {item.userName || "Suraj"}
-                        </span>
-
-                        {item.kind === 'cylinder' && handleDeleteEntry && (
-                          <button
-                            onClick={() => handleDeleteEntry(item.batchNum, item.originalEntry)}
-                            className="text-red-500 hover:text-red-700 font-bold p-1 text-xs"
-                            title="Delete entry"
-                          >
-                            🗑️
-                          </button>
-                        )}
-                        {item.kind === 'payment' && onDeletePayment && (
-                          <button
-                            onClick={() => onDeletePayment(item.rawPaymentObj)}
-                            className="text-red-500 hover:text-red-700 font-bold p-1 text-xs"
-                            title="Delete payment"
-                          >
-                            🗑️
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+          {activeSection === 'passbook' ? (
+            <>
+              <div className="flex items-center justify-between no-print">
+                <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
+                  📜 Passbook History Log ({filteredActivities.length} entries)
+                </h3>
               </div>
 
-              {/* DESKTOP TABLE VIEW (Clean 6-Column Layout for Desktop Screens) */}
-              <table className="hidden md:table w-full text-left border-collapse">
-                <thead className="sticky top-0 bg-slate-100 border-b border-customBorder z-10">
-                  <tr>
-                    <th className="py-2.5 px-3.5 text-[10px] font-bold text-mutedSlate uppercase">Date</th>
-                    <th className="py-2.5 px-3.5 text-[10px] font-bold text-mutedSlate uppercase">Batch #</th>
-                    <th className="py-2.5 px-3.5 text-[10px] font-bold text-mutedSlate uppercase">Activity & Details</th>
-                    <th className="py-2.5 px-3.5 text-[10px] font-bold text-mutedSlate uppercase">Category</th>
-                    <th className="py-2.5 px-3.5 text-[10px] font-bold text-mutedSlate uppercase">Recorded By</th>
-                    <th className="py-2.5 px-3.5 text-[10px] font-bold text-mutedSlate uppercase text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredActivities.map((item, idx) => (
-                    <tr key={item.id || idx} className="hover:bg-slate-50 transition-colors">
-                      <td className="py-2.5 px-3.5 text-xs font-bold text-slate-700">{item.date}</td>
-                      <td className="py-2.5 px-3.5 text-xs font-black text-amber-600">#{item.batchNum}</td>
-                      <td className="py-2.5 px-3.5 text-xs font-extrabold">
-                        {item.kind === 'cylinder' ? (
-                          <span className="text-slate-800">{item.qty}x {item.type} {item.isReturn ? 'Khali Return' : 'Cylinder Delivery'}</span>
-                        ) : (
-                          <span className="text-emerald-700 font-black">₹{item.amount.toLocaleString()} Received ({item.paymentMode}){item.note ? ` - ${item.note}` : ''}</span>
-                        )}
-                      </td>
-                      <td className="py-2.5 px-3.5 text-xs">
-                        {item.kind === 'cylinder' ? (
+              {filteredActivities.length === 0 ? (
+                <div className="text-center py-10 text-xs text-slate-400 font-semibold bg-slate-50 rounded-2xl border border-dashed my-auto no-print">
+                  No activity entries recorded for {restaurantName} in this period.
+                </div>
+              ) : (
+                <div className="overflow-y-auto border border-slate-200 rounded-2xl max-h-[380px] bg-white">
+                  
+                  {/* MOBILE CARDS VIEW (Clean & Spacious on Mobile Screens) */}
+                  <div className="block md:hidden divide-y divide-slate-100 no-print">
+                    {filteredActivities.map((item, idx) => (
+                      <div key={item.id || idx} className="p-3.5 space-y-2 hover:bg-slate-50 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-extrabold text-slate-900">{item.date}</span>
+                            <span className="text-[11px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                              #{item.batchNum}
+                            </span>
+                          </div>
+                          
                           <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
-                            item.isReturn ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-sky-100 text-sky-800 border border-sky-200'
+                            item.kind === 'cylinder'
+                              ? (item.isReturn ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-sky-100 text-sky-800 border border-sky-200')
+                              : (item.paymentMode === 'UPI' ? 'bg-sky-100 text-sky-700 border border-sky-200' : 'bg-amber-100 text-amber-800 border border-amber-200')
                           }`}>
-                            {item.isReturn ? '♻️ Khali Return' : '🚚 Delivery'}
+                            {item.kind === 'cylinder'
+                              ? (item.isReturn ? '♻️ Khali Return' : '🚚 Delivery')
+                              : `💳 Payment (${item.paymentMode})`}
                           </span>
-                        ) : (
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
-                            item.paymentMode === 'UPI' ? 'bg-sky-100 text-sky-700 border border-sky-200' : 'bg-amber-100 text-amber-800 border border-amber-200'
-                          }`}>
-                            💳 Payment ({item.paymentMode})
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-2.5 px-3.5 text-xs">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 text-slate-800 text-[10px] font-bold border border-slate-200">
-                          👤 {item.userName || "Suraj"}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-3.5 text-xs text-right">
-                        {item.kind === 'cylinder' && handleDeleteEntry && (
-                          <button
-                            onClick={() => handleDeleteEntry(item.batchNum, item.originalEntry)}
-                            className="text-red-500 hover:text-red-700 font-bold p-1 text-xs"
-                            title="Delete entry"
-                          >
-                            🗑️
-                          </button>
-                        )}
-                        {item.kind === 'payment' && onDeletePayment && (
-                          <button
-                            onClick={() => onDeletePayment(item.rawPaymentObj)}
-                            className="text-red-500 hover:text-red-700 font-bold p-1 text-xs"
-                            title="Delete payment"
-                          >
-                            🗑️
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        </div>
 
-            </div>
+                        <div className="flex items-center justify-between pt-0.5">
+                          <div>
+                            {item.kind === 'cylinder' ? (
+                              <div className="text-sm font-black text-slate-900">
+                                {item.qty}x {item.type} {item.isReturn ? 'Khali' : 'Cylinder'}
+                              </div>
+                            ) : (
+                              <div className="text-sm font-black text-emerald-600">
+                                ₹{item.amount.toLocaleString()} <span className="text-xs text-slate-500 font-semibold">Received</span>
+                              </div>
+                            )}
+                            <div className="text-[10px] text-slate-400 font-semibold mt-0.5">
+                              Recorded by: {item.userName}
+                            </div>
+                          </div>
+
+                          {item.kind === 'cylinder' && handleDeleteEntry && (
+                            <button
+                              onClick={() => handleDeleteEntry(item.batchNum, item.originalEntry)}
+                              className="px-2.5 py-1 rounded-lg bg-red-50 text-red-700 border border-red-200 text-xs font-bold active:scale-95"
+                            >
+                              Delete
+                            </button>
+                          )}
+                          {item.kind === 'payment' && onDeletePayment && (
+                            <button
+                              onClick={() => onDeletePayment(item.rawPaymentObj)}
+                              className="px-2.5 py-1 rounded-lg bg-red-50 text-red-700 border border-red-200 text-xs font-bold active:scale-95"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* DESKTOP TABLE VIEW */}
+                  <table className="hidden md:table w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-mutedSlate">
+                        <th className="px-4 py-3">Date</th>
+                        <th className="px-4 py-3">Type</th>
+                        <th className="px-4 py-3">Details</th>
+                        <th className="px-4 py-3 text-right">Batch</th>
+                        <th className="px-4 py-3 text-right">Delivered</th>
+                        <th className="px-4 py-3 text-right">Khali Ret</th>
+                        <th className="px-4 py-3 text-right">Paid (₹)</th>
+                        <th className="px-4 py-3">By</th>
+                        <th className="px-4 py-3 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredActivities.map((item, idx) => (
+                        <tr key={item.id || idx} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-4 py-3 font-semibold text-slate-700">{item.date}</td>
+                          <td className="px-4 py-3 font-bold">
+                            {item.kind === 'cylinder' ? (
+                              <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-black border ${
+                                item.isReturn ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-sky-50 text-sky-700 border-sky-200'
+                              }`}>
+                                {item.isReturn ? '♻️ Return' : '🚚 Supply'}
+                              </span>
+                            ) : (
+                              <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-black border ${
+                                item.paymentMode === 'UPI' ? 'bg-teal-50 text-teal-700 border-teal-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+                              }`}>
+                                💳 {item.paymentMode}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 font-semibold text-slate-600">
+                            {item.kind === 'cylinder' ? `${item.type} Cylinder` : 'Payment Collection'}
+                          </td>
+                          <td className="px-4 py-3 text-right font-bold text-slate-500">#{item.batchNum}</td>
+                          <td className="px-4 py-3 text-right font-bold text-slate-800">
+                            {item.kind === 'cylinder' && !item.isReturn ? `${item.qty} units` : '-'}
+                          </td>
+                          <td className="px-4 py-3 text-right font-bold text-slate-800">
+                            {item.kind === 'cylinder' && item.isReturn ? `${item.qty} units` : '-'}
+                          </td>
+                          <td className="px-4 py-3 text-right font-black text-emerald-700">
+                            {item.kind === 'payment' ? `₹${item.amount.toLocaleString()}` : '-'}
+                          </td>
+                          <td className="px-4 py-3 text-slate-500 font-bold">{item.userName}</td>
+                          <td className="px-4 py-3 text-right no-print">
+                            {item.kind === 'cylinder' && handleDeleteEntry && (
+                              <button
+                                onClick={() => handleDeleteEntry(item.batchNum, item.originalEntry)}
+                                className="text-red-500 hover:text-red-700 font-bold p-1 text-xs cursor-pointer"
+                                title="Delete entry"
+                              >
+                                🗑️
+                              </button>
+                            )}
+                            {item.kind === 'payment' && onDeletePayment && (
+                              <button
+                                onClick={() => onDeletePayment(item.rawPaymentObj)}
+                                className="text-red-500 hover:text-red-700 font-bold p-1 text-xs cursor-pointer"
+                                title="Delete payment"
+                              >
+                                🗑️
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                </div>
+              )}
+            </>
+          ) : (
+            // INVOICES LIST VIEW
+            <>
+              <div className="flex items-center justify-between no-print">
+                <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
+                  🧾 Generated Invoices History
+                </h3>
+              </div>
+
+              {restaurantBills.length === 0 ? (
+                <div className="text-center py-10 text-xs text-slate-400 font-semibold bg-slate-50 rounded-2xl border border-dashed my-auto no-print">
+                  No invoices generated for {restaurantName} yet.
+                </div>
+              ) : (
+                <div className="overflow-y-auto border border-slate-200 rounded-2xl max-h-[380px] bg-white">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-mutedSlate">
+                        <th className="px-4 py-3">Invoice No</th>
+                        <th className="px-4 py-3">Date</th>
+                        <th className="px-4 py-3">Type</th>
+                        <th className="px-4 py-3 text-right">Amount</th>
+                        <th className="px-4 py-3 text-right no-print">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {restaurantBills.map(b => (
+                        <tr key={b.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-4 py-3 font-extrabold text-slate-900">
+                            INV-{String(b.id).padStart(3, '0')}
+                          </td>
+                          <td className="px-4 py-3 font-semibold text-slate-600">{b.bill_date}</td>
+                          <td className="px-4 py-3 font-bold">
+                            <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-black border ${
+                              b.gst_mode === 'gst' ? 'bg-sky-50 text-sky-700 border-sky-200' : 'bg-slate-100 text-slate-600 border-slate-200'
+                            }`}>
+                              {b.gst_mode === 'gst' ? 'GST Tax Invoice' : 'Plain Bill'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right font-black text-slate-955">
+                            ₹{Number(b.total_amount).toLocaleString()}
+                          </td>
+                          <td className="px-4 py-3 text-right no-print flex justify-end gap-1.5">
+                            <button
+                              onClick={() => setSelectedBillForPrint(b)}
+                              className="px-2.5 py-1 rounded-lg bg-sky-50 border border-sky-200 text-sky-800 hover:bg-sky-100 text-[11px] font-extrabold transition-all shadow-xs cursor-pointer"
+                            >
+                              🖨️ View
+                            </button>
+                            <button
+                              onClick={() => handleDeleteBill(b.id)}
+                              className="px-2 py-1 rounded-lg bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 text-[11px] font-bold transition-all cursor-pointer"
+                              title="Delete Invoice"
+                            >
+                              🗑️
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
           )}
         </div>
 
         {/* Modal Footer */}
-        <div className="pt-3 border-t border-customBorder flex items-center justify-between">
+        <div className="pt-3 border-t border-customBorder flex items-center justify-between no-print">
           <span className="text-xs font-semibold text-slate-500">
             Statement for {restaurantName}
           </span>
           <button
             onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-slate-900 text-white text-xs font-extrabold hover:bg-slate-800 active:scale-95 transition-all shadow-md"
+            className="px-5 py-2 rounded-xl bg-slate-900 text-white text-xs font-extrabold hover:bg-slate-800 active:scale-95 transition-all shadow-md cursor-pointer"
           >
             Close Passbook
           </button>
         </div>
 
       </div>
+
+      {/* Invoice Print Overlay Modal (Only render on top when print is clicked) */}
+      {selectedBillForPrint && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-[100] p-4 overflow-y-auto no-print">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto relative animate-fadeIn">
+            
+            {/* Top controls */}
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                Invoice Print Preview
+              </h3>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => window.print()}
+                  className="px-4 py-2 rounded-xl bg-sky-600 text-white text-xs font-black uppercase tracking-wider hover:bg-sky-700 transition-all shadow-sm cursor-pointer"
+                >
+                  🖨️ Print / Save PDF
+                </button>
+                <button
+                  onClick={() => setSelectedBillForPrint(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-black uppercase tracking-wider hover:bg-slate-200 transition-all border cursor-pointer"
+                >
+                  Close Preview
+                </button>
+              </div>
+            </div>
+
+            {/* Print Area content */}
+            <div id="bill-print-area" className="border border-slate-200 rounded-2xl p-6 bg-white">
+              <div className="flex justify-between items-start border-b border-slate-200 pb-4 mb-4">
+                <div>
+                  <h2 className="text-lg font-black text-slate-900">M/S SHREE BALAJI AGENCIES</h2>
+                  <p className="text-[10px] text-slate-500 mt-1">Kamthi Line Beside SBI ATM, Rajnandgaon, Chhattisgarh, 491441</p>
+                  <p className="text-[10px] text-slate-500">📞 9407922288 | ✉️ msspagency@gmail.com</p>
+                  {selectedBillForPrint.gst_mode === 'gst' && <p className="text-[10px] text-slate-500 font-bold">GSTIN: 22SNZPS3600E1ZH</p>}
+                </div>
+                <div className="text-right">
+                  <span className="inline-block px-2.5 py-0.5 bg-slate-950 text-white text-[9px] font-black rounded uppercase tracking-wider">
+                    {selectedBillForPrint.gst_mode === 'gst' ? 'TAX INVOICE' : 'BILL'}
+                  </span>
+                  <p className="text-xs font-bold text-slate-700 mt-2">Invoice No: INV-{String(selectedBillForPrint.id).padStart(3, '0')}</p>
+                  <p className="text-[10px] text-slate-500">Date: {selectedBillForPrint.bill_date}</p>
+                </div>
+              </div>
+
+              <div className="mb-4 text-xs">
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Bill To</p>
+                <p className="font-extrabold text-slate-900">{selectedBillForPrint.restaurant_name}</p>
+                {/* GST Details of customer if GST Bill */}
+                {selectedBillForPrint.gst_mode === 'gst' && selectedBillForPrint.gst_num && <p className="text-[10px] text-slate-500 mt-0.5">GSTIN: {selectedBillForPrint.gst_num}</p>}
+              </div>
+
+              <table className="w-full text-left text-[11px] border-collapse mb-4">
+                <thead>
+                  <tr className="border-b border-slate-300 font-bold text-slate-700">
+                    <th className="py-2">Item</th>
+                    {selectedBillForPrint.gst_mode === 'gst' && <th className="py-2">HSN</th>}
+                    <th className="py-2 text-right">Qty</th>
+                    <th className="py-2 text-right">Rate</th>
+                    <th className="py-2 text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {Array.isArray(selectedBillForPrint.items) && selectedBillForPrint.items.map((it, i) => (
+                    <tr key={i}>
+                      <td className="py-2 text-slate-800">{it.description}</td>
+                      {selectedBillForPrint.gst_mode === 'gst' && <td className="py-2 text-slate-600">{it.hsn || '27111900'}</td>}
+                      <td className="py-2 text-right text-slate-700">{it.qty}</td>
+                      <td className="py-2 text-right text-slate-700">₹{Number(it.rate).toFixed(2)}</td>
+                      <td className="py-2 text-right text-slate-900 font-semibold">₹{(it.qty * it.rate).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div className="flex justify-end pt-2 border-t border-slate-200">
+                <div className="w-52 space-y-1 text-[11px]">
+                  {selectedBillForPrint.gst_mode === 'gst' && (
+                    <>
+                      <div className="flex justify-between text-slate-500">
+                        <span>Taxable Amount</span>
+                        <span>₹{Number(selectedBillForPrint.taxable_amount || 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-slate-500">
+                        <span>CGST @9%</span>
+                        <span>₹{Number(selectedBillForPrint.cgst || 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-slate-500">
+                        <span>SGST @9%</span>
+                        <span>₹{Number(selectedBillForPrint.sgst || 0).toFixed(2)}</span>
+                      </div>
+                    </>
+                  )}
+                  <div className="flex justify-between border-t border-slate-350 pt-1 font-black text-xs text-slate-900">
+                    <span>Total</span>
+                    <span>₹{Number(selectedBillForPrint.total_amount || 0).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 pt-3 border-t border-slate-100 text-[9px] text-slate-400">
+                <p>Terms: Goods once sold will not be taken back. Empty cylinder returnable; loss/damage chargeable.</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -55,12 +55,25 @@ export function useBilling(currentUser) {
     return data;
   };
 
+  const deleteBill = async (id) => {
+    const { error } = await supabase
+      .from('bills')
+      .delete()
+      .eq('id', id);
+    if (error) {
+      console.error('Error deleting bill', error);
+      throw error;
+    }
+    await fetchBills();
+  };
+
   return {
     restaurantProfiles,
     bills,
     loadingBilling,
     saveRestaurantProfile,
     createBill,
+    deleteBill,
     refetchBills: fetchBills
   };
 }
