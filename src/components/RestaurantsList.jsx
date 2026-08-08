@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import RestaurantStatementModal from './RestaurantStatementModal';
+import RestaurantProfileModal from './RestaurantProfileModal';
 
 export default function RestaurantsList({ 
   restaurants, 
@@ -17,9 +18,12 @@ export default function RestaurantsList({
   batches = [],
   payments = [],
   handleDeleteEntry,
-  onDeletePayment
+  onDeletePayment,
+  restaurantProfiles = {},
+  onSaveRestaurantProfile
 }) {
   const [selectedHotelForPassbook, setSelectedHotelForPassbook] = useState(null);
+  const [editingRestaurant, setEditingRestaurant] = useState(null);
 
   return (
     <div className="bg-white border border-customBorder rounded-2xl mb-6 overflow-hidden shadow-soft fade space-y-4">
@@ -69,6 +73,7 @@ export default function RestaurantsList({
               <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">⚪ Total Khali</th>
               <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Grand Total Del</th>
               <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3 text-right">Passbook</th>
+              <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3 text-right">Profile</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -112,6 +117,14 @@ export default function RestaurantsList({
                     📜 Passbook
                   </button>
                 </td>
+                <td className="px-4 py-3 text-xs text-right">
+                  <button
+                    onClick={() => setEditingRestaurant(r.name)}
+                    className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 text-[11px] font-bold transition-all shadow-xs"
+                  >
+                    ✏️ Edit
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -140,6 +153,7 @@ export default function RestaurantsList({
               </td>
               <td className="px-4 py-3.5 text-xs font-black text-slate-900">{totAll}</td>
               <td className="px-4 py-3.5"></td>
+              <td className="px-4 py-3.5"></td>
             </tr>
           </tfoot>
         </table>
@@ -154,6 +168,16 @@ export default function RestaurantsList({
           payments={payments}
           handleDeleteEntry={handleDeleteEntry}
           onDeletePayment={onDeletePayment}
+        />
+      )}
+
+      {/* Render Profile Edit Modal when a restaurant profile is being edited */}
+      {editingRestaurant && (
+        <RestaurantProfileModal
+          restaurantName={editingRestaurant}
+          existingProfile={restaurantProfiles[editingRestaurant]}
+          onClose={() => setEditingRestaurant(null)}
+          onSave={onSaveRestaurantProfile}
         />
       )}
     </div>

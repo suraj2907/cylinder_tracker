@@ -113,3 +113,21 @@ button {
     font-size: 12px;
   }
 }
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #bill-print-area, #bill-print-area * {
+    visibility: visible;
+  }
+  #bill-print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

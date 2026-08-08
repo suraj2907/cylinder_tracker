@@ -4,6 +4,7 @@ export const TABS = [
   { id: "dashboard", label: "📊 Dashboard" },
   { id: "batches", label: "📦 Batches & Supply" },
   { id: "payments", label: "💰 Cashflow & Wallet" },
+  { id: "billing", label: "🧾 Generate Bill" },
   { id: "calendar", label: "📅 Calendar Log" },
   { id: "restaurants", label: "🏪 Restaurants" },
   { id: "gasPredictor", label: "🔮 Gas Predictor" },
