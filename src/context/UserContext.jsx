@@ -37,9 +37,9 @@ export function UserProvider({ children }) {
   const logout = () => supabase.auth.signOut();
 
   // Map logged-in email to existing 'Suraj' or 'Shivam' profile identity
-  const email = session?.user?.email;
+  const email = session?.user?.email?.toLowerCase();
   const currentUser = email 
-    ? (email.toLowerCase().includes('shivam') ? 'Shivam' : 'Suraj') 
+    ? (email === 'shivam09498@gmail.com' ? 'Shivam' : 'Suraj') 
     : 'Suraj';
 
   return (

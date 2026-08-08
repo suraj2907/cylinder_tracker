@@ -58,9 +58,20 @@ ALTER TABLE public.batches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Authenticated users only - batches" ON public.batches TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Authenticated users only - entries" ON public.entries TO authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Authenticated users only - payments" ON public.payments TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Secure partner access - batches" ON public.batches
+    TO authenticated 
+    USING (auth.jwt() ->> 'email' = 'surajjawrani2022@gmail.com' OR auth.jwt() ->> 'email' = 'shivam09498@gmail.com')
+    WITH CHECK (auth.jwt() ->> 'email' = 'surajjawrani2022@gmail.com' OR auth.jwt() ->> 'email' = 'shivam09498@gmail.com');
+
+CREATE POLICY "Secure partner access - entries" ON public.entries
+    TO authenticated 
+    USING (auth.jwt() ->> 'email' = 'surajjawrani2022@gmail.com' OR auth.jwt() ->> 'email' = 'shivam09498@gmail.com')
+    WITH CHECK (auth.jwt() ->> 'email' = 'surajjawrani2022@gmail.com' OR auth.jwt() ->> 'email' = 'shivam09498@gmail.com');
+
+CREATE POLICY "Secure partner access - payments" ON public.payments
+    TO authenticated 
+    USING (auth.jwt() ->> 'email' = 'surajjawrani2022@gmail.com' OR auth.jwt() ->> 'email' = 'shivam09498@gmail.com')
+    WITH CHECK (auth.jwt() ->> 'email' = 'surajjawrani2022@gmail.com' OR auth.jwt() ->> 'email' = 'shivam09498@gmail.com');
 
 -- 5. Enable Supabase Realtime Replication
 ALTER PUBLICATION supabase_realtime ADD TABLE public.batches;
