@@ -61,7 +61,7 @@ export default function SalesSummaryDashboard({
   // Export to Excel
   const exportToExcel = () => {
     const data = filteredBills.map(b => ({
-      "Invoice No": `INV-${String(b.id).padStart(3, '0')}`,
+      "Invoice No": `INV-${String(b.invoice_no).padStart(4, '0')}`,
       "Date": b.bill_date,
       "Restaurant Name": b.restaurant_name,
       "GST Mode": b.gst_mode.toUpperCase(),
@@ -92,7 +92,7 @@ export default function SalesSummaryDashboard({
 
     const headers = [["Inv No", "Date", "Customer", "Subtotal", "Tax", "Total", "Status"]];
     const data = filteredBills.map(b => [
-      `INV-${String(b.id).padStart(3, '0')}`,
+      `INV-${String(b.invoice_no).padStart(4, '0')}`,
       b.bill_date,
       b.restaurant_name,
       `₹${b.taxable_amount.toFixed(2)}`,
@@ -246,7 +246,7 @@ export default function SalesSummaryDashboard({
                 return (
                   <tr key={bill.id} className="hover:bg-slate-50/50">
                     <td className="px-4 py-3 font-bold text-slate-800">
-                      INV-{String(bill.id).padStart(3, '0')}
+                      INV-{String(bill.invoice_no).padStart(4, '0')}
                     </td>
                     <td className="px-4 py-3 font-semibold text-slate-650">{bill.bill_date}</td>
                     <td className="px-4 py-3 font-bold text-slate-900">{bill.restaurant_name}</td>

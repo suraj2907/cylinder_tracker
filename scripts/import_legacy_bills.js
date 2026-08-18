@@ -17,7 +17,6 @@ const serviceKey = envConfig.SUPABASE_SERVICE_ROLE_KEY || envConfig.VITE_SUPABAS
 
 if (!supabaseUrl || !serviceKey) {
   console.error("ERROR: Supabase URL or Service Role Key is missing in your .env file!");
-  console.error("Please add VITE_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to your .env file to continue.");
   process.exit(1);
 }
 
@@ -94,20 +93,65 @@ function parseCSVRow(text) {
 
 function parseDate(dateStr) {
   if (!dateStr) return null;
-  const parts = dateStr.trim().split('/');
+  // Strip parentheses and anything inside them, e.g., "19/06/2026 (59)" -> "19/06/2026"
+  const cleanDateStr = dateStr.replace(/\s*\([^)]*\)/g, '').trim();
+  const parts = cleanDateStr.split('/');
   if (parts.length === 3) {
     const day = parts[0].padStart(2, '0');
     const month = parts[1].padStart(2, '0');
-    const year = parts[2];
+    // Ensure year has only digits
+    const year = parts[2].replace(/\D/g, '').trim();
     return `${year}-${month}-${day}`;
   }
   return null;
 }
 
+function resolveRestaurantName(partyName, dbRestaurants, nameMappings) {
+  const mappedNameLower = partyName.toLowerCase();
+  
+  if (nameMappings[mappedNameLower]) {
+    return nameMappings[mappedNameLower];
+  }
+  
+  const dbMatch = dbRestaurants.find(r => r.name.toLowerCase() === mappedNameLower);
+  if (dbMatch) {
+    return dbMatch.name;
+  }
+  
+  // Fallback overrides for unmatched raw names in Sales Summary Report
+  const fallbackOverrides = {
+    'ashwini': 'Ashwini Amritulaya',
+    'parvez bhiya kalp': 'Kalp',
+    'simran sweets': 'Simran Sweets',
+    'simran restaurant': 'Simran Sweets',
+    'jasbeer kaur bhatia': 'Jasbeer Kaur Bhatia',
+    'jasbeer kaur': 'Jasbeer Kaur Bhatia',
+    'karnail singh bhatia': 'Jasbeer Kaur Bhatia',
+    'grandvista ventures private limited': 'GRANDVISTA VENTURES PRIVATE LIMITED',
+    'grandvista ventures': 'GRANDVISTA VENTURES PRIVATE LIMITED',
+    'shri gurudev agro india private limited': 'SHRI GURUDEV AGRO INDIA PRIVATE LIMITED',
+    'shri gurudev agro': 'SHRI GURUDEV AGRO INDIA PRIVATE LIMITED',
+    'bajrang tadka': 'Bajrang Tadka Point',
+    'bajrang tadka point': 'Bajrang Tadka Point'
+  };
+  
+  if (fallbackOverrides[mappedNameLower]) {
+    return fallbackOverrides[mappedNameLower];
+  }
+  
+  return partyName;
+}
+
 async function runImport() {
   const nameMappings = loadNameMappings();
+  const reportPath = "C:\\Users\\Suraj\\OneDrive\\Desktop\\Cylinder tracker ss\\[MS Shree Balaji Agencies] Sales Summary Report as of 18-08-2026.csv";
   const folderPath = "C:\\Users\\Suraj\\OneDrive\\Desktop\\Cylinder tracker ss\\Parties Statement";
-  
+
+  if (!fs.existsSync(reportPath)) {
+    console.error(`ERROR: Sales Summary Report not found at: ${reportPath}`);
+    process.exit(1);
+  }
+
   if (!fs.existsSync(folderPath)) {
     console.error(`ERROR: Ledger folder not found at: ${folderPath}`);
     process.exit(1);
@@ -120,17 +164,100 @@ async function runImport() {
     console.error("ERROR: Failed to fetch restaurants from Supabase:", restError.message);
     process.exit(1);
   }
+  
   const dbRestaurantNames = dbRestaurants.map(r => r.name.toLowerCase());
   const dbNameMapping = {};
   dbRestaurants.forEach(r => {
     dbNameMapping[r.name.toLowerCase()] = r.name;
   });
 
-  const files = fs.readdirSync(folderPath).filter(f => f.endsWith('.csv'));
-  console.log(`Found ${files.length} ledger CSV files to import.`);
+  const billsToInsert = [];
+  const paymentsToInsert = [];
+  const processedInvoices = new Set();
 
-  let totalInvoicesImported = 0;
-  let totalPaymentsImported = 0;
+  // Helper to ensure restaurant exists in Supabase
+  async function ensureRestaurantExists(resolvedName) {
+    if (resolvedName.toLowerCase() === "gaspoint petroleum (india) limited") {
+      return false;
+    }
+    if (!dbRestaurantNames.includes(resolvedName.toLowerCase())) {
+      console.log(`Restaurant "${resolvedName}" not found — creating it now...`);
+      const { error: createErr } = await supabase
+        .from('restaurants')
+        .insert({ name: resolvedName });
+      if (createErr) {
+        console.error(`ERROR: Failed to create restaurant "${resolvedName}": ${createErr.message}`);
+        return false;
+      }
+      dbRestaurantNames.push(resolvedName.toLowerCase());
+      dbRestaurants.push({ name: resolvedName });
+    }
+    return true;
+  }
+
+  // 1. Process Sales Summary Report to import ALL Invoices
+  console.log("Processing Sales Summary Report...");
+  const reportContent = fs.readFileSync(reportPath, 'utf-8');
+  const reportRows = splitCSVToRows(reportContent);
+
+  for (let idx = 0; idx < reportRows.length; idx++) {
+    const rowText = reportRows[idx];
+    if (idx === 0 || !rowText.trim()) continue; // skip header
+
+    const parsedRow = parseCSVRow(rowText);
+    if (parsedRow.length < 11) continue;
+
+    const [invoiceNoStr, invoiceDateStr, contactName, amountStr, remainingStr, statusStr, dueDateStr, link, payType, category, createdBy] = parsedRow;
+    
+    if (invoiceNoStr === 'Invoice No') continue; // skip header fallback
+    if (!payType || (!payType.toLowerCase().includes('credit') && !payType.toLowerCase().includes('cash'))) continue;
+
+    const billDate = parseDate(invoiceDateStr);
+    if (!billDate) continue;
+
+    const resolvedName = resolveRestaurantName(contactName, dbRestaurants, nameMappings);
+    
+    // Auto-create restaurant if missing
+    const ok = await ensureRestaurantExists(resolvedName);
+    if (!ok) continue;
+
+    const amount = parseFloat(amountStr) || 0;
+    const remaining = parseFloat(remainingStr) || 0;
+    const parsedInvoiceNo = parseInt(invoiceNoStr, 10) || null;
+
+    // Back-calculate GST
+    const taxable = amount / 1.18;
+    const totalTax = amount - taxable;
+    const cgst = totalTax / 2;
+    const sgst = totalTax / 2;
+
+    const paymentStatus = (statusStr || '').toLowerCase().replace(' ', '_');
+
+    billsToInsert.push({
+      restaurant_name: resolvedName,
+      bill_date: billDate,
+      gst_mode: 'gst',
+      items: [{ description: "Legacy Import", hsn: null, qty: 1, rate: amount }],
+      subtotal: amount,
+      taxable_amount: parseFloat(taxable.toFixed(2)),
+      cgst: parseFloat(cgst.toFixed(2)),
+      sgst: parseFloat(sgst.toFixed(2)),
+      total_amount: amount,
+      payment_status: paymentStatus || (remaining === 0 ? 'paid' : 'unpaid'),
+      amount_paid: amount - remaining,
+      due_date: parseDate((dueDateStr || '').split(' (')[0].trim()) || billDate,
+      payment_type: payType.toLowerCase().includes('cash') ? 'cash' : 'credit',
+      invoice_no: parsedInvoiceNo,
+      legacy_invoice_no: parsedInvoiceNo,
+      created_by: createdBy || 'Suraj'
+    });
+    
+    processedInvoices.add(parsedInvoiceNo);
+  }
+
+  // 2. Process Individual Restaurant Ledger files for Payments and Opening Balances
+  console.log("Processing individual restaurant statement files...");
+  const files = fs.readdirSync(folderPath).filter(f => f.endsWith('.csv'));
 
   for (const file of files) {
     const filePath = path.join(folderPath, file);
@@ -139,8 +266,8 @@ async function runImport() {
     
     let partyName = "";
     let ledgerRows = [];
+    let openingBalance = 0;
 
-    // Parse header and records
     rows.forEach(rowText => {
       if (!rowText.trim()) return;
       
@@ -154,83 +281,41 @@ async function runImport() {
 
       const parsedRow = parseCSVRow(rowText);
       if (parsedRow.length >= 9 && parsedRow[1] !== 'Voucher') {
+        if (parsedRow[1] === 'Opening Balance') {
+          openingBalance = parseFloat(parsedRow[6]) || 0; // Balance column
+          return;
+        }
         ledgerRows.push(parsedRow);
       }
     });
 
-    if (!partyName) {
-      console.warn(`WARNING: Could not find party name in file ${file}. Skipping.`);
-      continue;
+    if (!partyName) continue;
+
+    const resolvedName = resolveRestaurantName(partyName, dbRestaurants, nameMappings);
+    const ok = await ensureRestaurantExists(resolvedName);
+    if (!ok) continue;
+
+    // Update Opening Balance in Supabase restaurants table
+    const { error: balanceErr } = await supabase
+      .from('restaurants')
+      .update({ previous_balance: openingBalance })
+      .eq('name', resolvedName);
+      
+    if (balanceErr) {
+      console.error(`ERROR: Failed to update previous_balance for "${resolvedName}":`, balanceErr.message);
+    } else if (openingBalance > 0) {
+      console.log(`Set Opening Balance for "${resolvedName}" to ₹${openingBalance}`);
     }
 
-    // Resolve name through mappings
-    const mappedNameLower = partyName.toLowerCase();
-    let resolvedName = partyName;
-    if (nameMappings[mappedNameLower]) {
-      resolvedName = nameMappings[mappedNameLower];
-    } else if (dbNameMapping[mappedNameLower]) {
-      resolvedName = dbNameMapping[mappedNameLower];
-    } else {
-      // Find closest case-insensitive match
-      const matchedName = dbRestaurants.find(r => r.name.toLowerCase() === mappedNameLower);
-      if (matchedName) {
-        resolvedName = matchedName.name;
-      }
-    }
-
-    // Skip supplier/unregistered names
-    if (resolvedName.toLowerCase() === "gaspoint petroleum (india) limited") {
-      console.log(`Skipping supplier ledger: ${partyName}`);
-      continue;
-    }
-
-    // Verify restaurant exists in Supabase
-    if (!dbRestaurantNames.includes(resolvedName.toLowerCase())) {
-      console.warn(`WARNING: Restaurant "${resolvedName}" does not exist in your restaurants table. Skipping statements for ${partyName}.`);
-      continue;
-    }
-
-    console.log(`Importing ledger for "${resolvedName}" (${ledgerRows.length} entries)...`);
-
-    const billsToInsert = [];
-    const paymentsToInsert = [];
-
+    // Process Payment-in rows only
     ledgerRows.forEach(row => {
       const [dateStr, voucher, srNo, paymentMode, creditStr, debitStr, balanceStr, dueDateStr, paymentStatus] = row;
-      
       const billDate = parseDate(dateStr);
       if (!billDate) return;
 
-      if (voucher === "Sales Invoice") {
-        const amount = parseFloat(creditStr) || 0;
-        const remaining = parseFloat(balanceStr) || 0;
+      if (voucher === "Payment-in") {
+        const amount = parseFloat(creditStr) || 0; // Payment-in amounts are in the Credit column
         
-        // Back-calculate GST
-        const taxable = amount / 1.18;
-        const totalTax = amount - taxable;
-        const cgst = totalTax / 2;
-        const sgst = totalTax / 2;
-
-        billsToInsert.push({
-          restaurant_name: resolvedName,
-          bill_date: billDate,
-          gst_mode: 'gst',
-          items: [{ description: "Legacy Import", hsn: null, qty: 1, rate: amount }],
-          subtotal: amount,
-          taxable_amount: parseFloat(taxable.toFixed(2)),
-          cgst: parseFloat(cgst.toFixed(2)),
-          sgst: parseFloat(sgst.toFixed(2)),
-          total_amount: amount,
-          payment_status: paymentStatus || (remaining === 0 ? 'paid' : 'unpaid'),
-          amount_paid: amount - remaining,
-          due_date: parseDate(dueDateStr) || billDate,
-          payment_type: 'credit',
-          created_by: 'Suraj'
-        });
-      } else if (voucher === "Payment-in") {
-        const amount = parseFloat(debitStr) || 0;
-        
-        // Strip bank name from mode e.g., "Upi (SBIN 6789)" -> "UPI"
         let parsedMode = 'Cash';
         if (paymentMode) {
           const modeLower = paymentMode.toLowerCase();
@@ -249,27 +334,39 @@ async function runImport() {
         });
       }
     });
+  }
 
-    // Bulk insert bills in chunks of 50
-    for (let i = 0; i < billsToInsert.length; i += 50) {
-      const chunk = billsToInsert.slice(i, i + 50);
-      const { error } = await supabase.from('bills').insert(chunk);
-      if (error) {
-        console.error(`ERROR: Failed to import bills chunk for ${resolvedName}:`, error.message);
-      } else {
-        totalInvoicesImported += chunk.length;
-      }
+  // 3. Clear existing legacy data before insert
+  console.log("Cleaning up existing legacy data from Supabase...");
+  const { error: delBillsErr } = await supabase.from('bills').delete().not('legacy_invoice_no', 'is', null);
+  if (delBillsErr) console.error("Error cleaning up bills:", delBillsErr.message);
+
+  const { error: delPaymentsErr } = await supabase.from('payments').delete().like('note', 'Legacy Import%');
+  if (delPaymentsErr) console.error("Error cleaning up payments:", delPaymentsErr.message);
+
+  // 4. Bulk Insert Invoices
+  console.log(`Inserting ${billsToInsert.length} bills into Supabase...`);
+  let totalInvoicesImported = 0;
+  for (let i = 0; i < billsToInsert.length; i += 50) {
+    const chunk = billsToInsert.slice(i, i + 50);
+    const { error } = await supabase.from('bills').insert(chunk);
+    if (error) {
+      console.error(`ERROR inserting bills chunk:`, error.message);
+    } else {
+      totalInvoicesImported += chunk.length;
     }
+  }
 
-    // Bulk insert payments in chunks of 50
-    for (let i = 0; i < paymentsToInsert.length; i += 50) {
-      const chunk = paymentsToInsert.slice(i, i + 50);
-      const { error } = await supabase.from('payments').insert(chunk);
-      if (error) {
-        console.error(`ERROR: Failed to import payments chunk for ${resolvedName}:`, error.message);
-      } else {
-        totalPaymentsImported += chunk.length;
-      }
+  // 5. Bulk Insert Payments
+  console.log(`Inserting ${paymentsToInsert.length} payments into Supabase...`);
+  let totalPaymentsImported = 0;
+  for (let i = 0; i < paymentsToInsert.length; i += 50) {
+    const chunk = paymentsToInsert.slice(i, i + 50);
+    const { error } = await supabase.from('payments').insert(chunk);
+    if (error) {
+      console.error(`ERROR inserting payments chunk:`, error.message);
+    } else {
+      totalPaymentsImported += chunk.length;
     }
   }
 

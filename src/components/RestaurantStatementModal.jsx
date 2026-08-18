@@ -35,8 +35,8 @@ export default function RestaurantStatementModal({
     return bills.filter(b => (b.restaurant_name || "").trim().toLowerCase() === normTarget);
   }, [bills, restaurantName]);
 
-  const handleDeleteBill = async (billId) => {
-    if (window.confirm(`Kya aap sach me Invoice INV-${String(billId).padStart(3, '0')} delete karna chahte hain?`)) {
+  const handleDeleteBill = async (billId, invoiceNo) => {
+    if (window.confirm(`Kya aap sach me Invoice INV-${String(invoiceNo).padStart(4, '0')} delete karna chahte hain?`)) {
       try {
         await deleteBill(billId);
       } catch (e) {
@@ -110,7 +110,7 @@ export default function RestaurantStatementModal({
           batchNum: '-',
           restaurantName: b.restaurant_name,
           amount: parseFloat(b.total_amount) || 0,
-          invoiceLabel: `INV-${String(b.id).padStart(4, '0')}`,
+          invoiceLabel: `INV-${String(b.invoice_no).padStart(4, '0')}`,
           userName: b.created_by || 'Suraj',
           note: b.note || '',
           rawBillObj: b
@@ -429,7 +429,7 @@ export default function RestaurantStatementModal({
                           )}
                           {item.kind === 'bill' && deleteBill && (
                             <button
-                              onClick={() => handleDeleteBill(item.rawBillObj.id)}
+                              onClick={() => handleDeleteBill(item.rawBillObj.id, item.rawBillObj.invoice_no)}
                               className="px-2.5 py-1 rounded-lg bg-red-50 text-red-700 border border-red-200 text-xs font-bold active:scale-95 cursor-pointer"
                             >
                               Delete
@@ -534,7 +534,7 @@ export default function RestaurantStatementModal({
                             )}
                             {item.kind === 'bill' && deleteBill && (
                               <button
-                                onClick={() => handleDeleteBill(item.rawBillObj.id)}
+                                onClick={() => handleDeleteBill(item.rawBillObj.id, item.rawBillObj.invoice_no)}
                                 className="text-red-500 hover:text-red-700 font-bold p-1 text-xs cursor-pointer active:scale-95"
                                 title="Delete Invoice"
                               >
@@ -579,7 +579,7 @@ export default function RestaurantStatementModal({
                       {restaurantBills.map(b => (
                         <tr key={b.id} className="hover:bg-slate-50 transition-colors">
                           <td className="px-4 py-3 font-extrabold text-slate-900">
-                            INV-{String(b.id).padStart(3, '0')}
+                            INV-{String(b.invoice_no).padStart(4, '0')}
                           </td>
                           <td className="px-4 py-3 font-semibold text-slate-600">{b.bill_date}</td>
                           <td className="px-4 py-3 font-bold">
@@ -600,7 +600,7 @@ export default function RestaurantStatementModal({
                               🖨️ View
                             </button>
                             <button
-                              onClick={() => handleDeleteBill(b.id)}
+                              onClick={() => handleDeleteBill(b.id, b.invoice_no)}
                               className="px-2 py-1 rounded-lg bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 text-[11px] font-bold transition-all cursor-pointer"
                               title="Delete Invoice"
                             >
@@ -671,7 +671,7 @@ export default function RestaurantStatementModal({
                   <span className="inline-block px-2.5 py-0.5 bg-slate-950 text-white text-[9px] font-black rounded uppercase tracking-wider">
                     {selectedBillForPrint.gst_mode === 'gst' ? 'TAX INVOICE' : 'BILL'}
                   </span>
-                  <p className="text-xs font-bold text-slate-700 mt-2">Invoice No: INV-{String(selectedBillForPrint.id).padStart(3, '0')}</p>
+                  <p className="text-xs font-bold text-slate-700 mt-2">Invoice No: INV-{String(selectedBillForPrint.invoice_no).padStart(4, '0')}</p>
                   <p className="text-[10px] text-slate-500">Date: {selectedBillForPrint.bill_date}</p>
                 </div>
               </div>

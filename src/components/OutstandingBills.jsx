@@ -49,7 +49,7 @@ export default function OutstandingBills({
         amount: amt,
         payment_mode: payMode,
         date: new Date().toISOString().slice(0, 10),
-        note: payNote || `Against Invoice INV-${String(selectedBill.id).padStart(4, '0')}`
+        note: payNote || `Against Invoice INV-${String(selectedBill.invoice_no).padStart(4, '0')}`
       });
 
       // 2. Update bill status & paid amount in DB
@@ -109,7 +109,7 @@ export default function OutstandingBills({
                 const balance = parseFloat(b.total_amount) - parseFloat(b.amount_paid || 0);
                 return (
                   <tr key={b.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 font-bold text-slate-900">INV-{String(b.id).padStart(4, '0')}</td>
+                    <td className="px-4 py-3 font-bold text-slate-900">INV-{String(b.invoice_no).padStart(4, '0')}</td>
                     <td className="px-4 py-3 font-extrabold text-slate-950">{b.restaurant_name}</td>
                     <td className="px-4 py-3 text-slate-500">{b.bill_date}</td>
                     <td className="px-4 py-3 text-right text-slate-900">₹{parseFloat(b.total_amount).toFixed(2)}</td>
@@ -164,7 +164,7 @@ export default function OutstandingBills({
               <div className="grid grid-cols-2 gap-3.5">
                 <div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase block">Invoice No</span>
-                  <span className="text-xs font-black text-slate-900 block mt-0.5">INV-{String(selectedBill.id).padStart(4, '0')}</span>
+                  <span className="text-xs font-black text-slate-900 block mt-0.5">INV-{String(selectedBill.invoice_no).padStart(4, '0')}</span>
                 </div>
                 <div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase block">Pending Balance</span>

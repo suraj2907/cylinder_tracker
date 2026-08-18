@@ -217,7 +217,7 @@ export default function GenerateBill({
 
   const handlePrint = () => window.print();
 
-  const invoiceLabel = savedBill ? `INV-${String(savedBill.id).padStart(3, '0')}` : null;
+  const invoiceLabel = savedBill ? `INV-${String(savedBill.invoice_no).padStart(4, '0')}` : null;
   const currentBalance = previousBalance + totals.total;
 
   if (savedBill) {

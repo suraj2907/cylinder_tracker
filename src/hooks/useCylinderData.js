@@ -737,7 +737,7 @@ export function useCylinderData(currentUser) {
 
   // Calculate global booking cash balance
   const totalBatchCosts = useMemo(() => batches.reduce((s, b) => s + (parseFloat(b.bookingCost || b.booking_cost) || 0), 0), [batches]);
-  const totalCollectionsAll = useMemo(() => payments.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0), [payments]);
+  const totalCollectionsAll = useMemo(() => payments.filter(p => !p.note || !p.note.includes('Legacy Import')).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0), [payments]);
   const netBookingWallet = totalCollectionsAll - totalBatchCosts;
 
   return {
