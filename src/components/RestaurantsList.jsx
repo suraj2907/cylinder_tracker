@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import RestaurantStatementModal from './RestaurantStatementModal';
 import RestaurantProfileModal from './RestaurantProfileModal';
 
@@ -26,6 +26,15 @@ export default function RestaurantsList({
 }) {
   const [selectedHotelForPassbook, setSelectedHotelForPassbook] = useState(null);
   const [editingRestaurant, setEditingRestaurant] = useState(null);
+  const [collectOnly, setCollectOnly] = useState(false);
+
+  // Filter restaurants by "Collect" status (outstanding > 0)
+  const displayedRestaurants = useMemo(() => {
+    if (collectOnly) {
+      return restaurants.filter(r => (parseFloat(r.outstanding) || 0) > 0);
+    }
+    return restaurants;
+  }, [restaurants, collectOnly]);
 
   return (
     <div className="bg-white border border-customBorder rounded-2xl mb-6 overflow-hidden shadow-soft fade space-y-4">
@@ -33,10 +42,23 @@ export default function RestaurantsList({
         <div className="flex items-center gap-2">
           <span className="font-extrabold text-xs uppercase tracking-wider text-sky-700">🏪 All Partner Restaurants & Hotel Passbooks</span>
           <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">
-            {restaurants.length}
+            {displayedRestaurants.length}
           </span>
         </div>
         <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+          {/* Collect Filter Toggle */}
+          <button
+            type="button"
+            onClick={() => setCollectOnly(!collectOnly)}
+            className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border shadow-sm cursor-pointer ${
+              collectOnly 
+                ? 'bg-amber-100 text-amber-800 border-amber-300 font-extrabold animate-pulseGlow' 
+                : 'bg-white text-slate-600 border-customBorder hover:bg-slate-50'
+            }`}
+          >
+            Collect {collectOnly ? 'ON 🟡' : 'OFF ⚪'}
+          </button>
+          
           <input 
             className="bg-white border border-customBorder rounded-xl px-3.5 py-2 text-textSlate placeholder-slate-400 focus:outline-none focus:border-accentCyan text-xs w-full sm:w-48 shadow-sm transition-all"
             placeholder="Search restaurant..." 
@@ -79,7 +101,7 @@ export default function RestaurantsList({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {restaurants.map((r, i) => (
+            {displayedRestaurants.map((r, i) => (
               <tr key={r.name} className="hover:bg-slate-50 transition-colors">
                 <td className="px-4 py-3 text-xs font-bold text-slate-400">{i + 1}</td>
                 <td className="px-4 py-3 text-xs font-bold text-textSlate">
@@ -172,6 +194,7 @@ export default function RestaurantsList({
           onDeletePayment={onDeletePayment}
           bills={bills}
           deleteBill={deleteBill}
+          restaurantProfiles={restaurantProfiles}
         />
       )}
 

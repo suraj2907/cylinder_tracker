@@ -12,10 +12,14 @@ export default function RestaurantStatementModal({
   handleDeleteEntry,
   onDeletePayment,
   bills = [],
-  deleteBill
+  deleteBill,
+  restaurantProfiles = {}
 }) {
   const today = new Date().toISOString().slice(0, 10);
   const currentMonthStr = today.slice(0, 7);
+
+  const profile = restaurantProfiles[restaurantName] || {};
+  const openingBalance = parseFloat(profile.previous_balance || 0);
 
   const [filterPeriod, setFilterPeriod] = useState(currentMonthStr); // "2026-07" or "all" or custom range
   const [rangeMode, setRangeMode] = useState(false);
@@ -41,7 +45,7 @@ export default function RestaurantStatementModal({
     }
   };
 
-  // Extract all activity entries (Deliveries, Khali Returns, Payments) for this restaurant
+  // Extract all activity entries (Deliveries, Khali Returns, Payments, Invoices) for this restaurant
   const allRestaurantActivities = useMemo(() => {
     if (!restaurantName) return [];
     const normTarget = restaurantName.trim().toLowerCase();
@@ -93,8 +97,48 @@ export default function RestaurantStatementModal({
       }
     });
 
-    return list.sort((a, b) => new Date(b.date) - new Date(a.date));
-  }, [restaurantName, batches, payments, today]);
+    // 3. Extract Sales Invoices (Bills) for this restaurant
+    bills.forEach(b => {
+      const pName = (b.restaurant_name || "").trim().toLowerCase();
+      if (pName === normTarget) {
+        const rawDate = b.bill_date || today;
+        const bDate = formatIsoDate(rawDate);
+        list.push({
+          id: b.id || `bill_${bDate}_${b.total_amount}_${Math.random()}`,
+          kind: 'bill',
+          date: bDate,
+          batchNum: '-',
+          restaurantName: b.restaurant_name,
+          amount: parseFloat(b.total_amount) || 0,
+          invoiceLabel: `INV-${String(b.id).padStart(4, '0')}`,
+          userName: b.created_by || 'Suraj',
+          note: b.note || '',
+          rawBillObj: b
+        });
+      }
+    });
+
+    const profile = restaurantProfiles[restaurantName] || {};
+    const openingBalance = parseFloat(profile.previous_balance || 0);
+
+    // Sort ascending to compute true running balance from the oldest entry
+    const sortedAsc = [...list].sort((a, b) => new Date(a.date) - new Date(b.date));
+    let currentBalance = openingBalance;
+    const listWithBalance = sortedAsc.map(item => {
+      if (item.kind === 'bill') {
+        currentBalance += item.amount;
+      } else if (item.kind === 'payment') {
+        currentBalance -= item.amount;
+      }
+      return {
+        ...item,
+        runningBalance: currentBalance
+      };
+    });
+
+    // Return sorted descending for display
+    return listWithBalance.sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [restaurantName, batches, payments, bills, restaurantProfiles, today]);
 
   // Filter activities based on Month / Date Range / All Time
   const filteredActivities = useMemo(() => {
@@ -150,6 +194,8 @@ export default function RestaurantStatementModal({
     s.add(currentMonthStr);
     return Array.from(s).sort().reverse();
   }, [allRestaurantActivities, currentMonthStr]);
+
+  const closingBalance = allRestaurantActivities.length > 0 ? allRestaurantActivities[0].runningBalance : openingBalance;
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[99999] flex items-center justify-center p-2.5 sm:p-5 animate-fadeIn">
@@ -262,12 +308,18 @@ export default function RestaurantStatementModal({
             </div>
           </div>
 
-          {/* Total Payments Card */}
-          <div className="bg-emerald-50/70 p-3 rounded-2xl border border-emerald-200">
-            <div className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider">💰 Payment Received</div>
-            <div className="text-lg font-black text-emerald-700 mt-0.5">₹{stats.totalPaid.toLocaleString()}</div>
-            <div className="text-[10px] text-emerald-800 font-bold mt-0.5">
-              Cash: ₹{stats.paidCash.toLocaleString()} | UPI: ₹{stats.paidUPI.toLocaleString()}
+          {/* Closing Balance Card */}
+          <div className={`p-3 rounded-2xl border ${
+            closingBalance > 0 ? 'bg-rose-50/70 border-rose-250 text-rose-900' : 'bg-emerald-50/70 border-emerald-250 text-emerald-950'
+          }`}>
+            <div className={`text-[10px] font-bold uppercase tracking-wider ${closingBalance > 0 ? 'text-rose-800' : 'text-emerald-800'}`}>
+              🔴 Closing Balance (Outstanding)
+            </div>
+            <div className="text-lg font-black mt-0.5">
+              ₹{closingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            </div>
+            <div className={`text-[10px] font-bold mt-0.5 ${closingBalance > 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
+              Opening Bal: ₹{openingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </div>
           </div>
         </div>
@@ -317,19 +369,25 @@ export default function RestaurantStatementModal({
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-extrabold text-slate-900">{item.date}</span>
-                            <span className="text-[11px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                              #{item.batchNum}
-                            </span>
+                            {item.kind !== 'bill' && (
+                              <span className="text-[11px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                                #{item.batchNum}
+                              </span>
+                            )}
                           </div>
                           
                           <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
                             item.kind === 'cylinder'
                               ? (item.isReturn ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-sky-100 text-sky-800 border border-sky-200')
-                              : (item.paymentMode === 'UPI' ? 'bg-sky-100 text-sky-700 border border-sky-200' : 'bg-amber-100 text-amber-800 border border-amber-200')
+                              : item.kind === 'bill'
+                                ? 'bg-indigo-100 text-indigo-850 border border-indigo-200'
+                                : (item.paymentMode === 'UPI' ? 'bg-sky-100 text-sky-700 border border-sky-200' : 'bg-amber-100 text-amber-800 border border-amber-200')
                           }`}>
                             {item.kind === 'cylinder'
                               ? (item.isReturn ? '♻️ Khali Return' : '🚚 Delivery')
-                              : `💳 Payment (${item.paymentMode})`}
+                              : item.kind === 'bill'
+                                ? '🧾 Invoice Sales'
+                                : `💳 Payment (${item.paymentMode})`}
                           </span>
                         </div>
 
@@ -338,6 +396,10 @@ export default function RestaurantStatementModal({
                             {item.kind === 'cylinder' ? (
                               <div className="text-sm font-black text-slate-900">
                                 {item.qty}x {item.type} {item.isReturn ? 'Khali' : 'Cylinder'}
+                              </div>
+                            ) : item.kind === 'bill' ? (
+                              <div className="text-sm font-black text-slate-900">
+                                {item.invoiceLabel} <span className="text-xs text-rose-600 font-black">₹{item.amount.toLocaleString()}</span>
                               </div>
                             ) : (
                               <div className="text-sm font-black text-emerald-600">
@@ -352,7 +414,7 @@ export default function RestaurantStatementModal({
                           {item.kind === 'cylinder' && handleDeleteEntry && (
                             <button
                               onClick={() => handleDeleteEntry(item.batchNum, item.originalEntry)}
-                              className="px-2.5 py-1 rounded-lg bg-red-50 text-red-700 border border-red-200 text-xs font-bold active:scale-95"
+                              className="px-2.5 py-1 rounded-lg bg-red-50 text-red-700 border border-red-200 text-xs font-bold active:scale-95 cursor-pointer"
                             >
                               Delete
                             </button>
@@ -360,7 +422,15 @@ export default function RestaurantStatementModal({
                           {item.kind === 'payment' && onDeletePayment && (
                             <button
                               onClick={() => onDeletePayment(item.rawPaymentObj)}
-                              className="px-2.5 py-1 rounded-lg bg-red-50 text-red-700 border border-red-200 text-xs font-bold active:scale-95"
+                              className="px-2.5 py-1 rounded-lg bg-red-50 text-red-700 border border-red-200 text-xs font-bold active:scale-95 cursor-pointer"
+                            >
+                              Delete
+                            </button>
+                          )}
+                          {item.kind === 'bill' && deleteBill && (
+                            <button
+                              onClick={() => handleDeleteBill(item.rawBillObj.id)}
+                              className="px-2.5 py-1 rounded-lg bg-red-50 text-red-700 border border-red-200 text-xs font-bold active:scale-95 cursor-pointer"
                             >
                               Delete
                             </button>
@@ -376,11 +446,13 @@ export default function RestaurantStatementModal({
                       <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-mutedSlate">
                         <th className="px-4 py-3">Date</th>
                         <th className="px-4 py-3">Type</th>
-                        <th className="px-4 py-3">Details</th>
+                        <th className="px-4 py-3">Details / Invoice</th>
                         <th className="px-4 py-3 text-right">Batch</th>
                         <th className="px-4 py-3 text-right">Delivered</th>
                         <th className="px-4 py-3 text-right">Khali Ret</th>
-                        <th className="px-4 py-3 text-right">Paid (₹)</th>
+                        <th className="px-4 py-3 text-right text-rose-650">Bill Amt (₹)</th>
+                        <th className="px-4 py-3 text-right text-emerald-700">Paid (₹)</th>
+                        <th className="px-4 py-3 text-right text-slate-800">Closing Bal (₹)</th>
                         <th className="px-4 py-3">By</th>
                         <th className="px-4 py-3 text-right">Action</th>
                       </tr>
@@ -396,6 +468,10 @@ export default function RestaurantStatementModal({
                               }`}>
                                 {item.isReturn ? '♻️ Return' : '🚚 Supply'}
                               </span>
+                            ) : item.kind === 'bill' ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] uppercase font-black border bg-indigo-50 text-indigo-700 border-indigo-200">
+                                🧾 Invoice
+                              </span>
                             ) : (
                               <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-black border ${
                                 item.paymentMode === 'UPI' ? 'bg-teal-50 text-teal-700 border-teal-200' : 'bg-amber-50 text-amber-700 border-amber-200'
@@ -404,25 +480,44 @@ export default function RestaurantStatementModal({
                               </span>
                             )}
                           </td>
-                          <td className="px-4 py-3 font-semibold text-slate-600">
-                            {item.kind === 'cylinder' ? `${item.type} Cylinder` : 'Payment Collection'}
+                          <td className="px-4 py-3 font-bold text-slate-800">
+                            {item.kind === 'cylinder' ? (
+                              <span className="font-semibold text-slate-600">{item.type} Cylinder</span>
+                            ) : item.kind === 'bill' ? (
+                              <button
+                                onClick={() => setSelectedBillForPrint(item.rawBillObj)}
+                                className="text-indigo-650 hover:underline font-bold"
+                              >
+                                {item.invoiceLabel}
+                              </button>
+                            ) : (
+                              <span className="font-semibold text-slate-600">Collection</span>
+                            )}
                           </td>
-                          <td className="px-4 py-3 text-right font-bold text-slate-500">#{item.batchNum}</td>
+                          <td className="px-4 py-3 text-right font-bold text-slate-500">
+                            {item.kind === 'bill' ? '-' : `#${item.batchNum}`}
+                          </td>
                           <td className="px-4 py-3 text-right font-bold text-slate-800">
                             {item.kind === 'cylinder' && !item.isReturn ? `${item.qty} units` : '-'}
                           </td>
                           <td className="px-4 py-3 text-right font-bold text-slate-800">
                             {item.kind === 'cylinder' && item.isReturn ? `${item.qty} units` : '-'}
                           </td>
+                          <td className="px-4 py-3 text-right font-black text-rose-600">
+                            {item.kind === 'bill' ? `₹${item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '-'}
+                          </td>
                           <td className="px-4 py-3 text-right font-black text-emerald-700">
-                            {item.kind === 'payment' ? `₹${item.amount.toLocaleString()}` : '-'}
+                            {item.kind === 'payment' ? `₹${item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '-'}
+                          </td>
+                          <td className="px-4 py-3 text-right font-black text-slate-900 bg-slate-50/50">
+                            ₹{(item.runningBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </td>
                           <td className="px-4 py-3 text-slate-500 font-bold">{item.userName}</td>
                           <td className="px-4 py-3 text-right no-print">
                             {item.kind === 'cylinder' && handleDeleteEntry && (
                               <button
                                 onClick={() => handleDeleteEntry(item.batchNum, item.originalEntry)}
-                                className="text-red-500 hover:text-red-700 font-bold p-1 text-xs cursor-pointer"
+                                className="text-red-500 hover:text-red-700 font-bold p-1 text-xs cursor-pointer active:scale-95"
                                 title="Delete entry"
                               >
                                 🗑️
@@ -431,8 +526,17 @@ export default function RestaurantStatementModal({
                             {item.kind === 'payment' && onDeletePayment && (
                               <button
                                 onClick={() => onDeletePayment(item.rawPaymentObj)}
-                                className="text-red-500 hover:text-red-700 font-bold p-1 text-xs cursor-pointer"
-                                title="Delete payment"
+                                className="text-red-500 hover:text-red-700 font-bold p-1 text-xs cursor-pointer active:scale-95"
+                                  title="Delete payment"
+                              >
+                                🗑️
+                              </button>
+                            )}
+                            {item.kind === 'bill' && deleteBill && (
+                              <button
+                                onClick={() => handleDeleteBill(item.rawBillObj.id)}
+                                className="text-red-500 hover:text-red-700 font-bold p-1 text-xs cursor-pointer active:scale-95"
+                                title="Delete Invoice"
                               >
                                 🗑️
                               </button>

@@ -67,6 +67,18 @@ export function useBilling(currentUser) {
     await fetchBills();
   };
 
+  const updateBillStatus = async (id, updateFields) => {
+    const { error } = await supabase
+      .from('bills')
+      .update(updateFields)
+      .eq('id', id);
+    if (error) {
+      console.error('Error updating bill status', error);
+      throw error;
+    }
+    await fetchBills();
+  };
+
   return {
     restaurantProfiles,
     bills,
@@ -74,6 +86,7 @@ export function useBilling(currentUser) {
     saveRestaurantProfile,
     createBill,
     deleteBill,
+    updateBillStatus,
     refetchBills: fetchBills
   };
 }
