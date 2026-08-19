@@ -700,7 +700,11 @@ export function useCylinderData(currentUser) {
   const totalBatchCosts = useMemo(() => batches.reduce((s, b) => s + (parseFloat(b.bookingCost || b.booking_cost) || 0), 0), [batches]);
   const totalCollectionsAll = useMemo(() => {
     return payments
-      .filter(p => (p.batch_num && p.batch_num > 0) || (p.note && !p.note.includes('Legacy Import')) || (!p.note && p.batch_num))
+      .filter(p => {
+        const bNum = Number(p.batch_num || p.batchNum || 0);
+        const isLegacy = p.note && p.note.includes('Legacy Import');
+        return bNum > 0 && !isLegacy;
+      })
       .reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
   }, [payments]);
   const netBookingWallet = totalCollectionsAll - totalBatchCosts;
