@@ -26,3 +26,7 @@ CREATE POLICY "Secure partner access - restaurants" ON public.restaurants
 DROP POLICY IF EXISTS "Secure partner access - bills" ON public.bills;
 CREATE POLICY "Secure partner access - bills" ON public.bills
     TO authenticated USING (true) WITH CHECK (true);
+
+-- 6. Ensure invoice_no column exists on public.bills
+ALTER TABLE public.bills ADD COLUMN IF NOT EXISTS invoice_no BIGINT;
+

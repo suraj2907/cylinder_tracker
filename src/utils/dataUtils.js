@@ -3,6 +3,7 @@
 export const ALIASES = {
   // Historical CSV normalizations
   "Rahul Panchmukhi Paratha": "Punchmukhi Paratha",
+  "Karnail Singh Bhatia": "Jasbeer Kaur Bhatia",
   "SIMRAN SWEETS": "Simran Restaurant",
   "Parvez Bhiya Kalp": "Kalp",
   "M/S HOTEL AMORA": "Hotel Amora",
@@ -127,7 +128,9 @@ export const ALIASES = {
   // Bajrang
   "Bajrang hotel": "Bajrang Hotel",
   "Bajrang": "Bajrang Hotel",
+  // Bajrang tadka
   "Bajrang tadka": "Bajrang Tadka",
+  "Bajrang tadka point": "Bajrang Tadka",
   // Khalsa
   "Khalaa hotel": "Khalsa Hotel",
   "Khalsa": "Khalsa Hotel",
@@ -441,21 +444,48 @@ export function computeAll(batches) {
     });
   });
 
-  // Equalize khali returns for zero-outstanding audited hotels
-  ZERO_OUTSTANDING_HOTELS.forEach(targetName => {
-    const normTarget = norm(targetName);
-    if (restMap[normTarget]) {
-      const del21 = restMap[normTarget]["21kg"] || 0;
-      const del192 = restMap[normTarget]["19.2kg"] || 0;
-
-      // Set khali returns equal to deliveries so outstanding = 0
-      restMap[normTarget]["Empty21kg"] = del21;
-      restMap[normTarget]["Empty19.2kg"] = del192;
-      restMap[normTarget]["Empty"] = del21 + del192;
-    }
-  });
-
   return { restMap, dateMap, batchStats };
 }
 
 export const INITIAL_DATA = [];
+
+export function getInvoiceLabel(bill) {
+  if (!bill) return 'INV-0000';
+  const val = bill.invoice_no || bill.legacy_invoice_no || bill.id;
+  if (!val) return 'INV-0000';
+  return `INV-${String(val).padStart(4, '0')}`;
+}
+
+export function getPartyCurrentBalance(partyName, restaurantProfiles = {}, bills = [], payments = []) {
+  if (!partyName) return 0;
+  const normP = norm(partyName);
+  
+  // 1. Base closing balance up to 17/08/2026 from official synced CSV ledgers
+  let baseBalance = 0;
+  Object.keys(restaurantProfiles || {}).forEach(k => {
+    if (norm(k) === normP) {
+      baseBalance = parseFloat(restaurantProfiles[k].previous_balance || 0);
+    }
+  });
+
+  // 2. Add unpaid portion of new bills generated on/after 18/08/2026
+  let newBillsSum = 0;
+  (bills || []).forEach(b => {
+    if (norm(b.restaurant_name) === normP && b.bill_date >= '2026-08-18') {
+      const unpaid = (parseFloat(b.total_amount) || 0) - (parseFloat(b.amount_paid) || 0);
+      if (unpaid > 0.05) newBillsSum += unpaid;
+    }
+  });
+
+  // 3. Subtract new payment collections recorded on/after 18/08/2026 (or active collections)
+  let newPaymentsSum = 0;
+  (payments || []).forEach(p => {
+    const pName = norm(p.restaurant_name || p.restaurantName);
+    const isNew = p.date >= '2026-08-18' || (p.note && !p.note.includes('Legacy Import'));
+    if (pName === normP && isNew) {
+      newPaymentsSum += (parseFloat(p.amount) || 0);
+    }
+  });
+
+  return Math.max(0, baseBalance + newBillsSum - newPaymentsSum);
+}

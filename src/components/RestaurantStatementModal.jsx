@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { formatIsoDate, normType } from '../utils/dataUtils';
+import { formatIsoDate, normType, getInvoiceLabel, getPartyCurrentBalance } from '../utils/dataUtils';
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const MFULL = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -110,7 +110,7 @@ export default function RestaurantStatementModal({
           batchNum: '-',
           restaurantName: b.restaurant_name,
           amount: parseFloat(b.total_amount) || 0,
-          invoiceLabel: `INV-${String(b.invoice_no).padStart(4, '0')}`,
+          invoiceLabel: getInvoiceLabel(b),
           userName: b.created_by || 'Suraj',
           note: b.note || '',
           rawBillObj: b
@@ -119,20 +119,27 @@ export default function RestaurantStatementModal({
     });
 
     const profile = restaurantProfiles[restaurantName] || {};
-    const openingBalance = parseFloat(profile.previous_balance || 0);
+    // Base balance up to 17/08/2026 from official synced CSV ledgers
+    const baseBalance = parseFloat(profile.previous_balance || 0);
 
     // Sort ascending to compute true running balance from the oldest entry
     const sortedAsc = [...list].sort((a, b) => new Date(a.date) - new Date(b.date));
-    let currentBalance = openingBalance;
+    
+    let currentBalance = baseBalance;
     const listWithBalance = sortedAsc.map(item => {
-      if (item.kind === 'bill') {
-        currentBalance += item.amount;
-      } else if (item.kind === 'payment') {
-        currentBalance -= item.amount;
+      const isNew = item.date >= '2026-08-18' || (item.kind === 'payment' && item.note && !item.note.includes('Legacy Import'));
+      if (isNew) {
+        if (item.kind === 'bill') {
+          const paidOnBill = item.rawBillObj ? (parseFloat(item.rawBillObj.amount_paid) || 0) : 0;
+          const unpaidOnBill = Math.max(0, item.amount - paidOnBill);
+          currentBalance += unpaidOnBill;
+        } else if (item.kind === 'payment') {
+          currentBalance -= item.amount;
+        }
       }
       return {
         ...item,
-        runningBalance: currentBalance
+        runningBalance: Math.max(0, currentBalance)
       };
     });
 
@@ -195,7 +202,9 @@ export default function RestaurantStatementModal({
     return Array.from(s).sort().reverse();
   }, [allRestaurantActivities, currentMonthStr]);
 
-  const closingBalance = allRestaurantActivities.length > 0 ? allRestaurantActivities[0].runningBalance : openingBalance;
+  const closingBalance = useMemo(() => {
+    return getPartyCurrentBalance(restaurantName, restaurantProfiles, bills, payments);
+  }, [restaurantName, restaurantProfiles, bills, payments]);
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[99999] flex items-center justify-center p-2.5 sm:p-5 animate-fadeIn">
@@ -579,7 +588,7 @@ export default function RestaurantStatementModal({
                       {restaurantBills.map(b => (
                         <tr key={b.id} className="hover:bg-slate-50 transition-colors">
                           <td className="px-4 py-3 font-extrabold text-slate-900">
-                            INV-{String(b.invoice_no).padStart(4, '0')}
+                            {getInvoiceLabel(b)}
                           </td>
                           <td className="px-4 py-3 font-semibold text-slate-600">{b.bill_date}</td>
                           <td className="px-4 py-3 font-bold">
@@ -671,7 +680,7 @@ export default function RestaurantStatementModal({
                   <span className="inline-block px-2.5 py-0.5 bg-slate-950 text-white text-[9px] font-black rounded uppercase tracking-wider">
                     {selectedBillForPrint.gst_mode === 'gst' ? 'TAX INVOICE' : 'BILL'}
                   </span>
-                  <p className="text-xs font-bold text-slate-700 mt-2">Invoice No: INV-{String(selectedBillForPrint.invoice_no).padStart(4, '0')}</p>
+                  <p className="text-xs font-bold text-slate-700 mt-2">Invoice No: {getInvoiceLabel(selectedBillForPrint)}</p>
                   <p className="text-[10px] text-slate-500">Date: {selectedBillForPrint.bill_date}</p>
                 </div>
               </div>

@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { getInvoiceLabel } from '../utils/dataUtils';
 
 function emptyItem() {
   return { item_id: '', description: '', hsn: '', qty: 1, rate: 0, gst_rate: 18 };
@@ -70,15 +71,25 @@ export default function GenerateBill({
   restaurantProfiles = {},
   createBill,
   itemsCatalog = [],
-  partyItemPrices = []
+  partyItemPrices = [],
+  bills = [],
+  payments = [],
+  nextSuggestedInvoiceNo = 3499
 }) {
   const [selectedRestaurant, setSelectedRestaurant] = useState('');
   const [search, setSearch] = useState('');
   const [gstMode, setGstMode] = useState('gst'); // 'gst' | 'none'
   const [billDate, setBillDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [customInvoiceNo, setCustomInvoiceNo] = useState('');
   const [items, setItems] = useState([emptyItem()]);
   const [savedBill, setSavedBill] = useState(null);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (nextSuggestedInvoiceNo) {
+      setCustomInvoiceNo(String(nextSuggestedInvoiceNo));
+    }
+  }, [nextSuggestedInvoiceNo]);
 
   const filteredRestaurants = useMemo(() => {
     if (!search) return restaurants.slice(0, 8);
@@ -87,12 +98,36 @@ export default function GenerateBill({
 
   const profile = restaurantProfiles[selectedRestaurant] || {};
   
-  // Previous balance from profile
+  // Calculate dynamic previous balance for selected party prior to bill date
   const previousBalance = useMemo(() => {
     if (!selectedRestaurant) return 0;
-    // Look up outstanding balance from profile (defaults to 0 if not calculated yet)
-    return parseFloat(profile.totalOutstanding || profile.outstanding || 0);
-  }, [profile, selectedRestaurant]);
+    const normTarget = selectedRestaurant.trim().toLowerCase();
+
+    const profileObj = restaurantProfiles[selectedRestaurant] || {};
+    const openingBal = parseFloat(profileObj.previous_balance || 0);
+
+    let totalBilled = 0;
+    (bills || []).forEach(b => {
+      if ((b.restaurant_name || "").trim().toLowerCase() === normTarget) {
+        if (!billDate || (b.bill_date && b.bill_date < billDate)) {
+          totalBilled += (parseFloat(b.total_amount) || 0);
+        }
+      }
+    });
+
+    let totalPaid = 0;
+    (payments || []).forEach(p => {
+      const pName = (p.restaurant_name || p.restaurantName || "").trim().toLowerCase();
+      if (pName === normTarget) {
+        const pDate = p.date || (p.created_at ? p.created_at.slice(0, 10) : "");
+        if (!billDate || (pDate && pDate < billDate)) {
+          totalPaid += (parseFloat(p.amount) || 0);
+        }
+      }
+    });
+
+    return Math.max(0, openingBal + totalBilled - totalPaid);
+  }, [selectedRestaurant, restaurantProfiles, bills, payments, billDate]);
 
   const handleItemChange = (idx, itemId) => {
     const itemObj = itemsCatalog.find(i => i.id === itemId);
@@ -196,6 +231,7 @@ export default function GenerateBill({
       const bill = await createBill({
         restaurant_name: selectedRestaurant,
         bill_date: billDate,
+        invoice_no: customInvoiceNo ? parseInt(customInvoiceNo, 10) : nextSuggestedInvoiceNo,
         gst_mode: gstMode,
         items,
         subtotal: totals.subtotal,
@@ -217,8 +253,10 @@ export default function GenerateBill({
 
   const handlePrint = () => window.print();
 
-  const invoiceLabel = savedBill ? `INV-${String(savedBill.invoice_no).padStart(4, '0')}` : null;
+  const invoiceLabel = savedBill ? getInvoiceLabel(savedBill) : null;
   const currentBalance = previousBalance + totals.total;
+  const savedAmountPaid = Number(savedBill?.amount_paid || 0);
+  const savedBalance = Math.max(0, Number(savedBill?.total_amount || totals.total) - savedAmountPaid);
 
   if (savedBill) {
     return (
@@ -409,11 +447,11 @@ export default function GenerateBill({
               <div className="space-y-1.5 font-bold text-[11px] text-slate-500 pb-2 border-b">
                 <div className="flex justify-between">
                   <span>Received Amount</span>
-                  <span className="text-emerald-700 font-black">₹{totals.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  <span className="text-slate-700 font-bold">₹{(savedBill?.amount_paid || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Balance</span>
-                  <span className="text-slate-800">₹0.00</span>
+                  <span>Balance Due</span>
+                  <span className="text-rose-700 font-black">₹{((totals.total || 0) - (savedBill?.amount_paid || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                 </div>
               </div>
 
@@ -476,8 +514,21 @@ export default function GenerateBill({
         )}
       </div>
 
-      <div className="flex gap-3">
-        <div className="flex-1">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div>
+          <label className="text-xs font-bold text-slate-500 uppercase">Invoice No.</label>
+          <div className="relative mt-1">
+            <span className="absolute left-3 top-2.5 text-xs font-black text-slate-400">INV-</span>
+            <input
+              type="number"
+              className="w-full border border-customBorder rounded-xl pl-11 pr-3 py-2 text-xs font-black focus:outline-none focus:border-accentCyan shadow-sm"
+              value={customInvoiceNo}
+              onChange={e => setCustomInvoiceNo(e.target.value)}
+              placeholder="3499"
+            />
+          </div>
+        </div>
+        <div>
           <label className="text-xs font-bold text-slate-500 uppercase">Bill Date</label>
           <input
             type="date"
@@ -486,7 +537,7 @@ export default function GenerateBill({
             onChange={e => setBillDate(e.target.value)}
           />
         </div>
-        <div className="flex-1">
+        <div>
           <label className="text-xs font-bold text-slate-500 uppercase">GST Filing Status</label>
           <div className="mt-1 flex bg-slate-100 rounded-xl p-1">
             <button

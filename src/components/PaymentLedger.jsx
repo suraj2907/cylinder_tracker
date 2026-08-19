@@ -42,7 +42,7 @@ export function PaymentLedger({
   const batchSummaries = useMemo(() => {
     return batches.map(b => {
       const bNum = b.batch;
-      const bPayments = payments.filter(p => (p.batch_num || p.batchNum) === bNum);
+      const bPayments = payments.filter(p => Number(p.batch_num || p.batchNum) === Number(bNum));
       
       const totalCash = bPayments.filter(p => (p.payment_mode || p.paymentMode) === 'Cash').reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
       const totalUPI = bPayments.filter(p => (p.payment_mode || p.paymentMode) === 'UPI').reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);

@@ -1,10 +1,9 @@
 import React, { useState, useMemo } from 'react';
+import { getInvoiceLabel } from '../utils/dataUtils';
 
 export default function OutstandingBills({
   bills = [],
-  payments = [],
-  createPayment, // Function to save collection payment in DB
-  updateBillStatus // Function to update amount_paid / status in DB
+  recordBillPayment
 }) {
   const [search, setSearch] = useState('');
   const [selectedBill, setSelectedBill] = useState(null); // Bill for recording payment
@@ -18,7 +17,7 @@ export default function OutstandingBills({
     return bills.filter(b => {
       const isPending = b.payment_status !== 'paid' && (parseFloat(b.total_amount) - parseFloat(b.amount_paid || 0)) > 0.05;
       const matchesSearch = !search || b.restaurant_name.toLowerCase().includes(search.toLowerCase()) ||
-                            String(b.id).includes(search);
+                            String(b.id).includes(search) || String(b.invoice_no || '').includes(search);
       return isPending && matchesSearch;
     });
   }, [bills, search]);
@@ -32,30 +31,24 @@ export default function OutstandingBills({
   const handleSavePayment = async (e) => {
     e.preventDefault();
     if (!selectedBill || !payAmount) return;
+    const amt = Number(payAmount);
+    const balance = Number(selectedBill.total_amount) - Number(selectedBill.amount_paid || 0);
+    if (!Number.isFinite(amt) || amt <= 0) {
+      alert('Please enter a valid payment amount.');
+      return;
+    }
+    if (amt > balance + 0.05) {
+      alert(`Payment pending balance (₹${balance.toFixed(2)}) se zyada nahi ho sakta.`);
+      return;
+    }
     setSaving(true);
     try {
-      const amt = parseFloat(payAmount);
-      const newPaidAmount = parseFloat(selectedBill.amount_paid || 0) + amt;
-      const totalAmt = parseFloat(selectedBill.total_amount);
-      
-      let status = 'partially_paid';
-      if (newPaidAmount >= totalAmt - 0.05) {
-        status = 'paid';
-      }
-
-      // 1. Save payment entry in DB
-      await createPayment({
-        restaurant_name: selectedBill.restaurant_name,
+      await recordBillPayment({
+        billId: selectedBill.id,
         amount: amt,
-        payment_mode: payMode,
-        date: new Date().toISOString().slice(0, 10),
-        note: payNote || `Against Invoice INV-${String(selectedBill.invoice_no).padStart(4, '0')}`
-      });
-
-      // 2. Update bill status & paid amount in DB
-      await updateBillStatus(selectedBill.id, {
-        amount_paid: Number(newPaidAmount.toFixed(2)),
-        payment_status: status
+        paymentMode: payMode,
+        paymentDate: new Date().toISOString().slice(0, 10),
+        note: payNote || `Against Invoice ${getInvoiceLabel(selectedBill)}`
       });
 
       alert("Payment collection recorded successfully!");
@@ -109,7 +102,7 @@ export default function OutstandingBills({
                 const balance = parseFloat(b.total_amount) - parseFloat(b.amount_paid || 0);
                 return (
                   <tr key={b.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 font-bold text-slate-900">INV-{String(b.invoice_no).padStart(4, '0')}</td>
+                    <td className="px-4 py-3 font-bold text-slate-900">{getInvoiceLabel(b)}</td>
                     <td className="px-4 py-3 font-extrabold text-slate-950">{b.restaurant_name}</td>
                     <td className="px-4 py-3 text-slate-500">{b.bill_date}</td>
                     <td className="px-4 py-3 text-right text-slate-900">₹{parseFloat(b.total_amount).toFixed(2)}</td>
@@ -164,7 +157,7 @@ export default function OutstandingBills({
               <div className="grid grid-cols-2 gap-3.5">
                 <div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase block">Invoice No</span>
-                  <span className="text-xs font-black text-slate-900 block mt-0.5">INV-{String(selectedBill.invoice_no).padStart(4, '0')}</span>
+                  <span className="text-xs font-black text-slate-900 block mt-0.5">{getInvoiceLabel(selectedBill)}</span>
                 </div>
                 <div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase block">Pending Balance</span>

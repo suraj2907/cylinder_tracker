@@ -95,70 +95,28 @@ export function useCylinderData(currentUser) {
     if (isSupabaseConfigured) {
       const fetchData = async () => {
         try {
-          // Fetch batches
+          // Fast parallel fetching for batches, entries, and payments
           const fetchBatchesChain = async () => {
-            let dbBatches = [];
-            let batchFrom = 0;
-            let batchTo = 999;
-            let keepFetching = true;
-            while (keepFetching) {
-              const { data, error } = await supabase
-                .from('batches')
-                .select('*')
-                .order('batch_num', { ascending: true })
-                .range(batchFrom, batchTo);
-              if (error) throw error;
-              if (data && data.length > 0) {
-                dbBatches = [...dbBatches, ...data];
-                if (data.length < 1000) keepFetching = false;
-                else { batchFrom += 1000; batchTo += 1000; }
-              } else {
-                keepFetching = false;
-              }
-            }
-            return dbBatches;
-          };
-
-          // Fetch entries
-          const fetchEntriesChain = async () => {
-            let dbEntries = [];
-            let entryFrom = 0;
-            let entryTo = 999;
-            let keepFetching = true;
-            while (keepFetching) {
-              const { data, error } = await supabase
-                .from('entries')
-                .select('*')
-                .order('id', { ascending: true })
-                .range(entryFrom, entryTo);
-              if (error) throw error;
-              if (data && data.length > 0) {
-                dbEntries = [...dbEntries, ...data];
-                if (data.length < 1000) keepFetching = false;
-                else { entryFrom += 1000; entryTo += 1000; }
-              } else {
-                keepFetching = false;
-              }
-            }
-            return dbEntries;
-          };
-
-          // Fetch payments gracefully
-          const fetchPayments = async () => {
-            const { data, error } = await supabase
-              .from('payments')
-              .select('*')
-              .order('created_at', { ascending: false });
-            if (error && error.code !== '42P01') {
-              console.warn("Payments query error", error);
-            }
+            const { data } = await supabase.from('batches').select('*').order('batch_num', { ascending: true }).range(0, 999);
             return data || [];
+          };
+
+          const fetchEntriesChain = async () => {
+            const ranges = [[0, 999], [1000, 1999], [2000, 2999], [3000, 3999], [4000, 4999], [5000, 5999], [6000, 6999]];
+            const res = await Promise.all(ranges.map(([f, t]) => supabase.from('entries').select('*').range(f, t)));
+            return res.flatMap(r => r.data || []);
+          };
+
+          const fetchPaymentsChain = async () => {
+            const ranges = [[0, 999], [1000, 1999], [2000, 2999], [3000, 3999]];
+            const res = await Promise.all(ranges.map(([f, t]) => supabase.from('payments').select('*').order('id', { ascending: true }).range(f, t)));
+            return res.flatMap(r => r.data || []);
           };
 
           const [dbBatches, dbEntries, dbPayments] = await Promise.all([
             fetchBatchesChain(),
             fetchEntriesChain(),
-            fetchPayments()
+            fetchPaymentsChain()
           ]);
 
           // Capture any unsynced local entries BEFORE they get overwritten below
@@ -418,7 +376,7 @@ export function useCylinderData(currentUser) {
               addActivityRef.current("Payment Recorded", `₹${newPay.amount} (${newPay.payment_mode}) for ${newPay.restaurant_name}`, partner);
             } else if (payload.eventType === 'DELETE') {
               const oldId = payload.old.id;
-              setPayments(prev => prev.filter(p => p !== oldId));
+              setPayments(prev => prev.filter(p => p.id !== oldId));
             }
           }
         )
@@ -613,32 +571,32 @@ export function useCylinderData(currentUser) {
   // Delete Entry Handler
   async function handleDeleteEntry(batchNum, originalEntry) {
     if (window.confirm("Sach me ye entry delete karni hai?")) {
-      // Immediately remove from local state
-      setBatches(prev => prev.map(b => {
-        if (b.batch === batchNum) {
-          return { ...b, entries: b.entries.filter(e => e !== originalEntry) };
-        }
-        return b;
-      }));
-
-      addActivity("Deleted Entry", `Entry for ${originalEntry.name} from Batch #${batchNum}`, currentUser);
-      showToast("🗑️ Entry delete ho gayi!");
-
       if (isSupabaseConfigured) {
         try {
+          let error;
           if (originalEntry.id && typeof originalEntry.id !== 'string') {
-            await supabase.from('entries').delete().eq('id', originalEntry.id);
+            ({ error } = await supabase.from('entries').delete().eq('id', originalEntry.id));
           } else {
-            await supabase.from('entries').delete()
+            ({ error } = await supabase.from('entries').delete()
               .eq('batch_num', batchNum)
               .eq('name', originalEntry.name)
               .eq('qty', originalEntry.qty)
-              .eq('type', originalEntry.type);
+              .eq('type', originalEntry.type));
+          }
+          if (error) {
+            throw error;
           }
         } catch (err) {
           console.warn("Supabase delete background exception:", err);
+          showToast(`Delete nahi hua: ${err.message || 'database error'}`, false);
+          return;
         }
       }
+      setBatches(prev => prev.map(b => b.batch === batchNum
+        ? { ...b, entries: b.entries.filter(e => e !== originalEntry) }
+        : b));
+      addActivity("Deleted Entry", `Entry for ${originalEntry.name} from Batch #${batchNum}`, currentUser);
+      showToast("🗑️ Entry delete ho gayi!");
     }
   }
 
@@ -699,9 +657,12 @@ export function useCylinderData(currentUser) {
     if (window.confirm(`Delete payment ₹${paymentObj.amount} for ${paymentObj.restaurant_name || paymentObj.restaurantName}?`)) {
       if (isSupabaseConfigured && paymentObj.id) {
         try {
-          await supabase.from('payments').delete().eq('id', paymentObj.id);
+          const { error } = await supabase.from('payments').delete().eq('id', paymentObj.id);
+          if (error) throw error;
         } catch (e) {
           console.error(e);
+          showToast(`Payment delete nahi hua: ${e.message || 'database error'}`, false);
+          return;
         }
       }
       setPayments(prev => prev.filter(p => p !== paymentObj));
@@ -735,9 +696,13 @@ export function useCylinderData(currentUser) {
     }
   }
 
-  // Calculate global booking cash balance
+  // Calculate global booking cash balance (Field collections minus batch booking costs)
   const totalBatchCosts = useMemo(() => batches.reduce((s, b) => s + (parseFloat(b.bookingCost || b.booking_cost) || 0), 0), [batches]);
-  const totalCollectionsAll = useMemo(() => payments.filter(p => !p.note || !p.note.includes('Legacy Import')).reduce((s, p) => s + (parseFloat(p.amount) || 0), 0), [payments]);
+  const totalCollectionsAll = useMemo(() => {
+    return payments
+      .filter(p => (p.batch_num && p.batch_num > 0) || (p.note && !p.note.includes('Legacy Import')) || (!p.note && p.batch_num))
+      .reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+  }, [payments]);
   const netBookingWallet = totalCollectionsAll - totalBatchCosts;
 
   return {

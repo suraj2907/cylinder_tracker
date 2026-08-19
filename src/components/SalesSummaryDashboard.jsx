@@ -3,12 +3,14 @@ import DateRangePicker from './DateRangePicker';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { getInvoiceLabel } from '../utils/dataUtils';
 
 export default function SalesSummaryDashboard({
   bills = [],
   restaurants = [],
   deleteBill
 }) {
+  const [isAllTime, setIsAllTime] = useState(false);
   const [dateRange, setDateRange] = useState(() => {
     // Default to this month
     const now = new Date();
@@ -26,7 +28,7 @@ export default function SalesSummaryDashboard({
   // Filter bills
   const filteredBills = useMemo(() => {
     return bills.filter(bill => {
-      const matchesDate = bill.bill_date >= dateRange.startDate && bill.bill_date <= dateRange.endDate;
+      const matchesDate = isAllTime || (bill.bill_date >= dateRange.startDate && bill.bill_date <= dateRange.endDate);
       const matchesStatus = statusFilter === 'all' ||
                             (statusFilter === 'paid' && bill.payment_status === 'paid') ||
                             (statusFilter === 'unpaid' && bill.payment_status !== 'paid');
@@ -37,7 +39,7 @@ export default function SalesSummaryDashboard({
 
       return matchesDate && matchesStatus && matchesParty && matchesStaff;
     });
-  }, [bills, dateRange, statusFilter, partyFilter, staffFilter]);
+  }, [bills, dateRange, isAllTime, statusFilter, partyFilter, staffFilter]);
 
   // Aggregate Metrics
   const metrics = useMemo(() => {
@@ -61,10 +63,10 @@ export default function SalesSummaryDashboard({
   // Export to Excel
   const exportToExcel = () => {
     const data = filteredBills.map(b => ({
-      "Invoice No": `INV-${String(b.invoice_no).padStart(4, '0')}`,
+      "Invoice No": getInvoiceLabel(b),
       "Date": b.bill_date,
       "Restaurant Name": b.restaurant_name,
-      "GST Mode": b.gst_mode.toUpperCase(),
+      "GST Mode": (b.gst_mode || 'gst').toUpperCase(),
       "Taxable Value": b.taxable_amount,
       "CGST": b.cgst,
       "SGST": b.sgst,
@@ -78,7 +80,7 @@ export default function SalesSummaryDashboard({
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Sales Summary");
-    XLSX.writeFile(workbook, `Sales_Summary_${dateRange.startDate}_to_${dateRange.endDate}.xlsx`);
+    XLSX.writeFile(workbook, `Sales_Summary_${isAllTime ? 'AllTime' : dateRange.startDate + '_to_' + dateRange.endDate}.xlsx`);
   };
 
   // Export to PDF
@@ -88,17 +90,17 @@ export default function SalesSummaryDashboard({
     doc.text("M/S SHREE BALAJI AGENCIES", 14, 15);
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text(`Sales Summary Report: ${dateRange.startDate} to ${dateRange.endDate}`, 14, 22);
+    doc.text(`Sales Summary Report: ${isAllTime ? 'All Time Records' : dateRange.startDate + ' to ' + dateRange.endDate}`, 14, 22);
 
     const headers = [["Inv No", "Date", "Customer", "Subtotal", "Tax", "Total", "Status"]];
     const data = filteredBills.map(b => [
-      `INV-${String(b.invoice_no).padStart(4, '0')}`,
+      getInvoiceLabel(b),
       b.bill_date,
       b.restaurant_name,
-      `₹${b.taxable_amount.toFixed(2)}`,
-      `₹${(b.cgst + b.sgst).toFixed(2)}`,
-      `₹${b.total_amount.toFixed(2)}`,
-      b.payment_status.toUpperCase()
+      `₹${(parseFloat(b.taxable_amount) || 0).toFixed(2)}`,
+      `₹${((parseFloat(b.cgst) || 0) + (parseFloat(b.sgst) || 0)).toFixed(2)}`,
+      `₹${(parseFloat(b.total_amount) || 0).toFixed(2)}`,
+      (b.payment_status || 'unpaid').toUpperCase()
     ]);
 
     doc.autoTable({
@@ -144,8 +146,25 @@ export default function SalesSummaryDashboard({
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {/* Date Filter */}
         <div className="bg-white border border-customBorder rounded-2xl p-4 shadow-soft">
-          <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-2">Billing Period</label>
-          <DateRangePicker value={dateRange} onChange={setDateRange} />
+          <div className="flex justify-between items-center mb-2">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Billing Period</label>
+            <button
+              type="button"
+              onClick={() => setIsAllTime(!isAllTime)}
+              className={`px-2 py-0.5 rounded text-[10px] font-black uppercase border transition-all cursor-pointer ${
+                isAllTime ? 'bg-sky-600 text-white border-sky-600 shadow-xs' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+              }`}
+            >
+              {isAllTime ? '🌐 All Time' : '📅 Date Filter'}
+            </button>
+          </div>
+          {!isAllTime ? (
+            <DateRangePicker value={dateRange} onChange={setDateRange} />
+          ) : (
+            <div className="text-xs font-bold text-sky-800 bg-sky-50 p-2 rounded-xl border border-sky-200 text-center">
+              All {bills.length.toLocaleString()} Historical Bills
+            </div>
+          )}
         </div>
 
         {/* Customer/Party Filter */}
@@ -246,7 +265,7 @@ export default function SalesSummaryDashboard({
                 return (
                   <tr key={bill.id} className="hover:bg-slate-50/50">
                     <td className="px-4 py-3 font-bold text-slate-800">
-                      INV-{String(bill.invoice_no).padStart(4, '0')}
+                      {getInvoiceLabel(bill)}
                     </td>
                     <td className="px-4 py-3 font-semibold text-slate-650">{bill.bill_date}</td>
                     <td className="px-4 py-3 font-bold text-slate-900">{bill.restaurant_name}</td>

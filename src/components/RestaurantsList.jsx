@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import RestaurantStatementModal from './RestaurantStatementModal';
 import RestaurantProfileModal from './RestaurantProfileModal';
+import { norm, getPartyCurrentBalance } from '../utils/dataUtils';
 
 export default function RestaurantsList({ 
   restaurants, 
@@ -28,13 +29,27 @@ export default function RestaurantsList({
   const [editingRestaurant, setEditingRestaurant] = useState(null);
   const [collectOnly, setCollectOnly] = useState(false);
 
-  // Filter restaurants by "Collect" status (outstanding > 0)
+  // Compute party financial (Rupee ₹) balance map: Base CSV balance + New App Bills (>= 18/08) - New Payments
+  const partyFinancialMap = useMemo(() => {
+    const map = {};
+    (restaurants || []).forEach(r => {
+      const normP = norm(r.name);
+      map[normP] = getPartyCurrentBalance(r.name, restaurantProfiles, bills, payments);
+    });
+    return map;
+  }, [restaurants, restaurantProfiles, bills, payments]);
+
+  const totalRupeeOutstandingAll = useMemo(() => {
+    return Object.values(partyFinancialMap).reduce((acc, val) => acc + (val > 0 ? val : 0), 0);
+  }, [partyFinancialMap]);
+
+  // Filter restaurants by "Collect" status (outstanding cylinders or rupee balance > 0)
   const displayedRestaurants = useMemo(() => {
     if (collectOnly) {
-      return restaurants.filter(r => (parseFloat(r.outstanding) || 0) > 0);
+      return restaurants.filter(r => (parseFloat(r.outstanding) || 0) > 0 || (partyFinancialMap[norm(r.name)] || 0) > 0);
     }
     return restaurants;
-  }, [restaurants, collectOnly]);
+  }, [restaurants, collectOnly, partyFinancialMap]);
 
   return (
     <div className="bg-white border border-customBorder rounded-2xl mb-6 overflow-hidden shadow-soft fade space-y-4">
@@ -76,7 +91,7 @@ export default function RestaurantsList({
             <option value="empty21">Sort: 21 KG Khali</option>
             <option value="empty192">Sort: 19.2 KG Khali</option>
             <option value="empty">Sort: Total Khali</option>
-            <option value="outstanding">Sort: Outstanding</option>
+            <option value="outstanding">Sort: Cylinder Outstanding</option>
             <option value="az">Sort: A - Z</option>
             <option value="za">Sort: Z - A</option>
           </select>
@@ -89,7 +104,8 @@ export default function RestaurantsList({
             <tr className="border-b border-customBorder bg-slate-50">
               <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">#</th>
               <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Restaurant</th>
-              <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Outstanding</th>
+              <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">🧯 Cyl. Outstanding</th>
+              <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">💰 Payment Balance (₹)</th>
               <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">🔵 21 KG Del</th>
               <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">🟢 19.2 KG Del</th>
               <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">🔵 21 KG Khali</th>
@@ -101,63 +117,76 @@ export default function RestaurantsList({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {displayedRestaurants.map((r, i) => (
-              <tr key={r.name} className="hover:bg-slate-50 transition-colors">
-                <td className="px-4 py-3 text-xs font-bold text-slate-400">{i + 1}</td>
-                <td className="px-4 py-3 text-xs font-bold text-textSlate">
-                  <button
-                    onClick={() => setSelectedHotelForPassbook(r.name)}
-                    className="hover:underline hover:text-sky-700 text-left font-extrabold"
-                  >
-                    {r.name}
-                  </button>
-                </td>
-                <td className="px-4 py-3 text-xs">
-                  <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${r.outstanding > 0 ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-emerald-100 text-emerald-700 border-emerald-200'}`}>
-                    {r.outstanding}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-xs">
-                  <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-100 text-sky-800 border border-sky-200">{r.kg21}</span>
-                </td>
-                <td className="px-4 py-3 text-xs">
-                  <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800 border border-teal-200">{r.kg192}</span>
-                </td>
-                <td className="px-4 py-3 text-xs">
-                  <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-100 text-sky-800 border border-sky-200">{r.empty21}</span>
-                </td>
-                <td className="px-4 py-3 text-xs">
-                  <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800 border border-teal-200">{r.empty192}</span>
-                </td>
-                <td className="px-4 py-3 text-xs">
-                  <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200">{r.empty}</span>
-                </td>
-                <td className={`px-4 py-3 text-xs font-black ${r.total > 50 ? 'text-amber-600' : 'text-slate-900'}`}>{r.total}</td>
-                <td className="px-4 py-3 text-xs text-right">
-                  <button
-                    onClick={() => setSelectedHotelForPassbook(r.name)}
-                    className="px-2.5 py-1 rounded-lg bg-sky-50 border border-sky-200 text-sky-800 hover:bg-sky-100 text-[11px] font-bold transition-all shadow-xs"
-                  >
-                    📜 Passbook
-                  </button>
-                </td>
-                <td className="px-4 py-3 text-xs text-right">
-                  <button
-                    onClick={() => setEditingRestaurant(r.name)}
-                    className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 text-[11px] font-bold transition-all shadow-xs"
-                  >
-                    ✏️ Edit
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {displayedRestaurants.map((r, i) => {
+              const rupeeBal = partyFinancialMap[norm(r.name)] || 0;
+              return (
+                <tr key={r.name} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-4 py-3 text-xs font-bold text-slate-400">{i + 1}</td>
+                  <td className="px-4 py-3 text-xs font-bold text-textSlate">
+                    <button
+                      onClick={() => setSelectedHotelForPassbook(r.name)}
+                      className="hover:underline hover:text-sky-700 text-left font-extrabold"
+                    >
+                      {r.name}
+                    </button>
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${r.outstanding > 0 ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-emerald-100 text-emerald-700 border-emerald-200'}`}>
+                      {r.outstanding} PCS
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-black border ${rupeeBal > 0 ? 'bg-rose-100 text-rose-800 border-rose-200' : 'bg-emerald-100 text-emerald-800 border-emerald-200'}`}>
+                      {rupeeBal > 0 ? `₹${rupeeBal.toLocaleString('en-IN')}` : '₹0'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-100 text-sky-800 border border-sky-200">{r.kg21}</span>
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800 border border-teal-200">{r.kg192}</span>
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-100 text-sky-800 border border-sky-200">{r.empty21}</span>
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800 border border-teal-200">{r.empty192}</span>
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200">{r.empty}</span>
+                  </td>
+                  <td className={`px-4 py-3 text-xs font-black ${r.total > 50 ? 'text-amber-600' : 'text-slate-900'}`}>{r.total}</td>
+                  <td className="px-4 py-3 text-xs text-right">
+                    <button
+                      onClick={() => setSelectedHotelForPassbook(r.name)}
+                      className="px-2.5 py-1 rounded-lg bg-sky-50 border border-sky-200 text-sky-800 hover:bg-sky-100 text-[11px] font-bold transition-all shadow-xs"
+                    >
+                      📜 Passbook
+                    </button>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-right">
+                    <button
+                      onClick={() => setEditingRestaurant(r.name)}
+                      className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 text-[11px] font-bold transition-all shadow-xs"
+                    >
+                      ✏️ Edit
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
           <tfoot>
             <tr className="border-t border-customBorder bg-slate-50">
               <td colSpan={2} className="px-4 py-3.5 text-xs font-extrabold uppercase tracking-wider text-slate-900">GRAND TOTAL</td>
               <td className="px-4 py-3.5 text-xs">
                 <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${totOutstanding > 0 ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-emerald-100 text-emerald-700 border-emerald-200'}`}>
-                  {totOutstanding}
+                  {totOutstanding} PCS
+                </span>
+              </td>
+              <td className="px-4 py-3.5 text-xs">
+                <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-black bg-rose-100 text-rose-800 border border-rose-200">
+                  ₹{totalRupeeOutstandingAll.toLocaleString('en-IN')}
                 </span>
               </td>
               <td className="px-4 py-3.5 text-xs">
