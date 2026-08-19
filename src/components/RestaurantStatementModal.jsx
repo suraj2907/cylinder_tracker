@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { formatIsoDate, normType, getInvoiceLabel, getPartyCurrentBalance } from '../utils/dataUtils';
+import { formatIsoDate, normType, getInvoiceLabel, getPartyCurrentBalance, norm } from '../utils/dataUtils';
+import officialLedgersData from '../utils/officialLedgersData.json';
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const MFULL = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -29,96 +30,113 @@ export default function RestaurantStatementModal({
   const [activeSection, setActiveSection] = useState('passbook'); // 'passbook' | 'invoices'
   const [selectedBillForPrint, setSelectedBillForPrint] = useState(null);
 
-  const restaurantBills = useMemo(() => {
-    if (!restaurantName) return [];
-    const normTarget = restaurantName.trim().toLowerCase();
-    return bills.filter(b => (b.restaurant_name || "").trim().toLowerCase() === normTarget);
-  }, [bills, restaurantName]);
-
-  const handleDeleteBill = async (billId, invoiceNo) => {
-    if (window.confirm(`Kya aap sach me Invoice INV-${String(invoiceNo).padStart(4, '0')} delete karna chahte hain?`)) {
-      try {
-        await deleteBill(billId);
-      } catch (e) {
-        alert('Delete nahi hua: ' + e.message);
-      }
-    }
-  };
-
-  // Extract all activity entries (Deliveries, Khali Returns, Payments, Invoices) for this restaurant
+  // Unified activity timeline for this restaurant
   const allRestaurantActivities = useMemo(() => {
-    if (!restaurantName) return [];
-    const normTarget = restaurantName.trim().toLowerCase();
     const list = [];
+    const normTarget = norm(restaurantName);
 
-    // 1. Extract Cylinder Deliveries & Returns from all batches
+    // 1. Include official CSV historical statement entries (01/07/2024 to 17/08/2026)
+    let targetOfficialLedgers = [];
+    Object.keys(officialLedgersData || {}).forEach(k => {
+      if (norm(k) === normTarget) {
+        targetOfficialLedgers = officialLedgersData[k] || [];
+      }
+    });
+
+    targetOfficialLedgers.forEach((e, idx) => {
+      list.push({
+        id: `official_ledger_${idx}_${e.date}_${e.srNo}`,
+        kind: e.voucher === 'Payment-in' ? 'payment' : (e.voucher === 'Sales Invoice' ? 'bill' : 'ledger'),
+        date: e.date,
+        voucher: e.voucher,
+        srNo: e.srNo,
+        paymentMode: e.paymentMode,
+        credit: e.credit,
+        debit: e.debit,
+        amount: e.voucher === 'Payment-in' ? e.credit : e.debit,
+        invoiceLabel: e.srNo ? `INV-${String(e.srNo).padStart(4, '0')}` : 'INV-0000',
+        paymentStatus: e.paymentStatus,
+        userName: 'Official Ledger',
+        note: e.paymentMode ? `Payment Mode: ${e.paymentMode}` : '',
+        isOfficialLedger: true,
+        officialBalance: e.balance
+      });
+    });
+
+    // 2. Extract Cylinder deliveries/returns for this restaurant
     batches.forEach(b => {
-      if (b.entries) {
-        b.entries.forEach(e => {
-          if ((e.name || "").trim().toLowerCase() === normTarget) {
-            const rawDate = e.date || b.khaliDate || today;
-            const normDate = formatIsoDate(rawDate);
-            const normT = normType(e.type);
-            list.push({
-              id: e.id || `cyl_${normDate}_${b.batch}_${Math.random()}`,
-              kind: 'cylinder',
-              date: normDate,
-              batchNum: b.batch,
-              restaurantName: e.name,
-              qty: e.qty,
-              type: normT,
-              isReturn: !!e.isReturn,
-              userName: e.user_name || 'Suraj',
-              originalEntry: e
-            });
-          }
-        });
-      }
+      (b.entries || []).forEach(e => {
+        if (norm(e.name) === normTarget) {
+          const rawDate = e.date || b.khaliDate || today;
+          const entryDate = formatIsoDate(rawDate);
+          list.push({
+            id: e.id || `cyl_${entryDate}_${e.name}_${Math.random()}`,
+            kind: 'cylinder',
+            date: entryDate,
+            batchNum: b.batch,
+            name: e.name,
+            qty: e.qty,
+            type: normType(e.type),
+            isReturn: !!e.isReturn,
+            userName: e.user_name || 'Suraj',
+            rawEntryObj: e
+          });
+        }
+      });
     });
 
-    // 2. Extract Payment Collections for this restaurant
+    // 3. Extract Real-Time Payment Collections on/after 18/08/2026
     payments.forEach(p => {
-      const pName = (p.restaurant_name || p.restaurantName || "").trim().toLowerCase();
+      const pName = norm(p.restaurant_name || p.restaurantName);
       if (pName === normTarget) {
-        const rawDate = p.date || (p.created_at ? p.created_at.slice(0, 10) : today);
+        const rawDate = p.date || today;
         const pDate = formatIsoDate(rawDate);
-        list.push({
-          id: p.id || `pay_${pDate}_${p.amount}_${Math.random()}`,
-          kind: 'payment',
-          date: pDate,
-          batchNum: p.batch_num || p.batchNum || 128,
-          restaurantName: p.restaurant_name || p.restaurantName,
-          amount: parseFloat(p.amount) || 0,
-          paymentMode: p.payment_mode || p.paymentMode || 'Cash',
-          userName: p.user_name || 'Suraj',
-          note: p.note || '',
-          rawPaymentObj: p
-        });
+        if (pDate >= '2026-08-18' || (p.note && !p.note.includes('Legacy Import'))) {
+          list.push({
+            id: p.id || `pay_${pDate}_${p.amount}_${Math.random()}`,
+            kind: 'payment',
+            date: pDate,
+            batchNum: p.batch_num || p.batchNum || '-',
+            restaurantName: p.restaurant_name || p.restaurantName,
+            amount: parseFloat(p.amount) || 0,
+            credit: parseFloat(p.amount) || 0,
+            debit: 0,
+            voucher: 'Payment-in',
+            paymentMode: p.payment_mode || p.paymentMode || 'Cash',
+            userName: p.user_name || 'Suraj',
+            note: p.note || '',
+            rawPaymentObj: p
+          });
+        }
       }
     });
 
-    // 3. Extract Sales Invoices (Bills) for this restaurant
+    // 4. Extract Real-Time Sales Invoices (Bills) on/after 18/08/2026
     bills.forEach(b => {
-      const pName = (b.restaurant_name || "").trim().toLowerCase();
+      const pName = norm(b.restaurant_name || "");
       if (pName === normTarget) {
         const rawDate = b.bill_date || today;
         const bDate = formatIsoDate(rawDate);
-        list.push({
-          id: b.id || `bill_${bDate}_${b.total_amount}_${Math.random()}`,
-          kind: 'bill',
-          date: bDate,
-          batchNum: '-',
-          restaurantName: b.restaurant_name,
-          amount: parseFloat(b.total_amount) || 0,
-          invoiceLabel: getInvoiceLabel(b),
-          userName: b.created_by || 'Suraj',
-          note: b.note || '',
-          rawBillObj: b
-        });
+        if (bDate >= '2026-08-18') {
+          list.push({
+            id: b.id || `bill_${bDate}_${b.total_amount}_${Math.random()}`,
+            kind: 'bill',
+            date: bDate,
+            batchNum: '-',
+            restaurantName: b.restaurant_name,
+            amount: parseFloat(b.total_amount) || 0,
+            debit: parseFloat(b.total_amount) || 0,
+            credit: 0,
+            voucher: 'Sales Invoice',
+            invoiceLabel: getInvoiceLabel(b),
+            userName: b.created_by || 'Suraj',
+            note: b.note || '',
+            rawBillObj: b
+          });
+        }
       }
     });
 
-    const profile = restaurantProfiles[restaurantName] || {};
     // Base balance up to 17/08/2026 from official synced CSV ledgers
     const baseBalance = parseFloat(profile.previous_balance || 0);
 
@@ -127,14 +145,18 @@ export default function RestaurantStatementModal({
     
     let currentBalance = baseBalance;
     const listWithBalance = sortedAsc.map(item => {
-      const isNew = item.date >= '2026-08-18' || (item.kind === 'payment' && item.note && !item.note.includes('Legacy Import'));
-      if (isNew) {
-        if (item.kind === 'bill') {
-          const paidOnBill = item.rawBillObj ? (parseFloat(item.rawBillObj.amount_paid) || 0) : 0;
-          const unpaidOnBill = Math.max(0, item.amount - paidOnBill);
-          currentBalance += unpaidOnBill;
-        } else if (item.kind === 'payment') {
-          currentBalance -= item.amount;
+      if (item.isOfficialLedger) {
+        currentBalance = item.officialBalance;
+      } else {
+        const isNew = item.date >= '2026-08-18' || (item.kind === 'payment' && item.note && !item.note.includes('Legacy Import'));
+        if (isNew) {
+          if (item.kind === 'bill') {
+            const paidOnBill = item.rawBillObj ? (parseFloat(item.rawBillObj.amount_paid) || 0) : 0;
+            const unpaidOnBill = Math.max(0, item.amount - paidOnBill);
+            currentBalance += unpaidOnBill;
+          } else if (item.kind === 'payment') {
+            currentBalance -= item.amount;
+          }
         }
       }
       return {
