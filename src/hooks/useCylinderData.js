@@ -28,6 +28,12 @@ export function useCylinderData(currentUser) {
 
   const [payments, setPayments] = useState(() => {
     try {
+      const cleanV2 = localStorage.getItem('cylinder_payments_clean_v2');
+      if (!cleanV2) {
+        localStorage.removeItem('cylinder_payments');
+        localStorage.setItem('cylinder_payments_clean_v2', 'true');
+        return [];
+      }
       const saved = localStorage.getItem('cylinder_payments');
       if (saved) return JSON.parse(saved);
     } catch (e) {
