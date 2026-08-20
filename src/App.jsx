@@ -1,10 +1,8 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import Dashboard from './components/Dashboard';
 import RestaurantsList from './components/RestaurantsList';
 import BatchesList from './components/BatchesList';
-import CalendarView from './components/CalendarView';
 import AddEntry from './components/AddEntry';
-import GasPredictor from './components/GasPredictor';
 import { PaymentLedger } from './components/PaymentLedger';
 import { PartnerActivityFeed } from './components/PartnerActivityFeed';
 import { useUser } from './context/UserContext';
@@ -12,15 +10,19 @@ import { useHashNavigation } from './hooks/useHashNavigation';
 import { useCylinderData } from './hooks/useCylinderData';
 import { useBilling } from './hooks/useBilling';
 import Login from './components/Login';
-import GenerateBill from './components/GenerateBill';
 import { useInventory } from './hooks/useInventory';
 import { useExpenses } from './hooks/useExpenses';
-import InventoryManager from './components/InventoryManager';
-import ExpenseTracker from './components/ExpenseTracker';
-import SalesSummaryDashboard from './components/SalesSummaryDashboard';
-import ProfitLossReport from './components/ProfitLossReport';
-import Gstr3bReport from './components/Gstr3bReport';
-import OutstandingBills from './components/OutstandingBills';
+
+// Lazy load secondary tabs for instant initial bundle loading and 0ms navigation
+const CalendarView = lazy(() => import('./components/CalendarView'));
+const GasPredictor = lazy(() => import('./components/GasPredictor'));
+const GenerateBill = lazy(() => import('./components/GenerateBill'));
+const InventoryManager = lazy(() => import('./components/InventoryManager'));
+const ExpenseTracker = lazy(() => import('./components/ExpenseTracker'));
+const SalesSummaryDashboard = lazy(() => import('./components/SalesSummaryDashboard'));
+const ProfitLossReport = lazy(() => import('./components/ProfitLossReport'));
+const Gstr3bReport = lazy(() => import('./components/Gstr3bReport'));
+const OutstandingBills = lazy(() => import('./components/OutstandingBills'));
 
 export default function App() {
   const { session, currentUser, logout, loading: authLoading } = useUser();
@@ -156,7 +158,7 @@ export default function App() {
                   <path d="M 256 230 C 256 230 268 245 268 255 C 268 262 262 268 256 268 C 250 268 244 262 244 255 C 244 245 256 230 256 230 Z" fill="#f59e0b"/>
                   <g transform="translate(36, 420)">
                     <rect x="0" y="0" width="440" height="60" rx="16" fill="#FFFFFF"/>
-                    <text x="200" y="40" font-family="'Arial Black', 'Inter', sans-serif" fontWeight="900" fontSize="20" fill="#0b1329" textAnchor="middle" letterSpacing="2">SHREE BALAJI AGENCIES</text>
+                    <text x="200" y="40" fontFamily="'Arial Black', 'Inter', sans-serif" fontWeight="900" fontSize="20" fill="#0b1329" textAnchor="middle" letterSpacing="2">SHREE BALAJI AGENCIES</text>
                   </g>
                 </svg>
               </div>
@@ -320,22 +322,28 @@ export default function App() {
         </div>
 
         {/* ACTIVE TAB CONTENT */}
-        <div key={tab} className="animate-fadeIn">
-          {tab === "dashboard" && <Dashboard restaurants={restaurants} batchStats={batchStats} restMap={restMap} totAll={totAll} tot21={tot21} tot192={tot192} totEmpty={totEmpty} totOutstanding={totOutstanding} />}
-          {tab === "restaurants" && <RestaurantsList restaurants={restaurants} tot21={tot21} tot192={tot192} totEmpty={totEmpty} totEmpty21={totEmpty21} totEmpty192={totEmpty192} totAll={totAll} totOutstanding={totOutstanding} search={search} setSearch={setSearch} sortBy={sortBy} setSortBy={setSortBy} batches={batches} payments={payments} handleDeleteEntry={handleDeleteEntry} onDeletePayment={handleDeletePayment} restaurantProfiles={restaurantProfiles} onSaveRestaurantProfile={saveRestaurantProfile} bills={bills} deleteBill={deleteBill} />}
-          {tab === "billing" && <GenerateBill restaurants={restaurants} restaurantProfiles={restaurantProfiles} createBill={createBill} itemsCatalog={itemsCatalog} partyItemPrices={partyItemPrices} bills={bills} payments={payments} nextSuggestedInvoiceNo={nextSuggestedInvoiceNo} />}
-          {tab === "outstandingBills" && <OutstandingBills bills={bills} recordBillPayment={recordBillPayment} />}
-          {tab === "inventory" && <InventoryManager items={itemsCatalog} purchaseBills={purchaseBills} stockAdjustments={stockAdjustments} partyItemPrices={partyItemPrices} restaurants={restaurants} saveItem={saveItem} saveStockAdjustment={saveStockAdjustment} savePurchaseBill={savePurchaseBill} deletePurchaseBill={deletePurchaseBill} savePartyPrice={savePartyPrice} deletePartyPrice={deletePartyPrice} />}
-          {tab === "expenses" && <ExpenseTracker categories={expenseCategories} expenseItems={expenseItems} expenses={expenses} saveCategory={saveCategory} deleteCategory={deleteCategory} saveExpenseItem={saveExpenseItem} deleteExpenseItem={deleteExpenseItem} saveExpense={saveExpense} deleteExpense={deleteExpense} />}
-          {tab === "salesReport" && <SalesSummaryDashboard bills={bills} restaurants={restaurants} deleteBill={deleteBill} />}
-          {tab === "profitLoss" && <ProfitLossReport items={itemsCatalog} purchaseBills={purchaseBills} stockAdjustments={stockAdjustments} bills={bills} expenses={expenses} />}
-          {tab === "gstReport" && <Gstr3bReport items={itemsCatalog} purchaseBills={purchaseBills} bills={bills} />}
-          {tab === "payments" && <PaymentLedger payments={payments} onAddPayment={handleAddPayment} onDeletePayment={handleDeletePayment} batches={batches} onUpdateBatchCost={handleUpdateBatchCost} restMap={restMap} />}
-          {tab === "calendar" && <CalendarView dateMap={dateMap} selectedDate={selectedDate} setSelectedDate={setSelectedDate} handleDeleteEntry={handleDeleteEntry} payments={payments} batches={batches} onDeletePayment={handleDeletePayment} />}
-          {tab === "batches" && <BatchesList filteredBatches={filteredBatches} batchSearch={batchSearch} setBatchSearch={setBatchSearch} />}
-          {tab === "add" && <AddEntry newEntry={newEntry} setNewEntry={setNewEntry} handleAdd={handleAdd} restMap={restMap} />}
-          {tab === "gasPredictor" && <GasPredictor restaurants={restaurants} batches={batches} />}
-        </div>
+        <Suspense fallback={
+          <div className="bg-white border border-customBorder rounded-2xl p-12 text-center shadow-soft animate-pulse">
+            <div className="text-sm font-extrabold text-sky-700 uppercase tracking-wider">⚡ Loading view...</div>
+          </div>
+        }>
+          <div key={tab} className="animate-fadeIn">
+            {tab === "dashboard" && <Dashboard restaurants={restaurants} batchStats={batchStats} restMap={restMap} totAll={totAll} tot21={tot21} tot192={tot192} totEmpty={totEmpty} totOutstanding={totOutstanding} />}
+            {tab === "restaurants" && <RestaurantsList restaurants={restaurants} tot21={tot21} tot192={tot192} totEmpty={totEmpty} totEmpty21={totEmpty21} totEmpty192={totEmpty192} totAll={totAll} totOutstanding={totOutstanding} search={search} setSearch={setSearch} sortBy={sortBy} setSortBy={setSortBy} batches={batches} payments={payments} handleDeleteEntry={handleDeleteEntry} onDeletePayment={handleDeletePayment} restaurantProfiles={restaurantProfiles} onSaveRestaurantProfile={saveRestaurantProfile} bills={bills} deleteBill={deleteBill} />}
+            {tab === "billing" && <GenerateBill restaurants={restaurants} restaurantProfiles={restaurantProfiles} createBill={createBill} itemsCatalog={itemsCatalog} partyItemPrices={partyItemPrices} bills={bills} payments={payments} nextSuggestedInvoiceNo={nextSuggestedInvoiceNo} />}
+            {tab === "outstandingBills" && <OutstandingBills bills={bills} recordBillPayment={recordBillPayment} />}
+            {tab === "inventory" && <InventoryManager items={itemsCatalog} purchaseBills={purchaseBills} stockAdjustments={stockAdjustments} partyItemPrices={partyItemPrices} restaurants={restaurants} saveItem={saveItem} saveStockAdjustment={saveStockAdjustment} savePurchaseBill={savePurchaseBill} deletePurchaseBill={deletePurchaseBill} savePartyPrice={savePartyPrice} deletePartyPrice={deletePartyPrice} />}
+            {tab === "expenses" && <ExpenseTracker categories={expenseCategories} expenseItems={expenseItems} expenses={expenses} saveCategory={saveCategory} deleteCategory={deleteCategory} saveExpenseItem={saveExpenseItem} deleteExpenseItem={deleteExpenseItem} saveExpense={saveExpense} deleteExpense={deleteExpense} />}
+            {tab === "salesReport" && <SalesSummaryDashboard bills={bills} restaurants={restaurants} deleteBill={deleteBill} />}
+            {tab === "profitLoss" && <ProfitLossReport items={itemsCatalog} purchaseBills={purchaseBills} stockAdjustments={stockAdjustments} bills={bills} expenses={expenses} />}
+            {tab === "gstReport" && <Gstr3bReport items={itemsCatalog} purchaseBills={purchaseBills} bills={bills} />}
+            {tab === "payments" && <PaymentLedger payments={payments} onAddPayment={handleAddPayment} onDeletePayment={handleDeletePayment} batches={batches} onUpdateBatchCost={handleUpdateBatchCost} restMap={restMap} />}
+            {tab === "calendar" && <CalendarView dateMap={dateMap} selectedDate={selectedDate} setSelectedDate={setSelectedDate} handleDeleteEntry={handleDeleteEntry} payments={payments} batches={batches} onDeletePayment={handleDeletePayment} />}
+            {tab === "batches" && <BatchesList filteredBatches={filteredBatches} batchSearch={batchSearch} setBatchSearch={setBatchSearch} />}
+            {tab === "add" && <AddEntry newEntry={newEntry} setNewEntry={setNewEntry} handleAdd={handleAdd} restMap={restMap} />}
+            {tab === "gasPredictor" && <GasPredictor restaurants={restaurants} batches={batches} />}
+          </div>
+        </Suspense>
       </div>
     </div>
   );

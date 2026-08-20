@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { useUser } from '../context/UserContext';
 import { norm } from '../utils/dataUtils';
 
-export function PaymentLedger({ 
+function PaymentLedgerComponent({ 
   payments = [], 
   onAddPayment, 
   onDeletePayment, 
@@ -475,3 +475,5 @@ export function PaymentLedger({
     </div>
   );
 }
+
+export const PaymentLedger = memo(PaymentLedgerComponent);

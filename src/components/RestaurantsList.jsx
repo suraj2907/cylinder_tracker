@@ -1,9 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import RestaurantStatementModal from './RestaurantStatementModal';
 import RestaurantProfileModal from './RestaurantProfileModal';
 import { norm, getPartyCurrentBalance } from '../utils/dataUtils';
 
-export default function RestaurantsList({ 
+function RestaurantsList({ 
   restaurants, 
   tot21, 
   tot192, 
@@ -239,3 +239,5 @@ export default function RestaurantsList({
     </div>
   );
 }
+
+export default memo(RestaurantsList);
