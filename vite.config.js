@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    strictPort: false,
     host: true,
     watch: {
       ignored: ['**/scratch/**', '**/scripts/**', '**/.git/**']

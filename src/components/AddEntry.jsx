@@ -3,7 +3,7 @@ import { useUser } from '../context/UserContext';
 
 export default function AddEntry({ newEntry, setNewEntry, handleAdd, restMap }) {
   const { currentUser } = useUser();
-  const [activeForm, setActiveForm] = useState('delivery'); // 'delivery' | 'return'
+  const [activeForm, setActiveForm] = useState('return'); // Default to Khali Tanki Return (Lena)
   const [weight, setWeight] = useState('19.2kg'); // '19.2kg' | '21kg'
 
   useEffect(() => {
@@ -15,6 +15,14 @@ export default function AddEntry({ newEntry, setNewEntry, handleAdd, restMap }) 
 
   return (
     <div className="space-y-6 fade">
+      {/* Informational Banner */}
+      <div className="p-4 rounded-2xl bg-sky-50 border border-sky-200 text-sky-900 text-xs font-semibold flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-base">💡</span>
+          <span><strong>Auto-Linked Deliveries</strong>: Generating a bill automatically adds Tanki Delivery and deducts inventory stock! Use this screen primarily to collect <strong>Khali Tanki (Lena)</strong>.</span>
+        </div>
+      </div>
+
       {/* Light Theme Tab Switcher */}
       <div className="flex p-1.5 bg-white border border-customBorder shadow-soft rounded-2xl max-w-md mx-auto">
         <button

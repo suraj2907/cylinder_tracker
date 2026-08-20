@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, memo } from 'react';
 import { formatIsoDate, normType, getInvoiceLabel, getPartyCurrentBalance, norm } from '../utils/dataUtils';
+import { supabase } from '../utils/supabaseClient';
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const MFULL = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -13,6 +14,7 @@ function RestaurantStatementModal({
   onDeletePayment,
   bills = [],
   deleteBill,
+  removeDeliveryEntries,
   restaurantProfiles = {}
 }) {
   const today = new Date().toISOString().slice(0, 10);
@@ -29,7 +31,7 @@ function RestaurantStatementModal({
   const [activeSection, setActiveSection] = useState('passbook');
   const [selectedBillForPrint, setSelectedBillForPrint] = useState(null);
   const [displayCount, setDisplayCount] = useState(40);
-  const [ledgerData, setLedgerData] = useState(null);
+  const [ledgerRows, setLedgerRows] = useState([]);
 
   const restaurantBills = useMemo(() => {
     if (!restaurantName) return [];
@@ -37,52 +39,46 @@ function RestaurantStatementModal({
     return bills.filter(b => norm(b.restaurant_name || '') === normTarget);
   }, [bills, restaurantName]);
 
-  // Dynamic async load for 2.2MB official ledger dataset
+  // Fetch this restaurant's historical ledger rows from the database using case-insensitive ilike
   useEffect(() => {
     let active = true;
-    import('../utils/officialLedgersData.json').then(mod => {
-      if (active) {
-        setLedgerData(mod.default || mod);
-      }
-    });
+    if (!restaurantName) return;
+    supabase
+      .from('legacy_ledger_entries')
+      .select('*')
+      .ilike('restaurant_name', restaurantName.trim())
+      .order('entry_date', { ascending: true })
+      .then(({ data, error }) => {
+        if (error) { console.error('Error fetching ledger history', error); return; }
+        if (active) setLedgerRows(data || []);
+      });
     return () => { active = false; };
-  }, []);
+  }, [restaurantName]);
 
   // Unified activity timeline for this restaurant
   const allRestaurantActivities = useMemo(() => {
     const list = [];
     const normTarget = norm(restaurantName);
 
-    // 1. Direct lookup for official CSV historical statement entries (01/07/2024 to 17/08/2026)
-    let targetOfficialLedgers = [];
-    if (ledgerData && ledgerData[restaurantName]) {
-      targetOfficialLedgers = ledgerData[restaurantName];
-    } else if (ledgerData) {
-      for (const k in ledgerData) {
-        if (norm(k) === normTarget) {
-          targetOfficialLedgers = ledgerData[k] || [];
-          break;
-        }
-      }
-    }
-
-    targetOfficialLedgers.forEach((e, idx) => {
+    // 1. Historical ledger rows from database
+    ledgerRows.forEach((e, idx) => {
+      if (!e.entry_date || e.voucher_type === 'Balance') return;
       list.push({
-        id: `official_ledger_${idx}_${e.date}_${e.srNo}`,
-        kind: e.voucher === 'Payment-in' ? 'payment' : (e.voucher === 'Sales Invoice' ? 'bill' : 'ledger'),
-        date: e.date,
-        voucher: e.voucher,
-        srNo: e.srNo,
-        paymentMode: e.paymentMode,
-        credit: e.credit,
-        debit: e.debit,
-        amount: e.voucher === 'Payment-in' ? e.credit : e.debit,
-        invoiceLabel: e.srNo ? `INV-${String(e.srNo).padStart(4, '0')}` : 'INV-0000',
-        paymentStatus: e.paymentStatus,
+        id: `official_ledger_${idx}_${e.entry_date}_${e.sr_no}`,
+        kind: e.voucher_type === 'Payment-in' ? 'payment' : (e.voucher_type === 'Invoice' || e.voucher_type === 'Sales Invoice' ? 'bill' : 'ledger'),
+        date: e.entry_date,
+        voucher: e.voucher_type,
+        srNo: e.sr_no,
+        paymentMode: e.payment_mode,
+        credit: parseFloat(e.credit) || 0,
+        debit: parseFloat(e.debit) || 0,
+        amount: e.voucher_type === 'Payment-in' ? (parseFloat(e.credit) || 0) : (parseFloat(e.debit) || 0),
+        invoiceLabel: e.sr_no ? `INV-${String(e.sr_no).padStart(4, '0')}` : 'INV-0000',
+        paymentStatus: e.payment_status,
         userName: 'Official Ledger',
-        note: e.paymentMode ? `Payment Mode: ${e.paymentMode}` : '',
+        note: e.payment_mode ? `Payment Mode: ${e.payment_mode}` : '',
         isOfficialLedger: true,
-        officialBalance: e.balance
+        officialBalance: e.balance !== null && e.balance !== undefined ? parseFloat(e.balance) : null
       });
     });
 
@@ -102,35 +98,39 @@ function RestaurantStatementModal({
             type: normType(e.type),
             isReturn: !!e.isReturn,
             userName: e.user_name || 'Suraj',
-            rawEntryObj: e
+            rawEntryObj: e,
+            originalEntry: e
           });
         }
       });
     });
 
-    // 3. Extract Real-Time Payment Collections on/after 18/08/2026
+    // 3. Extract Real-Time Payment Collections
+    const paymentKeys = new Set();
     payments.forEach(p => {
       const pName = norm(p.restaurant_name || p.restaurantName);
       if (pName === normTarget) {
         const rawDate = p.date || today;
         const pDate = formatIsoDate(rawDate);
-        if (pDate >= '2026-08-18' || (p.note && !p.note.includes('Legacy Import'))) {
-          list.push({
-            id: p.id || `pay_${pDate}_${p.amount}_${Math.random()}`,
-            kind: 'payment',
-            date: pDate,
-            batchNum: p.batch_num || p.batchNum || '-',
-            restaurantName: p.restaurant_name || p.restaurantName,
-            amount: parseFloat(p.amount) || 0,
-            credit: parseFloat(p.amount) || 0,
-            debit: 0,
-            voucher: 'Payment-in',
-            paymentMode: p.payment_mode || p.paymentMode || 'Cash',
-            userName: p.user_name || 'Suraj',
-            note: p.note || '',
-            rawPaymentObj: p
-          });
-        }
+        const pAmt = parseFloat(p.amount) || 0;
+        const pKey = `${pDate}_${pAmt}`;
+        paymentKeys.add(pKey);
+
+        list.push({
+          id: p.id ? `pay_${p.id}` : `pay_${pDate}_${pAmt}_${Math.random()}`,
+          kind: 'payment',
+          date: pDate,
+          batchNum: p.batch_num || p.batchNum || '-',
+          restaurantName: p.restaurant_name || p.restaurantName,
+          amount: pAmt,
+          credit: pAmt,
+          debit: 0,
+          voucher: 'Payment-in',
+          paymentMode: p.mode || p.payment_mode || p.paymentMode || 'UPI',
+          userName: p.created_by || p.user_name || 'Suraj',
+          note: p.notes || p.note || '',
+          rawPaymentObj: p
+        });
       }
     });
 
@@ -168,18 +168,15 @@ function RestaurantStatementModal({
     
     let currentBalance = baseBalance;
     const listWithBalance = sortedAsc.map(item => {
-      if (item.isOfficialLedger) {
+      if (item.isOfficialLedger && item.officialBalance !== null && !isNaN(item.officialBalance)) {
         currentBalance = item.officialBalance;
       } else {
-        const isNew = item.date >= '2026-08-18' || (item.kind === 'payment' && item.note && !item.note.includes('Legacy Import'));
-        if (isNew) {
-          if (item.kind === 'bill') {
-            const paidOnBill = item.rawBillObj ? (parseFloat(item.rawBillObj.amount_paid) || 0) : 0;
-            const unpaidOnBill = Math.max(0, item.amount - paidOnBill);
-            currentBalance += unpaidOnBill;
-          } else if (item.kind === 'payment') {
-            currentBalance -= item.amount;
-          }
+        if (item.kind === 'bill') {
+          const paidOnBill = item.rawBillObj ? (parseFloat(item.rawBillObj.amount_paid) || 0) : 0;
+          const unpaidOnBill = Math.max(0, item.amount - paidOnBill);
+          currentBalance += unpaidOnBill;
+        } else if (item.kind === 'payment') {
+          currentBalance -= item.amount;
         }
       }
       return {
@@ -190,7 +187,7 @@ function RestaurantStatementModal({
 
     // Return sorted descending using fast string comparison
     return listWithBalance.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  }, [restaurantName, batches, payments, bills, restaurantProfiles, today]);
+  }, [restaurantName, ledgerRows, batches, payments, bills, restaurantProfiles, today]);
 
   // Filter activities based on Month / Date Range / All Time
   const filteredActivities = useMemo(() => {
@@ -574,7 +571,7 @@ function RestaurantStatementModal({
                           <td className="px-4 py-3 text-right no-print">
                             {item.kind === 'cylinder' && handleDeleteEntry && (
                               <button
-                                onClick={() => handleDeleteEntry(item.batchNum, item.originalEntry)}
+                                onClick={() => handleDeleteEntry(item.batchNum, item.originalEntry || item.rawEntryObj)}
                                 className="text-red-500 hover:text-red-700 font-bold p-1 text-xs cursor-pointer active:scale-95"
                                 title="Delete entry"
                               >
@@ -585,14 +582,30 @@ function RestaurantStatementModal({
                               <button
                                 onClick={() => onDeletePayment(item.rawPaymentObj)}
                                 className="text-red-500 hover:text-red-700 font-bold p-1 text-xs cursor-pointer active:scale-95"
-                                  title="Delete payment"
+                                title="Delete payment"
                               >
                                 🗑️
                               </button>
                             )}
                             {item.kind === 'bill' && deleteBill && (
                               <button
-                                onClick={() => handleDeleteBill(item.rawBillObj.id, item.rawBillObj.invoice_no)}
+                                onClick={async () => {
+                                  const invLabel = item.invoiceLabel || (item.rawBillObj ? `INV-${item.rawBillObj.invoice_no}` : 'Invoice');
+                                  if (window.confirm(`Are you sure you want to delete ${invLabel}?`)) {
+                                    try {
+                                      if (item.rawBillObj?.id) {
+                                        await deleteBill(item.rawBillObj.id, removeDeliveryEntries);
+                                      } else if (item.isOfficialLedger && item.srNo) {
+                                        await supabase.from('legacy_ledger_entries').delete().eq('sr_no', item.srNo).ilike('restaurant_name', restaurantName.trim());
+                                        setLedgerRows(prev => prev.filter(r => r.sr_no !== item.srNo));
+                                      }
+                                      alert(`✅ ${invLabel} successfully deleted!`);
+                                    } catch (err) {
+                                      console.error('Error deleting bill:', err);
+                                      alert(`Delete nahi hua: ${err.message || 'Error'}`);
+                                    }
+                                  }
+                                }}
                                 className="text-red-500 hover:text-red-700 font-bold p-1 text-xs cursor-pointer active:scale-95"
                                 title="Delete Invoice"
                               >

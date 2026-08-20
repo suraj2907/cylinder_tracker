@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { INITIAL_DATA, computeAll } from '../utils/dataUtils';
+import { INITIAL_DATA, computeAll, norm } from '../utils/dataUtils';
 import { supabase } from '../utils/supabaseClient';
 
 export function useCylinderData(currentUser) {
@@ -576,18 +576,18 @@ export function useCylinderData(currentUser) {
 
   // Delete Entry Handler
   async function handleDeleteEntry(batchNum, originalEntry) {
+    if (!originalEntry) return;
     if (window.confirm("Sach me ye entry delete karni hai?")) {
       if (isSupabaseConfigured) {
         try {
           let error;
-          if (originalEntry.id && typeof originalEntry.id !== 'string') {
+          if (originalEntry.id) {
             ({ error } = await supabase.from('entries').delete().eq('id', originalEntry.id));
           } else {
             ({ error } = await supabase.from('entries').delete()
               .eq('batch_num', batchNum)
-              .eq('name', originalEntry.name)
-              .eq('qty', originalEntry.qty)
-              .eq('type', originalEntry.type));
+              .ilike('name', (originalEntry.name || '').trim())
+              .eq('qty', originalEntry.qty));
           }
           if (error) {
             throw error;
@@ -599,7 +599,7 @@ export function useCylinderData(currentUser) {
         }
       }
       setBatches(prev => prev.map(b => b.batch === batchNum
-        ? { ...b, entries: b.entries.filter(e => e !== originalEntry) }
+        ? { ...b, entries: b.entries.filter(e => e !== originalEntry && e.id !== originalEntry.id) }
         : b));
       addActivity("Deleted Entry", `Entry for ${originalEntry.name} from Batch #${batchNum}`, currentUser);
       showToast("🗑️ Entry delete ho gayi!");
@@ -660,19 +660,29 @@ export function useCylinderData(currentUser) {
 
   // Delete Payment Handler
   async function handleDeletePayment(paymentObj) {
-    if (window.confirm(`Delete payment ₹${paymentObj.amount} for ${paymentObj.restaurant_name || paymentObj.restaurantName}?`)) {
-      if (isSupabaseConfigured && paymentObj.id) {
+    const pName = paymentObj.restaurant_name || paymentObj.restaurantName;
+    const pAmt = parseFloat(paymentObj.amount) || 0;
+    if (window.confirm(`Delete payment ₹${pAmt.toLocaleString('en-IN')} for ${pName}?`)) {
+      if (isSupabaseConfigured) {
         try {
-          const { error } = await supabase.from('payments').delete().eq('id', paymentObj.id);
-          if (error) throw error;
+          if (paymentObj.id && typeof paymentObj.id !== 'string') {
+            await supabase.from('payments').delete().eq('id', paymentObj.id);
+          } else {
+            await supabase.from('payments').delete().ilike('restaurant_name', pName.trim()).eq('amount', pAmt);
+          }
+
+          // Delete matching entry in legacy_ledger_entries if present
+          if (pName) {
+            await supabase.from('legacy_ledger_entries').delete().ilike('restaurant_name', pName.trim()).eq('credit', pAmt).eq('voucher_type', 'Payment-in');
+          }
         } catch (e) {
-          console.error(e);
+          console.error('Error deleting payment:', e);
           showToast(`Payment delete nahi hua: ${e.message || 'database error'}`, false);
           return;
         }
       }
-      setPayments(prev => prev.filter(p => p !== paymentObj));
-      showToast("🗑️ Payment deleted!");
+      setPayments(prev => prev.filter(p => p !== paymentObj && p.id !== paymentObj.id));
+      showToast(`🗑️ ₹${pAmt.toLocaleString('en-IN')} Payment deleted and balance restored!`);
     }
   }
 
@@ -715,8 +725,20 @@ export function useCylinderData(currentUser) {
   }, [payments]);
   const netBookingWallet = totalCollectionsAll - totalBatchCosts;
 
+  const removeDeliveryEntries = useCallback((restaurantName, billDate) => {
+    const normTarget = norm(restaurantName);
+    setBatches(prev => prev.map(b => ({
+      ...b,
+      entries: (b.entries || []).filter(e => {
+        const isMatch = norm(e.name) === normTarget && (e.date === billDate || !billDate) && !e.is_return && !e.isReturn;
+        return !isMatch;
+      })
+    })));
+  }, []);
+
   return {
     batches,
+    removeDeliveryEntries,
     payments,
     activities,
     showActivityFeed,

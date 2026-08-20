@@ -913,22 +913,27 @@ function PurchaseBillModal({ items, onClose, onSavePurchase }) {
   const calculations = useMemo(() => {
     let subtotal = 0;
     let totalGst = 0;
+    let grandTotal = 0;
 
     purchaseLines.forEach(ln => {
       const qty = parseFloat(ln.qty) || 0;
       const rate = parseFloat(ln.rate) || 0;
-      const lineTaxable = qty * rate; // Rate is exclusive of tax
-      const lineGst = lineTaxable * (parseFloat(ln.gst_rate || 18) / 100);
+      const gstRate = parseFloat(ln.gst_rate || 18) / 100;
+
+      const lineTotal = qty * rate;              // rate is inclusive of tax — same convention as sales
+      const lineTaxable = lineTotal / (1 + gstRate);
+      const lineGst = lineTotal - lineTaxable;
 
       subtotal += lineTaxable;
       totalGst += lineGst;
+      grandTotal += lineTotal;
     });
 
     return {
       subtotal,
       cgst: totalGst / 2,
       sgst: totalGst / 2,
-      total: subtotal + totalGst
+      total: grandTotal
     };
   }, [purchaseLines]);
 
@@ -942,14 +947,14 @@ function PurchaseBillModal({ items, onClose, onSavePurchase }) {
     try {
       const itemsList = purchaseLines.map(ln => {
         const itemObj = items.find(i => i.id === ln.item_id);
-        const taxable = ln.qty * ln.rate;
-        const lineTax = taxable * (parseFloat(ln.gst_rate || 18) / 100);
+        const qty = parseFloat(ln.qty) || 0;
+        const rate = parseFloat(ln.rate) || 0;
         return {
           item_id: ln.item_id,
           item_name: itemObj ? itemObj.name : 'Unknown',
-          qty: ln.qty,
-          rate: ln.rate,
-          amount: taxable + lineTax,
+          qty,
+          rate,
+          amount: qty * rate,   // rate already includes GST — no separate addition
           gst_rate: ln.gst_rate
         };
       });
@@ -1071,7 +1076,7 @@ function PurchaseBillModal({ items, onClose, onSavePurchase }) {
                 </select>
 
                 <span className="text-xs font-black text-slate-700 w-24 text-right">
-                  ₹{((ln.qty * ln.rate) * (1 + ln.gst_rate / 100)).toFixed(2)}
+                  ₹{((parseFloat(ln.qty) || 0) * (parseFloat(ln.rate) || 0)).toFixed(2)}
                 </span>
 
                 {purchaseLines.length > 1 && (

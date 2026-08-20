@@ -3,6 +3,7 @@ import Dashboard from './components/Dashboard';
 import RestaurantsList from './components/RestaurantsList';
 import BatchesList from './components/BatchesList';
 import AddEntry from './components/AddEntry';
+import ReceivePaymentModal from './components/ReceivePaymentModal';
 import { PaymentLedger } from './components/PaymentLedger';
 import { PartnerActivityFeed } from './components/PartnerActivityFeed';
 import { useUser } from './context/UserContext';
@@ -62,6 +63,7 @@ export default function App() {
     handleDownload,
     handleAdd,
     handleDeleteEntry,
+    removeDeliveryEntries,
     handleAddPayment,
     handleDeletePayment,
     handleUpdateBatchCost
@@ -101,6 +103,8 @@ export default function App() {
     saveExpense,
     deleteExpense
   } = useExpenses(currentUser);
+
+  const [showReceivePaymentModal, setShowReceivePaymentModal] = React.useState(false);
 
   if (authLoading) {
     return (
@@ -214,7 +218,7 @@ export default function App() {
           </div>
 
           {/* Desktop Tab Navigation */}
-          <div className="hidden lg:flex items-center gap-1.5">
+          <div className="hidden lg:flex items-center gap-1.5 flex-wrap">
             {TABS.map(t => (
               <button 
                 key={t.id} 
@@ -231,6 +235,14 @@ export default function App() {
 
           {/* Controls & Activity Toggle */}
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowReceivePaymentModal(true)}
+              className="px-3.5 py-2 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white shadow-soft transition-all flex items-center gap-1.5 cursor-pointer"
+              title="Receive Party Payment & Update Ledger"
+            >
+              <span>💳 Receive Payment</span>
+            </button>
+
             <button
               onClick={() => setShowActivityFeed(!showActivityFeed)}
               className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 ${
@@ -329,7 +341,7 @@ export default function App() {
         }>
           <div key={tab} className="animate-fadeIn">
             {tab === "dashboard" && <Dashboard restaurants={restaurants} batchStats={batchStats} restMap={restMap} totAll={totAll} tot21={tot21} tot192={tot192} totEmpty={totEmpty} totOutstanding={totOutstanding} />}
-            {tab === "restaurants" && <RestaurantsList restaurants={restaurants} tot21={tot21} tot192={tot192} totEmpty={totEmpty} totEmpty21={totEmpty21} totEmpty192={totEmpty192} totAll={totAll} totOutstanding={totOutstanding} search={search} setSearch={setSearch} sortBy={sortBy} setSortBy={setSortBy} batches={batches} payments={payments} handleDeleteEntry={handleDeleteEntry} onDeletePayment={handleDeletePayment} restaurantProfiles={restaurantProfiles} onSaveRestaurantProfile={saveRestaurantProfile} bills={bills} deleteBill={deleteBill} />}
+            {tab === "restaurants" && <RestaurantsList restaurants={restaurants} tot21={tot21} tot192={tot192} totEmpty={totEmpty} totEmpty21={totEmpty21} totEmpty192={totEmpty192} totAll={totAll} totOutstanding={totOutstanding} search={search} setSearch={setSearch} sortBy={sortBy} setSortBy={setSortBy} batches={batches} payments={payments} handleDeleteEntry={handleDeleteEntry} onDeletePayment={handleDeletePayment} restaurantProfiles={restaurantProfiles} onSaveRestaurantProfile={saveRestaurantProfile} bills={bills} deleteBill={deleteBill} removeDeliveryEntries={removeDeliveryEntries} />}
             {tab === "billing" && <GenerateBill restaurants={restaurants} restaurantProfiles={restaurantProfiles} createBill={createBill} itemsCatalog={itemsCatalog} partyItemPrices={partyItemPrices} bills={bills} payments={payments} nextSuggestedInvoiceNo={nextSuggestedInvoiceNo} />}
             {tab === "outstandingBills" && <OutstandingBills bills={bills} recordBillPayment={recordBillPayment} />}
             {tab === "inventory" && <InventoryManager items={itemsCatalog} purchaseBills={purchaseBills} stockAdjustments={stockAdjustments} partyItemPrices={partyItemPrices} restaurants={restaurants} saveItem={saveItem} saveStockAdjustment={saveStockAdjustment} savePurchaseBill={savePurchaseBill} deletePurchaseBill={deletePurchaseBill} savePartyPrice={savePartyPrice} deletePartyPrice={deletePartyPrice} />}
@@ -344,6 +356,18 @@ export default function App() {
             {tab === "gasPredictor" && <GasPredictor restaurants={restaurants} batches={batches} />}
           </div>
         </Suspense>
+
+        <ReceivePaymentModal
+          isOpen={showReceivePaymentModal}
+          onClose={() => setShowReceivePaymentModal(false)}
+          restaurants={restaurants}
+          restaurantProfiles={restaurantProfiles}
+          bills={bills}
+          payments={payments}
+          onPaymentSuccess={(payPayload) => {
+            if (payPayload && handleAddPayment) handleAddPayment(payPayload);
+          }}
+        />
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { getInvoiceLabel } from '../utils/dataUtils';
+import { getInvoiceLabel, norm } from '../utils/dataUtils';
 
 function emptyItem() {
   return { item_id: '', description: '', hsn: '', qty: 1, rate: 0, gst_rate: 18 };
@@ -91,10 +91,47 @@ export default function GenerateBill({
     }
   }, [nextSuggestedInvoiceNo]);
 
+  // Comprehensive party list combining Supabase restaurant profiles, valid list, and cylinder list with canonical deduplication
+  const allAvailableParties = useMemo(() => {
+    const map = new Map();
+    // 1. From database restaurantProfiles
+    Object.keys(restaurantProfiles || {}).forEach(rawName => {
+      const canonical = norm(rawName);
+      if (canonical && canonical !== 'Unknown' && !map.has(canonical)) {
+        const prof = restaurantProfiles[rawName] || {};
+        map.set(canonical, {
+          name: canonical,
+          mobile: prof.mobile || '',
+          gst_num: prof.gst_num || '',
+          address: prof.address || ''
+        });
+      }
+    });
+    // 2. From VALID_RESTAURANTS & restaurants prop
+    (restaurants || []).forEach(r => {
+      const rawName = typeof r === 'string' ? r : r.name;
+      const canonical = norm(rawName);
+      if (canonical && canonical !== 'Unknown' && !map.has(canonical)) {
+        map.set(canonical, {
+          name: canonical,
+          mobile: (typeof r === 'object' && r.mobile) || '',
+          gst_num: (typeof r === 'object' && r.gst_num) || '',
+          address: (typeof r === 'object' && r.address) || ''
+        });
+      }
+    });
+
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [restaurantProfiles, restaurants]);
+
   const filteredRestaurants = useMemo(() => {
-    if (!search) return restaurants.slice(0, 8);
-    return restaurants.filter(r => r.name.toLowerCase().includes(search.toLowerCase())).slice(0, 8);
-  }, [restaurants, search]);
+    if (!search.trim()) return allAvailableParties.slice(0, 10);
+    const q = search.toLowerCase().trim();
+    return allAvailableParties.filter(r => 
+      r.name.toLowerCase().includes(q) || 
+      (r.mobile && r.mobile.includes(q))
+    ).slice(0, 15);
+  }, [allAvailableParties, search]);
 
   const profile = restaurantProfiles[selectedRestaurant] || {};
   
@@ -228,10 +265,12 @@ export default function GenerateBill({
       d.setDate(d.getDate() + 7);
       const dueDate = d.toISOString().slice(0, 10);
 
+      const restObj = restaurantProfiles[selectedRestaurant] || {};
       const bill = await createBill({
         restaurant_name: selectedRestaurant,
+        restaurant_id: restObj.id || undefined,
         bill_date: billDate,
-        invoice_no: customInvoiceNo ? parseInt(customInvoiceNo, 10) : nextSuggestedInvoiceNo,
+        invoice_no: customInvoiceNo ? parseInt(customInvoiceNo, 10) : undefined,
         gst_mode: gstMode,
         items,
         subtotal: totals.subtotal,
