@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { getInvoiceLabel, norm } from '../utils/dataUtils';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 function emptyItem() {
   return { item_id: '', description: '', hsn: '', qty: 1, rate: 0, gst_rate: 18 };
@@ -133,7 +135,10 @@ export default function GenerateBill({
     ).slice(0, 15);
   }, [allAvailableParties, search]);
 
-  const profile = restaurantProfiles[selectedRestaurant] || {};
+  const profile = restaurantProfiles[selectedRestaurant] ||
+                  restaurantProfiles[norm(selectedRestaurant)] ||
+                  Object.values(restaurantProfiles || {}).find(p => norm(p.name) === norm(selectedRestaurant)) ||
+                  {};
   
   // Calculate dynamic previous balance for selected party prior to bill date
   const previousBalance = useMemo(() => {
@@ -292,15 +297,57 @@ export default function GenerateBill({
 
   const handlePrint = () => window.print();
 
+  const generateBillPdfBlob = async () => {
+    const element = document.getElementById('bill-print-area');
+    const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#ffffff' });
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({ unit: 'px', format: [canvas.width, canvas.height] });
+    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+    return pdf.output('blob');
+  };
+
+  const handleShareBillOnWhatsApp = async () => {
+    const invoiceLabel = `INV-${String(savedBill.invoice_no).padStart(4, '0')}`;
+    const fileName = `${invoiceLabel}-${selectedRestaurant}.pdf`;
+
+    try {
+      const blob = await generateBillPdfBlob();
+      const file = new File([blob], fileName, { type: 'application/pdf' });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        // Opens the phone's native share sheet — user picks WhatsApp, PDF attaches automatically
+        await navigator.share({
+          files: [file],
+          title: invoiceLabel,
+          text: `Invoice ${invoiceLabel} from M/S Shree Balaji Agencies`
+        });
+        return;
+      }
+    } catch (err) {
+      console.warn('Native file share not available, falling back to link share', err);
+    }
+
+    // Fallback: desktop / unsupported browsers — send a WhatsApp text with a link instead
+    let phone = (restaurantProfiles[selectedRestaurant]?.mobile || '').replace(/\D/g, '');
+    if (phone.length === 10) phone = '91' + phone;
+    const message = `Hi, here is your invoice ${invoiceLabel} from M/S Shree Balaji Agencies. Amount: ₹${totals.total.toFixed(2)}. Please find the bill attached — if you don't see it, let us know and we'll resend.`;
+    if (phone) {
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+    } else {
+      alert('WhatsApp number saved nahi hai is party ka.');
+    }
+  };
+
   const invoiceLabel = savedBill ? getInvoiceLabel(savedBill) : null;
   const currentBalance = previousBalance + totals.total;
   const savedAmountPaid = Number(savedBill?.amount_paid || 0);
   const savedBalance = Math.max(0, Number(savedBill?.total_amount || totals.total) - savedAmountPaid);
 
+
   if (savedBill) {
     return (
       <div>
-        <div className="flex justify-between items-center mb-4 no-print">
+        <div className="flex justify-between items-center mb-4 no-print flex-wrap gap-2">
           <button
             onClick={() => {
               setSavedBill(null);
@@ -311,12 +358,20 @@ export default function GenerateBill({
           >
             ← Naya Bill Banao
           </button>
-          <button
-            onClick={handlePrint}
-            className="px-4 py-2 rounded-xl bg-sky-600 text-white text-sm font-bold hover:bg-sky-700 cursor-pointer"
-          >
-            🖨️ Print / Save PDF
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleShareBillOnWhatsApp}
+              className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 cursor-pointer flex items-center gap-1.5 shadow-sm transition-all"
+            >
+              📤 Send on WhatsApp
+            </button>
+            <button
+              onClick={handlePrint}
+              className="px-4 py-2 rounded-xl bg-sky-600 text-white text-sm font-bold hover:bg-sky-700 cursor-pointer flex items-center gap-1.5 shadow-sm transition-all"
+            >
+              🖨️ Print / Save PDF
+            </button>
+          </div>
         </div>
 
         {/* Printable Section */}
@@ -340,17 +395,18 @@ export default function GenerateBill({
 
           {/* Bill To & Ship To Details */}
           <div className="grid grid-cols-2 gap-4 mb-4 text-[11px]">
-            <div>
+            <div className="space-y-0.5">
               <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">Bill To</p>
               <p className="font-extrabold text-slate-900 text-xs">{selectedRestaurant}</p>
-              {profile.address && <p className="text-slate-500">{profile.address}</p>}
-              {profile.mobile && <p className="text-slate-500">Mobile: {profile.mobile}</p>}
-              {gstMode === 'gst' && profile.gst_num && <p className="text-slate-500 font-semibold">GSTIN: {profile.gst_num}</p>}
+              {profile.address ? <p className="text-slate-600 font-medium">{profile.address}</p> : null}
+              {profile.mobile ? <p className="text-slate-600 font-medium">Phone No: +91- {profile.mobile}</p> : null}
+              {profile.gst_num ? <p className="text-slate-600 font-semibold">GSTIN: {profile.gst_num}</p> : null}
             </div>
-            <div>
+            <div className="space-y-0.5">
               <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">Ship To</p>
               <p className="font-extrabold text-slate-900 text-xs">{selectedRestaurant}</p>
-              {profile.address && <p className="text-slate-500">{profile.address}</p>}
+              {profile.address ? <p className="text-slate-600 font-medium">{profile.address}</p> : null}
+              {profile.mobile ? <p className="text-slate-600 font-medium">Phone No: +91- {profile.mobile}</p> : null}
             </div>
           </div>
 
@@ -508,27 +564,33 @@ export default function GenerateBill({
   }
 
   return (
-    <div className="bg-white border border-customBorder rounded-2xl p-6 shadow-soft space-y-5 max-w-2xl mx-auto">
-      <h2 className="text-sm font-extrabold uppercase tracking-wider text-sky-700 flex items-center gap-1.5">
-        🧾 Generate New Tax Invoice
-      </h2>
+    <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-soft space-y-6 max-w-2xl mx-auto animate-fadeIn pb-12">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h2 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
+          Create New Invoice
+        </h2>
+        <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-lg bg-sky-50 text-sky-700 border border-sky-200">
+          GST & Plain Billing
+        </span>
+      </div>
 
       <div>
-        <label className="text-xs font-bold text-slate-500 uppercase">Selected Customer (Party)</label>
+        <label className="text-xs font-black text-slate-700 tracking-wide block mb-1">Select Customer</label>
         {!selectedRestaurant ? (
           <div className="relative mt-1">
             <input
-              className="w-full border border-customBorder rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-accentCyan shadow-sm"
-              placeholder="Search partner hotels..."
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3.5 py-2.5 text-xs font-bold focus:outline-none focus:border-sky-500 focus:bg-white shadow-xs transition-all"
+              placeholder="Search Restaurant/Customer..."
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
+            <span className="absolute left-3 top-3 text-slate-400 text-xs">🔍</span>
             {search && (
-              <div className="absolute z-10 w-full bg-white border border-customBorder rounded-xl mt-1 shadow-lg max-h-48 overflow-auto">
+              <div className="absolute z-10 w-full bg-white border border-slate-200 rounded-xl mt-1 shadow-lg max-h-48 overflow-auto">
                 {filteredRestaurants.map(r => (
                   <button
                     key={r.name}
-                    className="block w-full text-left px-3.5 py-2 text-xs font-bold hover:bg-slate-50 border-b border-slate-100 last:border-0"
+                    className="block w-full text-left px-3.5 py-2 text-xs font-bold hover:bg-slate-50 border-b border-slate-100 last:border-0 cursor-pointer"
                     onClick={() => {
                       setSelectedRestaurant(r.name);
                       setSearch('');
@@ -544,9 +606,12 @@ export default function GenerateBill({
             )}
           </div>
         ) : (
-          <div className="mt-1 flex items-center justify-between bg-sky-50 border border-sky-200 rounded-xl px-3.5 py-2.5">
-            <span className="text-xs font-black text-sky-900">{selectedRestaurant}</span>
-            <button onClick={() => setSelectedRestaurant('')} className="text-xs font-black text-sky-700 hover:underline">
+          <div className="mt-1 flex items-center justify-between bg-sky-50/70 border border-sky-200 rounded-2xl p-3">
+            <div>
+              <span className="text-xs font-black text-slate-900 block">{selectedRestaurant}</span>
+              {profile.mobile && <span className="text-[10px] text-slate-500 font-semibold">📞 +91-{profile.mobile}</span>}
+            </div>
+            <button onClick={() => setSelectedRestaurant('')} className="text-xs font-black text-sky-700 hover:text-sky-900 hover:underline cursor-pointer">
               Change
             </button>
           </div>
@@ -555,12 +620,12 @@ export default function GenerateBill({
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
-          <label className="text-xs font-bold text-slate-500 uppercase">Invoice No.</label>
+          <label className="text-xs font-black text-slate-700 tracking-wide block mb-1">Invoice No.</label>
           <div className="relative mt-1">
-            <span className="absolute left-3 top-2.5 text-xs font-black text-slate-400">INV-</span>
+            <span className="absolute left-3 top-2 text-xs font-black text-slate-400">INV-</span>
             <input
               type="number"
-              className="w-full border border-customBorder rounded-xl pl-11 pr-3 py-2 text-xs font-black focus:outline-none focus:border-accentCyan shadow-sm"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-3 py-2 text-xs font-black focus:outline-none focus:border-sky-500 focus:bg-white shadow-xs"
               value={customInvoiceNo}
               onChange={e => setCustomInvoiceNo(e.target.value)}
               placeholder="3499"
@@ -568,32 +633,32 @@ export default function GenerateBill({
           </div>
         </div>
         <div>
-          <label className="text-xs font-bold text-slate-500 uppercase">Bill Date</label>
+          <label className="text-xs font-black text-slate-700 tracking-wide block mb-1">Bill Date</label>
           <input
             type="date"
-            className="mt-1 w-full border border-customBorder rounded-xl px-3.5 py-2 text-xs font-bold focus:outline-none"
+            className="mt-1 w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-bold focus:outline-none focus:border-sky-500 focus:bg-white shadow-xs cursor-pointer"
             value={billDate}
             onChange={e => setBillDate(e.target.value)}
           />
         </div>
         <div>
-          <label className="text-xs font-bold text-slate-500 uppercase">GST Filing Status</label>
-          <div className="mt-1 flex bg-slate-100 rounded-xl p-1">
-            <button
-              onClick={() => setGstMode('gst')}
-              className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer ${
-                gstMode === 'gst' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'
-              }`}
-            >
-              GST Bill
-            </button>
+          <label className="text-xs font-black text-slate-700 tracking-wide block mb-1">Bill Type</label>
+          <div className="mt-1 flex bg-slate-100 rounded-xl p-1 shadow-inner">
             <button
               onClick={() => setGstMode('none')}
               className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer ${
-                gstMode === 'none' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500'
+                gstMode === 'none' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               Plain Bill
+            </button>
+            <button
+              onClick={() => setGstMode('gst')}
+              className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer ${
+                gstMode === 'gst' ? 'bg-sky-600 shadow-xs text-white' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              GST Bill
             </button>
           </div>
         </div>
@@ -697,9 +762,9 @@ export default function GenerateBill({
       <button
         onClick={handleGenerate}
         disabled={saving}
-        className="w-full py-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-black shadow-md disabled:opacity-50 cursor-pointer"
+        className="w-full py-3.5 rounded-2xl bg-sky-600 hover:bg-sky-700 active:scale-98 text-white text-sm font-black shadow-soft disabled:opacity-50 transition-all cursor-pointer"
       >
-        {saving ? 'Saving invoice...' : '🧾 Save & Generate Invoice'}
+        {saving ? 'Generating...' : 'Generate & Preview'}
       </button>
     </div>
   );

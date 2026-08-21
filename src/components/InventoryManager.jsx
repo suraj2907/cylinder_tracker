@@ -47,15 +47,30 @@ export default function InventoryManager({
     }
   };
 
+  // Compute Stock KPIs matching AI Studio design
+  const stockStats = useMemo(() => {
+    let stock192 = 0;
+    let stock21 = 0;
+    let stockEmpty = 0;
+    (items || []).forEach(it => {
+      const n = (it.name || '').toLowerCase();
+      const s = parseInt(it.current_stock, 10) || 0;
+      if (n.includes('empty') || n.includes('khali')) stockEmpty += s;
+      else if (n.includes('21')) stock21 += s;
+      else if (n.includes('19.2') || n.includes('19')) stock192 += s;
+    });
+    return { stock192, stock21, stockEmpty };
+  }, [items]);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fadeIn pb-12">
       {/* Header and Tab Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-customBorder shadow-soft">
         <div>
           <h2 className="text-xl font-black text-textSlate flex items-center gap-2">
-            📦 Inventory & Stock Catalog
+            📦 Stock & Inventory Status
           </h2>
-          <p className="text-xs text-muted font-bold mt-1">Manage cylinders, track purchases, custom hotel rates, and adjustments.</p>
+          <p className="text-xs text-muted font-bold mt-1">Real-time cylinders stock, purchases, and custom hotel rates.</p>
         </div>
 
         <div className="flex bg-slate-100 rounded-xl p-1 shrink-0">
@@ -75,6 +90,60 @@ export default function InventoryManager({
           >
             🚚 Stock Purchases
           </button>
+        </div>
+      </div>
+
+      {/* 3 KPI Stock Cards matching AI Studio 04_inventory.png */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* 19.2kg Filled */}
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-soft">
+          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">19.2kg Filled</p>
+          <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">
+            {stockStats.stock192} <span className="text-xs font-semibold text-slate-400">cylinders</span>
+          </div>
+          <div className="w-full bg-slate-100 h-2 rounded-full mt-3 overflow-hidden">
+            <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${Math.min(100, Math.max(15, (stockStats.stock192 / 200) * 100))}%` }} />
+          </div>
+          <div className="flex justify-between items-center mt-2 text-[10px] font-bold">
+            <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+              {stockStats.stock192 > 20 ? 'Stock OK' : 'Low Stock'}
+            </span>
+            <span className="text-slate-400">Target: 200</span>
+          </div>
+        </div>
+
+        {/* 21kg Filled */}
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-soft">
+          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">21kg Filled</p>
+          <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">
+            {stockStats.stock21} <span className="text-xs font-semibold text-slate-400">cylinders</span>
+          </div>
+          <div className="w-full bg-slate-100 h-2 rounded-full mt-3 overflow-hidden">
+            <div className="bg-amber-500 h-full rounded-full" style={{ width: `${Math.min(100, Math.max(15, (stockStats.stock21 / 100) * 100))}%` }} />
+          </div>
+          <div className="flex justify-between items-center mt-2 text-[10px] font-bold">
+            <span className={`px-2 py-0.5 rounded-md border ${stockStats.stock21 > 10 ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-rose-700 bg-rose-50 border-rose-200'}`}>
+              {stockStats.stock21 > 10 ? 'Stock Adequate' : 'Low Stock'}
+            </span>
+            <span className="text-slate-400">Target: 100</span>
+          </div>
+        </div>
+
+        {/* Empties */}
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-soft">
+          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Empties (Khali)</p>
+          <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">
+            {stockStats.stockEmpty} <span className="text-xs font-semibold text-slate-400">cylinders</span>
+          </div>
+          <div className="w-full bg-slate-100 h-2 rounded-full mt-3 overflow-hidden">
+            <div className="bg-sky-500 h-full rounded-full" style={{ width: `${Math.min(100, Math.max(15, (stockStats.stockEmpty / 300) * 100))}%` }} />
+          </div>
+          <div className="flex justify-between items-center mt-2 text-[10px] font-bold">
+            <span className="text-sky-700 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200">
+              Rotation Ready
+            </span>
+            <span className="text-slate-400">Capacity: 300</span>
+          </div>
         </div>
       </div>
 

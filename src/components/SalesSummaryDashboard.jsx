@@ -118,24 +118,24 @@ export default function SalesSummaryDashboard({
   return (
     <div className="space-y-6">
       {/* Header and Export buttons */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-customBorder shadow-soft">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-soft">
         <div>
-          <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
-            📈 Sales Summary Report
+          <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+            Sales Summary & Invoices
           </h2>
-          <p className="text-xs text-muted font-bold mt-1">Detailed overview of generated invoices, tax values, and collected balances.</p>
+          <p className="text-xs text-slate-400 font-bold mt-1">Detailed overview of generated invoices, tax values, and collected balances.</p>
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
           <button
             onClick={exportToExcel}
-            className="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+            className="px-4 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
           >
             📊 Export Excel
           </button>
           <button
             onClick={exportToPdf}
-            className="px-3.5 py-2 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-800 text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+            className="px-4 py-2 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-800 text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
           >
             🧾 Export PDF
           </button>
@@ -145,13 +145,13 @@ export default function SalesSummaryDashboard({
       {/* Date Range & Quick Filters */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {/* Date Filter */}
-        <div className="bg-white border border-customBorder rounded-2xl p-4 shadow-soft">
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-soft">
           <div className="flex justify-between items-center mb-2">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Billing Period</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Billing Period</label>
             <button
               type="button"
               onClick={() => setIsAllTime(!isAllTime)}
-              className={`px-2 py-0.5 rounded text-[10px] font-black uppercase border transition-all cursor-pointer ${
+              className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase border transition-all cursor-pointer ${
                 isAllTime ? 'bg-sky-600 text-white border-sky-600 shadow-xs' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
               }`}
             >
@@ -168,10 +168,10 @@ export default function SalesSummaryDashboard({
         </div>
 
         {/* Customer/Party Filter */}
-        <div className="bg-white border border-customBorder rounded-2xl p-4 shadow-soft">
-          <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-2">Customer (Party)</label>
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-soft">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-2">Customer (Party)</label>
           <select
-            className="w-full border border-customBorder rounded-xl px-3 py-2 text-xs font-bold bg-white"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"
             value={partyFilter}
             onChange={e => setPartyFilter(e.target.value)}
           >
@@ -183,15 +183,15 @@ export default function SalesSummaryDashboard({
         </div>
 
         {/* Payment Status Filter */}
-        <div className="bg-white border border-customBorder rounded-2xl p-4 shadow-soft">
-          <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-2">Status</label>
-          <div className="flex bg-slate-100 rounded-xl p-1">
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-soft">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-2">Status</label>
+          <div className="flex bg-slate-100 rounded-xl p-1 shadow-inner">
             {['all', 'paid', 'unpaid'].map(status => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
                 className={`flex-1 py-1 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer ${
-                  statusFilter === status ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+                  statusFilter === status ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
                 {status}
@@ -201,15 +201,15 @@ export default function SalesSummaryDashboard({
         </div>
 
         {/* Staff Filter */}
-        <div className="bg-white border border-customBorder rounded-2xl p-4 shadow-soft">
-          <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-2">Staff Created By</label>
-          <div className="flex bg-slate-100 rounded-xl p-1">
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-soft">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-2">Staff Created By</label>
+          <div className="flex bg-slate-100 rounded-xl p-1 shadow-inner">
             {['all', 'Suraj', 'Shivam'].map(staff => (
               <button
                 key={staff}
                 onClick={() => setStaffFilter(staff)}
                 className={`flex-1 py-1 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer ${
-                  staffFilter === staff ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+                  staffFilter === staff ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
                 {staff}
@@ -221,21 +221,21 @@ export default function SalesSummaryDashboard({
 
       {/* Metrics Summary Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white border border-customBorder border-l-4 border-l-sky-500 rounded-2xl p-5 shadow-soft">
-          <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">Total Sales value</span>
-          <span className="text-xl font-black text-slate-900 block mt-1.5">
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-soft">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Total Sales value</span>
+          <span className="text-2xl font-black text-slate-900 block mt-1.5 tracking-tight">
             ₹{metrics.totalSales.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </span>
         </div>
-        <div className="bg-white border border-customBorder border-l-4 border-l-emerald-500 rounded-2xl p-5 shadow-soft">
-          <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">Total Amount Received</span>
-          <span className="text-xl font-black text-emerald-800 block mt-1.5">
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-soft">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Total Amount Received</span>
+          <span className="text-2xl font-black text-emerald-800 block mt-1.5 tracking-tight">
             ₹{metrics.totalPaid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </span>
         </div>
-        <div className="bg-white border border-customBorder border-l-4 border-l-amber-500 rounded-2xl p-5 shadow-soft">
-          <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">Total Outstanding Balance</span>
-          <span className="text-xl font-black text-amber-800 block mt-1.5">
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-soft">
+          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Total Outstanding Balance</span>
+          <span className="text-2xl font-black text-amber-800 block mt-1.5 tracking-tight">
             ₹{metrics.totalUnpaid.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </span>
         </div>

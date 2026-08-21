@@ -43,15 +43,36 @@ function RestaurantStatementModal({
   useEffect(() => {
     let active = true;
     if (!restaurantName) return;
-    supabase
-      .from('legacy_ledger_entries')
-      .select('*')
-      .ilike('restaurant_name', restaurantName.trim())
-      .order('entry_date', { ascending: true })
-      .then(({ data, error }) => {
-        if (error) { console.error('Error fetching ledger history', error); return; }
-        if (active) setLedgerRows(data || []);
+
+    fetch(`/api/db?table=legacy_ledger_entries&ilike=restaurant_name&value=${encodeURIComponent(restaurantName.trim())}&order=entry_date&asc=true`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (active && Array.isArray(data) && data.length > 0) {
+          setLedgerRows(data);
+          return;
+        }
+        supabase
+          .from('legacy_ledger_entries')
+          .select('*')
+          .ilike('restaurant_name', restaurantName.trim())
+          .order('entry_date', { ascending: true })
+          .then(({ data: sbData, error }) => {
+            if (error) { console.error('Error fetching ledger history', error); return; }
+            if (active) setLedgerRows(sbData || []);
+          });
+      })
+      .catch(() => {
+        supabase
+          .from('legacy_ledger_entries')
+          .select('*')
+          .ilike('restaurant_name', restaurantName.trim())
+          .order('entry_date', { ascending: true })
+          .then(({ data: sbData, error }) => {
+            if (error) { console.error('Error fetching ledger history', error); return; }
+            if (active) setLedgerRows(sbData || []);
+          });
       });
+
     return () => { active = false; };
   }, [restaurantName]);
 
@@ -163,10 +184,18 @@ function RestaurantStatementModal({
     // Base balance up to 17/08/2026 from official synced CSV ledgers
     const baseBalance = parseFloat(profile.previous_balance || 0);
 
-    // Fast string sorting (100x faster than new Date instantiation)
-    const sortedAsc = [...list].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    // Precise chronological ascending sort: date asc -> cylinder -> invoice -> payment (by srNo)
+    const sortedAsc = [...list].sort((a, b) => {
+      const dateCmp = (a.date || '').localeCompare(b.date || '');
+      if (dateCmp !== 0) return dateCmp;
+      const typeRank = { cylinder: 1, ledger: 2, bill: 3, payment: 4 };
+      const rankA = typeRank[a.kind] || 2;
+      const rankB = typeRank[b.kind] || 2;
+      if (rankA !== rankB) return rankA - rankB;
+      return (a.srNo || 0) - (b.srNo || 0);
+    });
     
-    let currentBalance = baseBalance;
+    let currentBalance = 0;
     const listWithBalance = sortedAsc.map(item => {
       if (item.isOfficialLedger && item.officialBalance !== null && !isNaN(item.officialBalance)) {
         currentBalance = item.officialBalance;
@@ -185,8 +214,16 @@ function RestaurantStatementModal({
       };
     });
 
-    // Return sorted descending using fast string comparison
-    return listWithBalance.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    // Sort descending for UI display (newest first, with latest payment on top of that date)
+    return listWithBalance.sort((a, b) => {
+      const dateCmp = (b.date || '').localeCompare(a.date || '');
+      if (dateCmp !== 0) return dateCmp;
+      const typeRank = { payment: 1, bill: 2, ledger: 3, cylinder: 4 };
+      const rankA = typeRank[a.kind] || 2;
+      const rankB = typeRank[b.kind] || 2;
+      if (rankA !== rankB) return rankA - rankB;
+      return (b.srNo || 0) - (a.srNo || 0);
+    });
   }, [restaurantName, ledgerRows, batches, payments, bills, restaurantProfiles, today]);
 
   // Filter activities based on Month / Date Range / All Time
@@ -258,29 +295,53 @@ function RestaurantStatementModal({
         
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-customBorder pb-3 flex-wrap gap-2">
-          <div>
-            <span className="text-[10px] font-black text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-md uppercase tracking-wider">
-              🏪 Hotel Passbook Statement
-            </span>
-            <h2 className="text-lg sm:text-xl font-black text-textSlate mt-0.5">
-              {restaurantName}
-            </h2>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 text-sm flex items-center justify-center cursor-pointer"
+            >
+              ←
+            </button>
+            <div>
+              <span className="text-[10px] font-black text-sky-700 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                Party Transaction Passbook
+              </span>
+              <h2 className="text-base sm:text-lg font-black text-slate-900 mt-0.5">
+                {restaurantName}
+              </h2>
+            </div>
           </div>
 
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-slate-100 text-slate-500 font-bold hover:bg-slate-200 text-lg flex items-center justify-center shrink-0"
+            className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 font-bold hover:bg-slate-200 text-base flex items-center justify-center shrink-0 cursor-pointer"
           >
             ✕
           </button>
         </div>
 
+        {/* Compact Current Balance Header Strip */}
+        <div className="bg-slate-50 rounded-xl px-4 py-2.5 flex items-center justify-between border border-slate-200">
+          <div>
+            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Current Balance (Outstanding)</div>
+            <div className="text-xl sm:text-2xl font-black text-rose-600">
+              ₹{closingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-xs font-bold text-slate-800">{restaurantName}</div>
+            <div className="text-[11px] text-slate-500 font-medium">
+              Holding: <span className="font-bold text-amber-700">{stats.totalOut} Cylinders</span> {profile.mobile ? `• +91-${profile.mobile}` : ''}
+            </div>
+          </div>
+        </div>
+
         {/* Filter Period Controls */}
-        <div className="flex items-center justify-between gap-2 flex-wrap bg-slate-50 p-2.5 rounded-2xl border border-slate-200">
-          <div className="flex items-center gap-1.5 p-1 bg-white border border-slate-200 rounded-xl">
+        <div className="flex items-center justify-between gap-2 flex-wrap bg-slate-50 p-2 rounded-xl border border-slate-200">
+          <div className="flex items-center gap-1.5 p-0.5 bg-white border border-slate-200 rounded-lg">
             <button
               onClick={() => setRangeMode(false)}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+              className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
                 !rangeMode ? 'bg-sky-600 text-white shadow-sm font-extrabold' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -288,7 +349,7 @@ function RestaurantStatementModal({
             </button>
             <button
               onClick={() => setRangeMode(true)}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+              className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
                 rangeMode ? 'bg-sky-600 text-white shadow-sm font-extrabold' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -300,7 +361,7 @@ function RestaurantStatementModal({
             <select
               value={filterPeriod}
               onChange={e => setFilterPeriod(e.target.value)}
-              className="bg-white border border-slate-300 rounded-xl px-3 py-1.5 text-xs font-black text-slate-800 shadow-sm focus:border-sky-500"
+              className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 shadow-sm focus:border-sky-500"
             >
               <option value="all">All Time (Complete History)</option>
               {availableMonths.map(mStr => {
@@ -317,70 +378,70 @@ function RestaurantStatementModal({
                 type="date"
                 value={startDate}
                 onChange={e => setStartDate(e.target.value)}
-                className="px-2.5 py-1 rounded-xl border border-slate-300 bg-white text-xs font-bold"
+                className="px-2 py-0.5 rounded-lg border border-slate-300 bg-white text-xs font-bold"
               />
               <span className="text-xs text-slate-400 font-bold">to</span>
               <input
                 type="date"
                 value={endDate}
                 onChange={e => setEndDate(e.target.value)}
-                className="px-2.5 py-1 rounded-xl border border-slate-300 bg-white text-xs font-bold"
+                className="px-2 py-0.5 rounded-lg border border-slate-300 bg-white text-xs font-bold"
               />
             </div>
           )}
         </div>
 
         {/* Summary KPIs Strip for this Hotel */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {/* Delivered Card */}
-          <div className="bg-sky-50/70 p-3 rounded-2xl border border-sky-200">
-            <div className="text-[10px] font-bold text-sky-800 uppercase tracking-wider">📦 Total Delivered</div>
-            <div className="text-lg font-black text-sky-950 mt-0.5">{stats.totalDel} units</div>
-            <div className="text-[10px] text-sky-800 font-bold mt-0.5">
+          <div className="bg-sky-50/70 py-1.5 px-2.5 rounded-xl border border-sky-200">
+            <div className="text-[9px] font-bold text-sky-800 uppercase tracking-wider">📦 Total Delivered</div>
+            <div className="text-sm font-black text-sky-950">{stats.totalDel} units</div>
+            <div className="text-[9px] text-sky-800 font-bold">
               19.2kg: {stats.del192} | 21kg: {stats.del21}
             </div>
           </div>
 
           {/* Khali Returned Card */}
-          <div className="bg-teal-50/70 p-3 rounded-2xl border border-teal-200">
-            <div className="text-[10px] font-bold text-teal-800 uppercase tracking-wider">♻️ Khali Returned</div>
-            <div className="text-lg font-black text-teal-950 mt-0.5">{stats.totalRet} units</div>
-            <div className="text-[10px] text-teal-800 font-bold mt-0.5">
+          <div className="bg-teal-50/70 py-1.5 px-2.5 rounded-xl border border-teal-200">
+            <div className="text-[9px] font-bold text-teal-800 uppercase tracking-wider">♻️ Khali Returned</div>
+            <div className="text-sm font-black text-teal-950">{stats.totalRet} units</div>
+            <div className="text-[9px] text-teal-800 font-bold">
               19.2kg: {stats.ret192} | 21kg: {stats.ret21}
             </div>
           </div>
 
           {/* Outstanding Empty Card */}
-          <div className={`p-3 rounded-2xl border ${
+          <div className={`py-1.5 px-2.5 rounded-xl border ${
             stats.totalOut > 0 ? 'bg-amber-50/80 border-amber-300' : 'bg-emerald-50/80 border-emerald-200'
           }`}>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-700">⚠️ Outstanding Khali</div>
-            <div className={`text-lg font-black mt-0.5 ${stats.totalOut > 0 ? 'text-amber-950' : 'text-emerald-900'}`}>
+            <div className="text-[9px] font-bold uppercase tracking-wider text-slate-700">⚠️ Outstanding Khali</div>
+            <div className={`text-sm font-black ${stats.totalOut > 0 ? 'text-amber-950' : 'text-emerald-900'}`}>
               {stats.totalOut} cylinders
             </div>
-            <div className="text-[10px] font-bold mt-0.5 text-slate-700">
+            <div className="text-[9px] font-bold text-slate-700">
               19.2kg: {stats.out192} | 21kg: {stats.out21}
             </div>
           </div>
 
           {/* Closing Balance Card */}
-          <div className={`p-3 rounded-2xl border ${
+          <div className={`py-1.5 px-2.5 rounded-xl border ${
             closingBalance > 0 ? 'bg-rose-50/70 border-rose-250 text-rose-900' : 'bg-emerald-50/70 border-emerald-250 text-emerald-950'
           }`}>
-            <div className={`text-[10px] font-bold uppercase tracking-wider ${closingBalance > 0 ? 'text-rose-800' : 'text-emerald-800'}`}>
-              🔴 Closing Balance (Outstanding)
+            <div className={`text-[9px] font-bold uppercase tracking-wider ${closingBalance > 0 ? 'text-rose-800' : 'text-emerald-800'}`}>
+              🔴 Closing Balance
             </div>
-            <div className="text-lg font-black mt-0.5">
+            <div className="text-sm font-black">
               ₹{closingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </div>
-            <div className={`text-[10px] font-bold mt-0.5 ${closingBalance > 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
-              Opening Bal: ₹{openingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            <div className={`text-[9px] font-bold ${closingBalance > 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
+              Opening: ₹{openingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </div>
           </div>
         </div>
 
         {/* Date-Wise Complete Passbook Table / Invoices List */}
-        <div className="space-y-3 flex-1 overflow-hidden flex flex-col min-h-[220px]">
+        <div className="space-y-2 flex-1 overflow-hidden flex flex-col min-h-[350px]">
           
           {/* Tab Switcher */}
           <div className="flex bg-slate-100 rounded-xl p-1 max-w-[280px] no-print">
@@ -398,7 +459,7 @@ function RestaurantStatementModal({
                 activeSection === 'invoices' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-800'
               }`}
             >
-              🧾 Invoices ({restaurantBills.length})
+              🧾 Invoices ({restaurantBills.length + ledgerRows.filter(r => r.voucher_type === 'Invoice' || r.voucher_type === 'Sales Invoice').length})
             </button>
           </div>
 
@@ -415,7 +476,7 @@ function RestaurantStatementModal({
                   No activity entries recorded for {restaurantName} in this period.
                 </div>
               ) : (
-                <div className="overflow-y-auto border border-slate-200 rounded-2xl max-h-[380px] bg-white">
+                <div className="overflow-y-auto border border-slate-200 rounded-2xl max-h-[460px] flex-1 bg-white shadow-inner">
                   
                   {/* MOBILE CARDS VIEW (Clean & Spacious on Mobile Screens) */}
                   <div className="block md:hidden divide-y divide-slate-100 no-print">
@@ -424,7 +485,7 @@ function RestaurantStatementModal({
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-extrabold text-slate-900">{item.date}</span>
-                            {item.kind !== 'bill' && (
+                            {item.batchNum && (
                               <span className="text-[11px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
                                 #{item.batchNum}
                               </span>
@@ -550,7 +611,7 @@ function RestaurantStatementModal({
                             )}
                           </td>
                           <td className="px-4 py-3 text-right font-bold text-slate-500">
-                            {item.kind === 'bill' ? '-' : `#${item.batchNum}`}
+                            {item.batchNum ? `#${item.batchNum}` : '-'}
                           </td>
                           <td className="px-4 py-3 text-right font-bold text-slate-800">
                             {item.kind === 'cylinder' && !item.isReturn ? `${item.qty} units` : '-'}

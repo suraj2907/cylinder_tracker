@@ -13,7 +13,6 @@ export const TABS = [
   { id: "gstReport", label: "🧾 GST Report" },
   { id: "calendar", label: "📅 Calendar Log" },
   { id: "restaurants", label: "🏪 Restaurants" },
-  { id: "gasPredictor", label: "🔮 Gas Predictor" },
   { id: "add", label: "➕ Add Entry" },
 ];
 

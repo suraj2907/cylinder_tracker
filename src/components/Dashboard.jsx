@@ -1,132 +1,170 @@
-import React from 'react';
-import { Download } from 'lucide-react';
-import { exportToPDF, exportToExcel } from '../utils/exportUtils';
+import React, { useMemo } from 'react';
+import { FileText, TrendingUp, Package, Percent, ChevronRight } from 'lucide-react';
+import { norm, getAllPartiesCurrentBalances } from '../utils/dataUtils';
 
-export default function Dashboard({ restaurants, batchStats, restMap, totAll, tot21, tot192, totEmpty, totOutstanding }) {
+export default function Dashboard({ restaurants = [], restaurantProfiles = {}, bills = [], payments = [], setTab }) {
+
+  // Single-pass accurate party balance calculation
+  const partyBalanceMap = useMemo(() => {
+    return getAllPartiesCurrentBalances(restaurantProfiles, bills, payments);
+  }, [restaurantProfiles, bills, payments]);
+
+  // Total money pending to collect across customer accounts
+  const totalToCollect = useMemo(() => {
+    return Object.entries(partyBalanceMap).reduce((sum, [p, v]) => {
+      if (p.toLowerCase().includes('gaspoint')) return sum;
+      return sum + (v > 0 ? v : 0);
+    }, 0);
+  }, [partyBalanceMap]);
+
+  // Top active customer restaurants sorted by highest pending balance
+  const topActiveList = useMemo(() => {
+    const list = (restaurants || []).map(r => ({
+      ...r,
+      balance: partyBalanceMap[norm(r.name)] || 0
+    }));
+    // Also include any customer profiles with positive balance not present in current cylinder deliveries
+    Object.entries(partyBalanceMap).forEach(([normName, bal]) => {
+      if (bal > 0 && !normName.toLowerCase().includes('gaspoint') && !list.some(r => norm(r.name) === normName)) {
+        list.push({
+          name: normName,
+          outstanding: 0,
+          total: 0,
+          balance: bal
+        });
+      }
+    });
+    return list
+      .filter(r => !r.name.toLowerCase().includes('gaspoint'))
+      .sort((a, b) => (b.balance || 0) - (a.balance || 0))
+      .slice(0, 10);
+  }, [restaurants, partyBalanceMap]);
+
   return (
-    <div className="space-y-6 fade">
-      {/* Export Action Buttons */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white p-4 rounded-2xl border border-customBorder shadow-soft">
-        <div>
-          <h2 className="text-base font-extrabold text-textSlate">📊 Executive Operations Dashboard</h2>
-          <p className="text-xs text-mutedSlate">Real-time LPG Cylinder Distribution & Outstanding Summary</p>
+    <div className="max-w-4xl mx-auto w-full space-y-6 animate-fadeIn pb-16 px-3 sm:px-6">
+
+      {/* Main Pending Balance Hero Card */}
+      <div className="bg-white border border-[#EEEEEE] rounded-3xl p-6 sm:p-8 text-center shadow-xs">
+        <h1 className="text-xs font-bold text-[#737373] uppercase tracking-widest mb-1.5">
+          AGENCY DASHBOARD • TOTAL MONEY PENDING
+        </h1>
+        <div className="text-3xl sm:text-5xl font-light text-[#1A1A1A] tracking-tight my-2">
+          ₹ {totalToCollect.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
-          <button 
-            onClick={() => exportToPDF(restaurants, tot21, tot192, totAll)}
-            className="flex-1 sm:flex-initial px-3.5 py-2 bg-orange-600 hover:bg-orange-700 active:scale-95 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all text-xs shadow-soft">
-            <Download size={14} /> PDF Report
-          </button>
-          <button 
-            onClick={() => exportToExcel(restaurants, batchStats)}
-            className="flex-1 sm:flex-initial px-3.5 py-2 bg-sky-600 hover:bg-sky-700 active:scale-95 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all text-xs shadow-soft">
-            <Download size={14} /> Excel Report
-          </button>
-        </div>
+        <p className="text-[11px] text-[#999999] font-medium">
+          Live aggregate outstanding from {restaurants.length} active customer accounts
+        </p>
       </div>
 
-      {/* Top Restaurants Card */}
-      <div className="bg-white border border-customBorder rounded-2xl overflow-hidden shadow-soft">
-        <div className="bg-slate-50 px-5 py-4 border-b border-customBorder flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-2">
-            <span className="font-extrabold text-xs uppercase tracking-wider text-sky-700">🏆 Top 20 Active Restaurants</span>
-            <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700">
-              {Object.keys(restMap).length} total
-            </span>
+      {/* 4 Action Grid Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        {/* Generate Bill */}
+        <button
+          id="btn-action-generate-bill"
+          onClick={() => setTab('billing')}
+          className="group flex flex-col items-center justify-center p-4 sm:p-5 bg-white rounded-2xl border border-[#EEEEEE] hover:border-[#1A1A1A] active:scale-[0.98] transition-all cursor-pointer shadow-xs"
+        >
+          <div className="w-12 h-12 rounded-xl bg-[#F5F5F5] flex items-center justify-center text-[#1A1A1A] group-hover:bg-[#1A1A1A] group-hover:text-white transition-colors">
+            <FileText className="w-5 h-5 stroke-[1.8]" />
           </div>
+          <span className="mt-2.5 text-xs sm:text-sm font-semibold text-[#1A1A1A]">
+            Generate Bill
+          </span>
+          <span className="text-[10px] text-[#999999] hidden sm:block mt-0.5">GST & Plain Invoices</span>
+        </button>
+
+        {/* Cashflow */}
+        <button
+          id="btn-action-cashflow"
+          onClick={() => setTab('payments')}
+          className="group flex flex-col items-center justify-center p-4 sm:p-5 bg-white rounded-2xl border border-[#EEEEEE] hover:border-[#1A1A1A] active:scale-[0.98] transition-all cursor-pointer shadow-xs"
+        >
+          <div className="w-12 h-12 rounded-xl bg-[#F5F5F5] flex items-center justify-center text-[#1A1A1A] group-hover:bg-[#1A1A1A] group-hover:text-white transition-colors">
+            <TrendingUp className="w-5 h-5 stroke-[1.8]" />
+          </div>
+          <span className="mt-2.5 text-xs sm:text-sm font-semibold text-[#1A1A1A]">
+            Cashflow
+          </span>
+          <span className="text-[10px] text-[#999999] hidden sm:block mt-0.5">Daily Ledger & Collections</span>
+        </button>
+
+        {/* Inventory */}
+        <button
+          id="btn-action-inventory"
+          onClick={() => setTab('inventory')}
+          className="group flex flex-col items-center justify-center p-4 sm:p-5 bg-white rounded-2xl border border-[#EEEEEE] hover:border-[#1A1A1A] active:scale-[0.98] transition-all cursor-pointer shadow-xs"
+        >
+          <div className="w-12 h-12 rounded-xl bg-[#F5F5F5] flex items-center justify-center text-[#1A1A1A] group-hover:bg-[#1A1A1A] group-hover:text-white transition-colors">
+            <Package className="w-5 h-5 stroke-[1.8]" />
+          </div>
+          <span className="mt-2.5 text-xs sm:text-sm font-semibold text-[#1A1A1A]">
+            Inventory
+          </span>
+          <span className="text-[10px] text-[#999999] hidden sm:block mt-0.5">Live Stock & Purchases</span>
+        </button>
+
+        {/* Profit & Loss */}
+        <button
+          id="btn-action-reports"
+          onClick={() => setTab('profitLoss')}
+          className="group flex flex-col items-center justify-center p-4 sm:p-5 bg-white rounded-2xl border border-[#EEEEEE] hover:border-[#1A1A1A] active:scale-[0.98] transition-all cursor-pointer shadow-xs"
+        >
+          <div className="w-12 h-12 rounded-xl bg-[#F5F5F5] flex items-center justify-center text-[#1A1A1A] group-hover:bg-[#1A1A1A] group-hover:text-white transition-colors">
+            <Percent className="w-5 h-5 stroke-[1.8]" />
+          </div>
+          <span className="mt-2.5 text-xs sm:text-sm font-semibold text-[#1A1A1A]">
+            Profit & Loss
+          </span>
+          <span className="text-[10px] text-[#999999] hidden sm:block mt-0.5">Financial Margins</span>
+        </button>
+      </div>
+
+      {/* Top Active Restaurants Section */}
+      <div className="bg-white border border-[#EEEEEE] rounded-3xl p-5 sm:p-6 shadow-xs space-y-3">
+        <div className="flex items-center justify-between pb-2 border-b border-[#EEEEEE]">
+          <div>
+            <h2 className="text-sm sm:text-base font-bold text-[#1A1A1A] tracking-tight">
+              Top Active Restaurants
+            </h2>
+            <p className="text-xs text-[#737373]">Parties with assigned cylinders & pending amounts</p>
+          </div>
+          <button
+            onClick={() => setTab('restaurants')}
+            className="text-xs font-semibold text-sky-600 hover:text-sky-700 hover:underline flex items-center gap-1 cursor-pointer"
+          >
+            <span>View All ({restaurants.length})</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-customBorder bg-slate-50">
-                <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">#</th>
-                <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Restaurant</th>
-                <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Outstanding</th>
-                <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">🔵 21 KG</th>
-                <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">🟢 19.2 KG</th>
-                <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">⚪ Khali</th>
-                <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Total Delivered</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {restaurants.slice(0, 20).map((r, i) => (
-                <tr key={r.name} className="hover:bg-slate-50 transition-colors">
-                  <td className={`px-4 py-3 text-xs font-black ${i < 3 ? 'text-amber-600' : 'text-slate-400'}`}>{i + 1}</td>
-                  <td className="px-4 py-3 text-xs font-bold text-textSlate">{r.name}</td>
-                  <td className="px-4 py-3 text-xs">
-                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${r.outstanding > 0 ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-emerald-100 text-emerald-700 border-emerald-200'}`}>
-                      {r.outstanding}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-xs">
-                    <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-100 text-sky-800 border border-sky-200">{r.kg21}</span>
-                  </td>
-                  <td className="px-4 py-3 text-xs">
-                    <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800 border border-teal-200">{r.kg192}</span>
-                  </td>
-                  <td className="px-4 py-3 text-xs">
-                    <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200">{r.empty}</span>
-                  </td>
-                  <td className={`px-4 py-3 text-xs font-black ${r.total > 50 ? 'text-amber-600' : 'text-slate-900'}`}>{r.total}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+          {topActiveList.map((rest) => (
+            <button
+              key={rest.name}
+              id={`btn-restaurant-row-${rest.name}`}
+              onClick={() => setTab('restaurants')}
+              className="w-full flex items-center justify-between p-3.5 bg-[#FDFDFD] hover:bg-[#F5F5F5] rounded-xl border border-[#EEEEEE] hover:border-[#CCCCCC] active:scale-[0.99] transition-all text-left cursor-pointer shadow-none"
+            >
+              <div className="min-w-0 flex-1 pr-3">
+                <div className="text-xs sm:text-sm font-semibold text-[#1A1A1A] truncate">
+                  {rest.name}
+                </div>
+                <div className="text-[11px] text-[#737373] font-normal mt-0.5">
+                  {rest.outstanding || 0} Cylinders Assigned
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className={`text-xs sm:text-sm font-bold ${rest.balance > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
+                  ₹ {rest.balance > 0 ? rest.balance.toLocaleString('en-IN') : '0'}
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#CCCCCC]" />
+              </div>
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Recent Batches Card */}
-      <div className="bg-white border border-customBorder rounded-2xl overflow-hidden shadow-soft">
-        <div className="bg-slate-50 px-5 py-4 border-b border-customBorder">
-          <span className="font-extrabold text-xs uppercase tracking-wider text-sky-700">📦 Recent 10 Batches</span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-customBorder bg-slate-50">
-                <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Batch</th>
-                <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Khali Date</th>
-                <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Entries</th>
-                <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">🔵 21KG</th>
-                <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">🟢 19.2KG</th>
-                <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">⚪ Khali</th>
-                <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Outstanding</th>
-                <th className="text-[11px] font-bold uppercase tracking-wider text-mutedSlate px-4 py-3">Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {batchStats.slice(0, 10).map((b, i) => {
-                const delivered = b.kg21 + b.kg192;
-                const outstanding = delivered - b.empty;
-                return (
-                  <tr key={`${b.batch}-${i}`} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 text-xs font-black text-amber-600">#{b.batch}</td>
-                    <td className="px-4 py-3 text-xs text-slate-500 font-medium">{b.khaliDate || "—"}</td>
-                    <td className="px-4 py-3 text-xs">
-                      <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200">{b.count}</span>
-                    </td>
-                    <td className="px-4 py-3 text-xs">
-                      <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-100 text-sky-800 border border-sky-200">{b.kg21}</span>
-                    </td>
-                    <td className="px-4 py-3 text-xs">
-                      <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-teal-100 text-teal-800 border border-teal-200">{b.kg192}</span>
-                    </td>
-                    <td className="px-4 py-3 text-xs">
-                      <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-600 border border-slate-200">{b.empty}</span>
-                    </td>
-                    <td className="px-4 py-3 text-xs">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${outstanding > 0 ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-emerald-100 text-emerald-700 border-emerald-200'}`}>
-                        {outstanding}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-xs font-black text-slate-900">{delivered}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   );
 }

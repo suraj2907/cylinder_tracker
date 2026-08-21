@@ -12,6 +12,23 @@ export function useInventory(currentUser) {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
+      const [resItems, resPurchases, resAdj, resPartyPrices, resBills] = await Promise.all([
+        fetch('/api/db?table=items&order=name&asc=true').then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch('/api/db?table=purchase_bills&order=purchase_date&asc=false').then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch('/api/db?table=stock_adjustments&order=created_at&asc=false').then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch('/api/db?table=party_item_prices').then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch('/api/db?table=bills').then(r => r.ok ? r.json() : null).catch(() => null)
+      ]);
+
+      if (resItems && resPurchases && resAdj && resPartyPrices && resBills) {
+        setItems(resItems || []);
+        setPurchaseBills(resPurchases || []);
+        setStockAdjustments(resAdj || []);
+        setPartyItemPrices(resPartyPrices || []);
+        setBills(resBills || []);
+        return;
+      }
+
       const [
         { data: itemsData },
         { data: purchasesData },

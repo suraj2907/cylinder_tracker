@@ -9,6 +9,20 @@ export function useBilling(currentUser) {
   const [loadingBilling, setLoadingBilling] = useState(true);
 
   const fetchProfiles = useCallback(async () => {
+    try {
+      const res = await fetch('/api/db?table=restaurants');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          const map = {};
+          data.forEach(r => { map[r.name] = r; });
+          setRestaurantProfiles(map);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('API DB proxy fetch error, falling back to Supabase client', e);
+    }
     const { data, error } = await supabase.from('restaurants').select('*');
     if (error) {
       console.error('Error fetching restaurant profiles', error);
@@ -19,9 +33,19 @@ export function useBilling(currentUser) {
     setRestaurantProfiles(map);
   }, []);
 
-  // Fetch ALL bills via dynamic pagination — keeps working correctly no matter how large the table grows,
-  // unlike a fixed set of ranges which silently drops data once row count exceeds the hardcoded ceiling.
   const fetchBills = useCallback(async () => {
+    try {
+      const res = await fetch('/api/db?table=bills&order=id&asc=false');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setBills(data);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('API DB proxy fetch bills error, falling back to Supabase client', e);
+    }
     try {
       let all = [];
       let from = 0;
@@ -34,7 +58,7 @@ export function useBilling(currentUser) {
         if (error) throw error;
         if (!data || data.length === 0) break;
         all = all.concat(data);
-        if (data.length < PAGE_SIZE) break; // last page
+        if (data.length < PAGE_SIZE) break;
         from += PAGE_SIZE;
       }
       setBills(all);

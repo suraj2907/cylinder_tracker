@@ -162,32 +162,32 @@ export default function CalendarView({
   }, [filteredTimeline]);
 
   return (
-    <div className="space-y-6 fade">
+    <div className="space-y-6 animate-fadeIn pb-12">
       {/* Calendar Header & View Switcher */}
-      <div className="bg-white border border-customBorder rounded-2xl p-5 shadow-soft space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="bg-white border border-slate-200/80 rounded-3xl p-6 shadow-soft space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
-            <h2 className="text-base font-extrabold text-textSlate flex items-center gap-2">
-              <span>📅 Daily Calendar & Date Selection</span>
+            <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+              <span>Operations & Calendar Log</span>
             </h2>
-            <p className="text-xs text-mutedSlate mt-0.5">
+            <p className="text-xs text-slate-400 font-bold mt-1">
               Select date or date range to view hotel delivery & payment history.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 p-1 bg-slate-100 border border-slate-200 rounded-xl">
+          <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl shadow-inner">
             <button
               onClick={() => { setRangeMode(false); setSelectedDate(today); }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                !rangeMode ? 'bg-white text-slate-900 shadow-sm border border-slate-200 font-extrabold' : 'text-slate-500 hover:text-slate-900'
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                !rangeMode ? 'bg-white text-slate-900 shadow-xs font-extrabold' : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               📅 Month / Single Date
             </button>
             <button
               onClick={() => setRangeMode(true)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                rangeMode ? 'bg-white text-slate-900 shadow-sm border border-slate-200 font-extrabold' : 'text-slate-500 hover:text-slate-900'
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                rangeMode ? 'bg-white text-slate-900 shadow-xs font-extrabold' : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               📆 Date Range Filter

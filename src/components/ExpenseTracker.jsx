@@ -61,14 +61,14 @@ export default function ExpenseTracker({
   }, [filteredExpenses, categories]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fadeIn pb-12">
       {/* Header and Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-customBorder shadow-soft">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-soft">
         <div>
-          <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
-            💸 Expense Tracker & Ledger
+          <h2 className="text-xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+            Business Expense Tracker
           </h2>
-          <p className="text-xs text-muted font-bold mt-1">Track business operations, EMI, insurance, fuel, and salaries.</p>
+          <p className="text-xs text-slate-400 font-bold mt-1">Track business operations, fuel, repairs, salaries, and overheads.</p>
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
@@ -82,34 +82,34 @@ export default function ExpenseTracker({
             onClick={() => setManagingItems(true)}
             className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all shadow-xs cursor-pointer"
           >
-            📋 Catalog Items
+            📋 Catalog
           </button>
           <button
             onClick={() => setRecordingExpense(true)}
-            className="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-black transition-all shadow-md active:scale-95 flex items-center gap-1 cursor-pointer"
+            className="px-4 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 active:scale-95 text-white text-xs font-black transition-all shadow-soft flex items-center gap-1.5 cursor-pointer"
           >
-            ➕ Record Expense
+            ➕ Log Expense
           </button>
         </div>
       </div>
 
-      {/* Date Range Selector and Summary Card */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div className="bg-white border border-customBorder rounded-2xl p-5 shadow-soft flex flex-col justify-between">
-          <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Date Period Filter</label>
+      {/* Date Range Selector and Hero Summary Card */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-soft flex flex-col justify-between">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Date Period Filter</label>
           <div className="mt-2.5">
             <DateRangePicker value={dateRange} onChange={setDateRange} />
           </div>
         </div>
 
-        <div className="bg-white border border-customBorder rounded-2xl p-5 shadow-soft md:col-span-2 flex items-center justify-between">
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-soft md:col-span-2 flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">Total Expenses In Period</span>
-            <span className="text-2xl font-black text-rose-600 block mt-1.5">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Total Expenses In Period</span>
+            <span className="text-3xl font-black text-slate-900 block mt-1.5 tracking-tight">
               ₹{Number(groupedExpenses.grandTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </span>
           </div>
-          <div className="px-4 py-2.5 bg-rose-50 border border-rose-200 text-rose-800 text-[10px] font-black rounded-xl uppercase tracking-wider">
+          <div className="px-3.5 py-2 bg-rose-50 border border-rose-200 text-rose-800 text-[10px] font-black rounded-xl uppercase tracking-wider">
             💸 Outflow Logged
           </div>
         </div>

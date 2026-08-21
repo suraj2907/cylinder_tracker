@@ -10,6 +10,19 @@ export function useExpenses(currentUser) {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
+      const [resCat, resItem, resExp] = await Promise.all([
+        fetch('/api/db?table=expense_categories&order=name&asc=true').then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch('/api/db?table=expense_items&order=name&asc=true').then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch('/api/db?table=expenses&order=expense_date&asc=false').then(r => r.ok ? r.json() : null).catch(() => null)
+      ]);
+
+      if (resCat && resItem && resExp) {
+        setCategories(resCat || []);
+        setExpenseItems(resItem || []);
+        setExpenses(resExp || []);
+        return;
+      }
+
       const [
         { data: catData },
         { data: itemData },
