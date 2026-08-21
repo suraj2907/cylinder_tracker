@@ -30,7 +30,7 @@ export function useExpenses(currentUser) {
       ] = await Promise.all([
         supabase.from('expense_categories').select('*').order('name'),
         supabase.from('expense_items').select('*').order('name'),
-        supabase.from('expenses').select('*').order('expense_date', { ascending: false })
+        supabase.from('expenses').select('*').order('expense_date', { ascending: false }).range(0, 4999)
       ]);
 
       setCategories(catData || []);
@@ -48,6 +48,20 @@ export function useExpenses(currentUser) {
   }, [fetchData]);
 
   const saveCategory = async (name) => {
+    try {
+      const res = await fetch('/api/db?table=expense_categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        await fetchData();
+        return data[0] || data;
+      }
+    } catch (e) {
+      console.warn("Proxy saveCategory fallback to supabase:", e);
+    }
     const { data, error } = await supabase.from('expense_categories').insert([{ name }]).select();
     if (error) throw error;
     await fetchData();
@@ -55,12 +69,37 @@ export function useExpenses(currentUser) {
   };
 
   const deleteCategory = async (id) => {
+    try {
+      const res = await fetch(`/api/db?table=expense_categories&id=${encodeURIComponent(id)}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        await fetchData();
+        return;
+      }
+    } catch (e) {
+      console.warn("Proxy deleteCategory fallback to supabase:", e);
+    }
     const { error } = await supabase.from('expense_categories').delete().eq('id', id);
     if (error) throw error;
     await fetchData();
   };
 
   const saveExpenseItem = async (name, defaultRate = 0) => {
+    try {
+      const res = await fetch('/api/db?table=expense_items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, default_rate: parseFloat(defaultRate) || 0 })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        await fetchData();
+        return data[0] || data;
+      }
+    } catch (e) {
+      console.warn("Proxy saveExpenseItem fallback to supabase:", e);
+    }
     const { data, error } = await supabase.from('expense_items').insert([{ name, default_rate: parseFloat(defaultRate) }]).select();
     if (error) throw error;
     await fetchData();
@@ -68,6 +107,17 @@ export function useExpenses(currentUser) {
   };
 
   const deleteExpenseItem = async (id) => {
+    try {
+      const res = await fetch(`/api/db?table=expense_items&id=${encodeURIComponent(id)}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        await fetchData();
+        return;
+      }
+    } catch (e) {
+      console.warn("Proxy deleteExpenseItem fallback to supabase:", e);
+    }
     const { error } = await supabase.from('expense_items').delete().eq('id', id);
     if (error) throw error;
     await fetchData();
@@ -75,6 +125,23 @@ export function useExpenses(currentUser) {
 
   const saveExpense = async (expenseData) => {
     const { id, ...fields } = expenseData;
+    const payload = id ? { id, ...fields } : { ...fields, created_by: currentUser };
+    
+    try {
+      const res = await fetch('/api/db?table=expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        await fetchData();
+        return data[0] || data;
+      }
+    } catch (e) {
+      console.warn("Proxy saveExpense fallback to supabase client:", e);
+    }
+
     let query;
     if (id) {
       query = supabase.from('expenses').update(fields).eq('id', id).select();
@@ -88,6 +155,17 @@ export function useExpenses(currentUser) {
   };
 
   const deleteExpense = async (id) => {
+    try {
+      const res = await fetch(`/api/db?table=expenses&id=${encodeURIComponent(id)}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        await fetchData();
+        return;
+      }
+    } catch (e) {
+      console.warn("Proxy deleteExpense fallback to supabase client:", e);
+    }
     const { error } = await supabase.from('expenses').delete().eq('id', id);
     if (error) throw error;
     await fetchData();

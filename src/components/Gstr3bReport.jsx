@@ -1,6 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import DateRangePicker from './DateRangePicker';
 
+function formatLocalYMD(d) {
+  if (!d) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export default function Gstr3bReport({
   items = [],
   purchaseBills = [],
@@ -13,8 +21,8 @@ export default function Gstr3bReport({
     const quarterStartMonth = Math.floor(currentMonth / 3) * 3;
     const start = new Date(today.getFullYear(), quarterStartMonth, 1);
     return {
-      startDate: start.toISOString().slice(0, 10),
-      endDate: today.toISOString().slice(0, 10)
+      startDate: formatLocalYMD(start),
+      endDate: formatLocalYMD(today)
     };
   });
 

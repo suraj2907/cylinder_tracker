@@ -194,22 +194,31 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
       const currentBatchNum = latestBatchData?.batch_num || 132;
 
       for (const lineItem of billData.items) {
-        const desc = (lineItem.description || '').toLowerCase();
+        const desc = (lineItem.description || lineItem.name || '').toLowerCase();
         let deliveryType = null;
-        if (desc.includes('19.2')) {
-          deliveryType = '19.2kg-delivery';
-        } else if (desc.includes('21')) {
+        if (desc.includes('21')) {
           deliveryType = '21kg-delivery';
+        } else if (desc.includes('19.2') || desc.includes('commercial') || desc.includes('lpg') || desc.includes('cylinder')) {
+          deliveryType = '19.2kg-delivery';
+        } else if (!desc.includes('regulator') && !desc.includes('convertor') && !desc.includes('pipe') && !desc.includes('empty')) {
+          deliveryType = '19.2kg-delivery';
+        }
+
+        // Exclude non-cylinder accessories
+        if (desc.includes('regulator') || desc.includes('convertor') || desc.includes('pipe') || desc.includes('empty')) {
+          deliveryType = null;
         }
 
         if (deliveryType && lineItem.qty > 0) {
           const qtyNum = parseInt(lineItem.qty, 10);
+          const billDateStr = billData.bill_date || new Date().toISOString().slice(0, 10);
+
           if (typeof onAddDeliveryEntry === 'function') {
-            onAddDeliveryEntry(
+            await onAddDeliveryEntry(
               targetRestName,
               qtyNum,
               deliveryType,
-              billData.bill_date || new Date().toISOString().slice(0, 10),
+              billDateStr,
               currentBatchNum
             );
           } else {
@@ -217,7 +226,7 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
               name: targetRestName,
               type: deliveryType,
               qty: qtyNum,
-              date: billData.bill_date || new Date().toISOString().slice(0, 10),
+              date: billDateStr,
               batch_num: currentBatchNum,
               is_return: false,
               user_name: currentUser
@@ -252,18 +261,35 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
     if (billData) {
       // 2. Restore stock in `items` catalog table
       if (Array.isArray(billData.items)) {
-        for (const lineItem of billData.items) {
-          if (lineItem.item_id && lineItem.qty) {
-            const { data: itemData } = await supabase
-              .from('items')
-              .select('current_stock')
-              .eq('id', lineItem.item_id)
-              .single();
-            if (itemData) {
-              const restoredStock = (itemData.current_stock || 0) + parseInt(lineItem.qty, 10);
-              await supabase.from('items').update({ current_stock: restoredStock }).eq('id', lineItem.item_id);
+        try {
+          const { data: allItems } = await supabase.from('items').select('id, name, current_stock');
+          for (const lineItem of billData.items) {
+            const qtyNum = parseFloat(lineItem.qty) || 0;
+            if (qtyNum > 0) {
+              let targetItem = null;
+              if (lineItem.item_id) {
+                targetItem = (allItems || []).find(it => it.id === lineItem.item_id);
+              }
+              if (!targetItem && lineItem.description) {
+                const desc = lineItem.description.toLowerCase();
+                targetItem = (allItems || []).find(it => {
+                  const n = it.name.toLowerCase();
+                  if (desc.includes('19.2') && n.includes('19.2')) return true;
+                  if (desc.includes('21') && n.includes('21')) return true;
+                  if (desc.includes('15') && n.includes('15')) return true;
+                  if (desc.includes('empty') && n.includes('empty')) return true;
+                  return false;
+                });
+              }
+              if (targetItem) {
+                const restoredStock = (parseFloat(targetItem.current_stock) || 0) + qtyNum;
+                await supabase.from('items').update({ current_stock: restoredStock }).eq('id', targetItem.id);
+                targetItem.current_stock = restoredStock;
+              }
             }
           }
+        } catch (stockErr) {
+          console.warn('Error restoring stock on bill delete:', stockErr);
         }
       }
 

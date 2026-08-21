@@ -59,46 +59,16 @@ export function useInventory(currentUser) {
     fetchData();
   }, [fetchData]);
 
-  // Compute live stock dynamically for each item
+  // Compute live stock dynamically for each item from current database stock
   const itemsWithLiveStock = useMemo(() => {
     return items.map(item => {
-      // 1. Purchases sum from purchase_bills items JSONB array: [{item_id, qty, ...}]
-      let totalPurchases = 0;
-      purchaseBills.forEach(pb => {
-        if (Array.isArray(pb.items)) {
-          pb.items.forEach(line => {
-            if (line.item_id === item.id) {
-              totalPurchases += (parseFloat(line.qty) || 0);
-            }
-          });
-        }
-      });
-
-      // 2. Sales sum from bills JSONB items array: [{description, qty, rate, item_id}, ...]
-      let totalSales = 0;
-      bills.forEach(bill => {
-        if (Array.isArray(bill.items)) {
-          bill.items.forEach(line => {
-            if (line.item_id === item.id || (line.description && item.name && line.description.toLowerCase() === item.name.toLowerCase())) {
-              totalSales += (parseFloat(line.qty) || 0);
-            }
-          });
-        }
-      });
-
-      // 3. Adjustments sum
-      const totalAdjustments = stockAdjustments
-        .filter(a => a.item_id === item.id)
-        .reduce((sum, a) => sum + (parseFloat(a.adjustment_qty) || 0), 0);
-
-      const liveStock = totalPurchases - totalSales + totalAdjustments;
-
+      const baseStock = parseFloat(item.current_stock) || 0;
       return {
         ...item,
-        current_stock: liveStock
+        current_stock: baseStock
       };
     });
-  }, [items, purchaseBills, stockAdjustments, bills]);
+  }, [items]);
 
   const saveItem = async (itemData) => {
     const { id, ...fields } = itemData;

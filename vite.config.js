@@ -80,35 +80,57 @@ function publicLedgerApiPlugin() {
             const client = createClient(supabaseUrl, serviceKey);
 
             if (req.method === 'GET') {
-              let query = client.from(table).select('*');
+              const explicitLimit = parsedUrl.searchParams.get('limit') ? parseInt(parsedUrl.searchParams.get('limit'), 10) : null;
               const orderCol = parsedUrl.searchParams.get('order');
-              if (orderCol) {
-                query = query.order(orderCol, { ascending: parsedUrl.searchParams.get('asc') === 'true' });
-              }
+              const isAsc = parsedUrl.searchParams.get('asc') === 'true';
               const ilikeCol = parsedUrl.searchParams.get('ilike');
               const ilikeVal = parsedUrl.searchParams.get('value');
-              if (ilikeCol && ilikeVal) {
-                query = query.ilike(ilikeCol, ilikeVal);
-              }
-              const limitVal = parsedUrl.searchParams.get('limit');
-              if (limitVal) {
-                query = query.limit(parseInt(limitVal, 10));
-              } else {
-                query = query.limit(10000);
-              }
 
-              const { data, error } = await query;
-              if (error) throw error;
-              res.statusCode = 200;
-              res.setHeader('Content-Type', 'application/json');
-              return res.end(JSON.stringify(data || []));
+              if (explicitLimit && explicitLimit <= 1000) {
+                let query = client.from(table).select('*');
+                if (orderCol) query = query.order(orderCol, { ascending: isAsc });
+                if (ilikeCol && ilikeVal) query = query.ilike(ilikeCol, ilikeVal);
+                query = query.limit(explicitLimit);
+                const { data, error } = await query;
+                if (error) throw error;
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                return res.end(JSON.stringify(data || []));
+              } else {
+                const targetLimit = explicitLimit || 50000;
+                let allData = [];
+                let from = 0;
+                const pageSize = 1000;
+                while (from < targetLimit) {
+                  let chunkQuery = client.from(table).select('*');
+                  if (orderCol) chunkQuery = chunkQuery.order(orderCol, { ascending: isAsc });
+                  if (ilikeCol && ilikeVal) chunkQuery = chunkQuery.ilike(ilikeCol, ilikeVal);
+                  const { data, error } = await chunkQuery.range(from, Math.min(from + pageSize - 1, targetLimit - 1));
+                  if (error) throw error;
+                  if (!data || data.length === 0) break;
+                  allData = allData.concat(data);
+                  if (data.length < pageSize) break;
+                  from += pageSize;
+                }
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                return res.end(JSON.stringify(allData));
+              }
             } else if (req.method === 'POST') {
               let body = '';
               req.on('data', chunk => body += chunk);
               req.on('end', async () => {
                 try {
                   const payload = JSON.parse(body || '{}');
-                  const { data, error } = await client.from(table).upsert(payload).select();
+                  let query;
+                  if (Array.isArray(payload)) {
+                    query = client.from(table).insert(payload);
+                  } else if (payload.id) {
+                    query = client.from(table).upsert(payload);
+                  } else {
+                    query = client.from(table).insert([payload]);
+                  }
+                  const { data, error } = await query.select();
                   if (error) throw error;
                   res.statusCode = 200;
                   res.setHeader('Content-Type', 'application/json');

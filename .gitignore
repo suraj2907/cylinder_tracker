@@ -30,3 +30,7 @@ src/data.json
 src/data_cleaned.json
 import_report.js
 public/*.csv
+scripts/
+scratch/
+scratch*
+

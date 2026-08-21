@@ -14,6 +14,14 @@ export const PRESETS = {
   CUSTOM: 'Custom Range'
 };
 
+function formatLocalYMD(d) {
+  if (!d) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export default function DateRangePicker({ value = { startDate: '', endDate: '' }, onChange }) {
   const [activePreset, setActivePreset] = useState(PRESETS.THIS_MONTH);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -38,7 +46,7 @@ export default function DateRangePicker({ value = { startDate: '', endDate: '' }
         // Mon - Today
         const dayOfWeek = today.getDay(); // 0 is Sun, 1 is Mon
         const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-        startDate = new Date(today.setDate(diff));
+        startDate = new Date(today.getFullYear(), today.getMonth(), diff);
         endDate = new Date();
         break;
       case PRESETS.LAST_WEEK:
@@ -46,8 +54,8 @@ export default function DateRangePicker({ value = { startDate: '', endDate: '' }
         const lastMon = new Date();
         const currentDay = lastMon.getDay();
         const dist = lastMon.getDate() - currentDay + (currentDay === 0 ? -6 : 1) - 7;
-        startDate = new Date(new Date().setDate(dist));
-        endDate = new Date(new Date().setDate(dist + 6));
+        startDate = new Date(lastMon.getFullYear(), lastMon.getMonth(), dist);
+        endDate = new Date(lastMon.getFullYear(), lastMon.getMonth(), dist + 6);
         break;
       case PRESETS.LAST_7_DAYS:
         startDate = new Date();
@@ -88,8 +96,8 @@ export default function DateRangePicker({ value = { startDate: '', endDate: '' }
     }
 
     return {
-      startDate: startDate.toISOString().slice(0, 10),
-      endDate: endDate.toISOString().slice(0, 10)
+      startDate: formatLocalYMD(startDate),
+      endDate: formatLocalYMD(endDate)
     };
   };
 
@@ -116,26 +124,26 @@ export default function DateRangePicker({ value = { startDate: '', endDate: '' }
       <button
         type="button"
         onClick={() => setShowDropdown(!showDropdown)}
-        className="w-full text-left bg-white border border-customBorder rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 flex items-center justify-between shadow-xs hover:border-slate-400 transition-all cursor-pointer"
+        className="w-full text-left bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-800 flex items-center justify-between shadow-xs hover:border-slate-400 transition-all cursor-pointer overflow-hidden"
       >
-        <span>
-          📅 {activePreset}: <span className="text-sky-700">{value.startDate}</span> to <span className="text-sky-700">{value.endDate}</span>
+        <span className="truncate pr-1">
+          📅 <span className="font-extrabold">{activePreset === PRESETS.CURRENT_FISCAL_YEAR ? 'FY' : activePreset}</span>: <span className="text-sky-700 font-extrabold">{value.startDate}</span> to <span className="text-sky-700 font-extrabold">{value.endDate}</span>
         </span>
-        <span className="text-[10px] text-slate-400">▼</span>
+        <span className="text-[10px] text-slate-400 shrink-0">▼</span>
       </button>
 
       {/* Dropdown Menu */}
       {showDropdown && (
-        <div className="absolute z-[999] w-full bg-white border border-customBorder rounded-2xl mt-1.5 shadow-2xl p-4 space-y-3.5 animate-fadeIn">
+        <div className="absolute z-[999] left-0 mt-1.5 w-[310px] sm:w-[350px] max-w-[calc(100vw-32px)] bg-white border border-slate-200 rounded-2xl shadow-2xl p-3.5 space-y-3 animate-fadeIn">
           {/* Preset Buttons Grid */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-1.5">
             {Object.values(PRESETS).map(p => (
               <button
                 key={p}
                 type="button"
                 onClick={() => handlePresetSelect(p)}
-                className={`py-1.5 px-2.5 rounded-lg text-[10px] font-bold text-left transition-all ${
-                  activePreset === p ? 'bg-sky-50 text-sky-700 border border-sky-200' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-transparent'
+                className={`py-1.5 px-2 rounded-lg text-[10px] font-bold text-left transition-all ${
+                  activePreset === p ? 'bg-sky-50 text-sky-700 border border-sky-200 shadow-xs' : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-transparent'
                 }`}
               >
                 {p}
@@ -145,21 +153,21 @@ export default function DateRangePicker({ value = { startDate: '', endDate: '' }
 
           {/* Custom Date Inputs */}
           {activePreset === PRESETS.CUSTOM && (
-            <div className="flex gap-2.5 items-center border-t border-slate-100 pt-3">
-              <div className="flex-1">
-                <label className="text-[9px] font-black text-slate-400 uppercase">Start Date</label>
+            <div className="grid grid-cols-2 gap-2 border-t border-slate-100 pt-2.5">
+              <div>
+                <label className="text-[9px] font-black text-slate-400 uppercase block mb-1">Start Date</label>
                 <input
                   type="date"
-                  className="mt-1 w-full border border-customBorder rounded-lg px-2 py-1 text-xs font-bold text-slate-700 focus:outline-none"
+                  className="w-full border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-800 focus:outline-none"
                   value={value.startDate}
                   onChange={e => handleCustomDateChange('startDate', e.target.value)}
                 />
               </div>
-              <div className="flex-1">
-                <label className="text-[9px] font-black text-slate-400 uppercase">End Date</label>
+              <div>
+                <label className="text-[9px] font-black text-slate-400 uppercase block mb-1">End Date</label>
                 <input
                   type="date"
-                  className="mt-1 w-full border border-customBorder rounded-lg px-2 py-1 text-xs font-bold text-slate-700 focus:outline-none"
+                  className="w-full border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-800 focus:outline-none"
                   value={value.endDate}
                   onChange={e => handleCustomDateChange('endDate', e.target.value)}
                 />
@@ -171,7 +179,7 @@ export default function DateRangePicker({ value = { startDate: '', endDate: '' }
           <button
             type="button"
             onClick={() => setShowDropdown(false)}
-            className="w-full py-1.5 bg-slate-900 text-white rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-slate-800 cursor-pointer"
+            className="w-full py-1.5 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-slate-800 active:scale-95 cursor-pointer shadow-soft"
           >
             Apply Range Filter
           </button>

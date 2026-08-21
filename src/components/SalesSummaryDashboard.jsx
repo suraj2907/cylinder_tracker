@@ -1,9 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import DateRangePicker from './DateRangePicker';
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
 import { getInvoiceLabel } from '../utils/dataUtils';
+
+function formatLocalYMD(d) {
+  if (!d) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
 export default function SalesSummaryDashboard({
   bills = [],
@@ -16,14 +21,16 @@ export default function SalesSummaryDashboard({
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), 1);
     return {
-      startDate: start.toISOString().slice(0, 10),
-      endDate: now.toISOString().slice(0, 10)
+      startDate: formatLocalYMD(start),
+      endDate: formatLocalYMD(now)
     };
   });
 
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'paid' | 'unpaid'
   const [partyFilter, setPartyFilter] = useState('');
   const [staffFilter, setStaffFilter] = useState('all'); // 'all' | 'Suraj' | 'Shivam'
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50); // 25 | 50 | 100 | 250
 
   // Filter bills
   const filteredBills = useMemo(() => {
@@ -40,6 +47,16 @@ export default function SalesSummaryDashboard({
       return matchesDate && matchesStatus && matchesParty && matchesStaff;
     });
   }, [bills, dateRange, isAllTime, statusFilter, partyFilter, staffFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredBills.length / pageSize));
+
+  // Clamped page
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  const paginatedBills = useMemo(() => {
+    const start = (safeCurrentPage - 1) * pageSize;
+    return filteredBills.slice(start, start + pageSize);
+  }, [filteredBills, safeCurrentPage, pageSize]);
 
   // Aggregate Metrics
   const metrics = useMemo(() => {
@@ -61,7 +78,8 @@ export default function SalesSummaryDashboard({
   }, [filteredBills]);
 
   // Export to Excel
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
+    const XLSX = await import('xlsx');
     const data = filteredBills.map(b => ({
       "Invoice No": getInvoiceLabel(b),
       "Date": b.bill_date,
@@ -84,7 +102,9 @@ export default function SalesSummaryDashboard({
   };
 
   // Export to PDF
-  const exportToPdf = () => {
+  const exportToPdf = async () => {
+    const { default: jsPDF } = await import('jspdf');
+    await import('jspdf-autotable');
     const doc = new jsPDF();
     doc.setFont("helvetica", "bold");
     doc.text("M/S SHREE BALAJI AGENCIES", 14, 15);
@@ -143,14 +163,17 @@ export default function SalesSummaryDashboard({
       </div>
 
       {/* Date Range & Quick Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         {/* Date Filter */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-soft">
           <div className="flex justify-between items-center mb-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Billing Period</label>
             <button
               type="button"
-              onClick={() => setIsAllTime(!isAllTime)}
+              onClick={() => {
+                setIsAllTime(!isAllTime);
+                setCurrentPage(1);
+              }}
               className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase border transition-all cursor-pointer ${
                 isAllTime ? 'bg-sky-600 text-white border-sky-600 shadow-xs' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
               }`}
@@ -159,7 +182,10 @@ export default function SalesSummaryDashboard({
             </button>
           </div>
           {!isAllTime ? (
-            <DateRangePicker value={dateRange} onChange={setDateRange} />
+            <DateRangePicker value={dateRange} onChange={(d) => {
+              setDateRange(d);
+              setCurrentPage(1);
+            }} />
           ) : (
             <div className="text-xs font-bold text-sky-800 bg-sky-50 p-2 rounded-xl border border-sky-200 text-center">
               All {bills.length.toLocaleString()} Historical Bills
@@ -173,7 +199,10 @@ export default function SalesSummaryDashboard({
           <select
             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800"
             value={partyFilter}
-            onChange={e => setPartyFilter(e.target.value)}
+            onChange={e => {
+              setPartyFilter(e.target.value);
+              setCurrentPage(1);
+            }}
           >
             <option value="">All customers...</option>
             {restaurants.map(r => (
@@ -189,7 +218,10 @@ export default function SalesSummaryDashboard({
             {['all', 'paid', 'unpaid'].map(status => (
               <button
                 key={status}
-                onClick={() => setStatusFilter(status)}
+                onClick={() => {
+                  setStatusFilter(status);
+                  setCurrentPage(1);
+                }}
                 className={`flex-1 py-1 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer ${
                   statusFilter === status ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
                 }`}
@@ -207,7 +239,10 @@ export default function SalesSummaryDashboard({
             {['all', 'Suraj', 'Shivam'].map(staff => (
               <button
                 key={staff}
-                onClick={() => setStaffFilter(staff)}
+                onClick={() => {
+                  setStaffFilter(staff);
+                  setCurrentPage(1);
+                }}
                 className={`flex-1 py-1 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer ${
                   staffFilter === staff ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
                 }`}
@@ -260,20 +295,20 @@ export default function SalesSummaryDashboard({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredBills.map(bill => {
+              {paginatedBills.map(bill => {
                 const outstanding = bill.total_amount - bill.amount_paid;
                 return (
-                  <tr key={bill.id} className="hover:bg-slate-50/50">
+                  <tr key={bill.id || bill.invoice_no} className="hover:bg-slate-50/50">
                     <td className="px-4 py-3 font-bold text-slate-800">
                       {getInvoiceLabel(bill)}
                     </td>
                     <td className="px-4 py-3 font-semibold text-slate-650">{bill.bill_date}</td>
                     <td className="px-4 py-3 font-bold text-slate-900">{bill.restaurant_name}</td>
                     <td className="px-4 py-3 text-slate-500 font-semibold">{bill.created_by || 'Suraj'}</td>
-                    <td className="px-4 py-3 text-right text-slate-600">₹{bill.taxable_amount.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-right text-slate-500">₹{bill.cgst.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-right text-slate-500">₹{bill.sgst.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-right font-black text-slate-900">₹{bill.total_amount.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right text-slate-600">₹{(bill.taxable_amount || 0).toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right text-slate-500">₹{(bill.cgst || 0).toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right text-slate-500">₹{(bill.sgst || 0).toFixed(2)}</td>
+                    <td className="px-4 py-3 text-right font-black text-slate-900">₹{(bill.total_amount || 0).toFixed(2)}</td>
                     <td className="px-4 py-3 text-center">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase border ${
                         bill.payment_status === 'paid'
@@ -290,7 +325,7 @@ export default function SalesSummaryDashboard({
                             deleteBill(bill.id);
                           }
                         }}
-                        className="text-red-500 hover:text-red-700 font-bold"
+                        className="text-red-500 hover:text-red-700 font-bold cursor-pointer"
                       >
                         Delete
                       </button>
@@ -309,6 +344,54 @@ export default function SalesSummaryDashboard({
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Toolbar */}
+        {filteredBills.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-slate-50 border-t border-slate-200">
+            <div className="text-xs font-bold text-slate-500">
+              Showing <span className="text-slate-900 font-extrabold">{((safeCurrentPage - 1) * pageSize) + 1}</span> to <span className="text-slate-900 font-extrabold">{Math.min(safeCurrentPage * pageSize, filteredBills.length)}</span> of <span className="text-slate-900 font-extrabold">{filteredBills.length.toLocaleString()}</span> invoices
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 mr-2">
+                <span className="text-[11px] font-bold text-slate-400">Rows:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-bold text-slate-700"
+                >
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                  <option value={250}>250</option>
+                </select>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={safeCurrentPage === 1}
+                className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white font-bold text-xs text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 cursor-pointer shadow-xs"
+              >
+                ◀ Prev
+              </button>
+              <span className="text-xs font-black text-slate-800 px-1.5">
+                {safeCurrentPage} / {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={safeCurrentPage === totalPages}
+                className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white font-bold text-xs text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-100 cursor-pointer shadow-xs"
+              >
+                Next ▶
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,0 +1,3458 @@
+[
+  {
+    "date": "2026-08-16",
+    "serialNo": "431",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 2300,
+    "notes": ""
+  },
+  {
+    "date": "2026-08-16",
+    "serialNo": "430",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 1300,
+    "notes": ""
+  },
+  {
+    "date": "2026-08-14",
+    "serialNo": "429",
+    "expName": "Raw Material",
+    "paymentMode": "Cash",
+    "amount": 1460,
+    "notes": ""
+  },
+  {
+    "date": "2026-08-14",
+    "serialNo": "428",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2026-08-12",
+    "serialNo": "427",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 2000,
+    "notes": ""
+  },
+  {
+    "date": "2026-08-12",
+    "serialNo": "426",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 2000,
+    "notes": ""
+  },
+  {
+    "date": "2026-08-10",
+    "serialNo": "425",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2026-08-05",
+    "serialNo": "424",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 2000,
+    "notes": ""
+  },
+  {
+    "date": "2026-08-01",
+    "serialNo": "423",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 2000,
+    "notes": ""
+  },
+  {
+    "date": "2026-08-03",
+    "serialNo": "422",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2026-07-30",
+    "serialNo": "421",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2026-07-27",
+    "serialNo": "420",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 2000,
+    "notes": ""
+  },
+  {
+    "date": "2026-07-27",
+    "serialNo": "419",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 4000,
+    "notes": ""
+  },
+  {
+    "date": "2026-07-23",
+    "serialNo": "418",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 9000,
+    "notes": ""
+  },
+  {
+    "date": "2026-07-24",
+    "serialNo": "417",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 3500,
+    "notes": ""
+  },
+  {
+    "date": "2026-07-22",
+    "serialNo": "416",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2026-07-17",
+    "serialNo": "415",
+    "expName": "Monthly Salary",
+    "paymentMode": "Cash",
+    "amount": 3100,
+    "notes": ""
+  },
+  {
+    "date": "2026-07-13",
+    "serialNo": "414",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2026-07-12",
+    "serialNo": "413",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2026-07-11",
+    "serialNo": "412",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 4500,
+    "notes": ""
+  },
+  {
+    "date": "2026-07-08",
+    "serialNo": "411",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2026-06-30",
+    "serialNo": "410",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 5620,
+    "notes": ""
+  },
+  {
+    "date": "2026-06-22",
+    "serialNo": "409",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2026-06-20",
+    "serialNo": "408",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 2900,
+    "notes": ""
+  },
+  {
+    "date": "2026-06-19",
+    "serialNo": "407",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2026-06-13",
+    "serialNo": "406",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 4500,
+    "notes": ""
+  },
+  {
+    "date": "2026-06-12",
+    "serialNo": "405",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 4500,
+    "notes": ""
+  },
+  {
+    "date": "2026-03-21",
+    "serialNo": "404",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 13230,
+    "notes": "parag , welding,paint , labour charge,"
+  },
+  {
+    "date": "2026-04-06",
+    "serialNo": "403",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 9900,
+    "notes": "Raipur mistri"
+  },
+  {
+    "date": "2026-03-21",
+    "serialNo": "402",
+    "expName": "Tata ace fitness",
+    "paymentMode": "Cash",
+    "amount": 6000,
+    "notes": ""
+  },
+  {
+    "date": "2026-06-06",
+    "serialNo": "401",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 4200,
+    "notes": ""
+  },
+  {
+    "date": "2026-06-05",
+    "serialNo": "400",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 3400,
+    "notes": ""
+  },
+  {
+    "date": "2026-05-29",
+    "serialNo": "399",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 2200,
+    "notes": ""
+  },
+  {
+    "date": "2026-05-16",
+    "serialNo": "398",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2026-05-15",
+    "serialNo": "397",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 2040,
+    "notes": ""
+  },
+  {
+    "date": "2026-05-11",
+    "serialNo": "396",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1300,
+    "notes": ""
+  },
+  {
+    "date": "2026-05-05",
+    "serialNo": "395",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 2000,
+    "notes": ""
+  },
+  {
+    "date": "2026-04-18",
+    "serialNo": "394",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1800,
+    "notes": ""
+  },
+  {
+    "date": "2026-04-08",
+    "serialNo": "393",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 4000,
+    "notes": ""
+  },
+  {
+    "date": "2026-03-24",
+    "serialNo": "392",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 2700,
+    "notes": ""
+  },
+  {
+    "date": "2026-03-24",
+    "serialNo": "391",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2026-03-13",
+    "serialNo": "390",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2026-03-11",
+    "serialNo": "389",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2026-03-03",
+    "serialNo": "388",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2026-03-01",
+    "serialNo": "387",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 2500,
+    "notes": ""
+  },
+  {
+    "date": "2026-02-27",
+    "serialNo": "386",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2026-02-25",
+    "serialNo": "385",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 3400,
+    "notes": "Back tyre apollo"
+  },
+  {
+    "date": "2026-02-23",
+    "serialNo": "384",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1300,
+    "notes": ""
+  },
+  {
+    "date": "2026-02-21",
+    "serialNo": "383",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 2500,
+    "notes": ""
+  },
+  {
+    "date": "2026-02-18",
+    "serialNo": "382",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 25000,
+    "notes": ""
+  },
+  {
+    "date": "2026-02-18",
+    "serialNo": "381",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2026-02-14",
+    "serialNo": "380",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2026-02-13",
+    "serialNo": "2273",
+    "expName": "Payment In Discount",
+    "paymentMode": "Cash",
+    "amount": 3000,
+    "notes": ""
+  },
+  {
+    "date": "2026-02-09",
+    "serialNo": "379",
+    "expName": "Bishi amount monthly",
+    "paymentMode": "Cash",
+    "amount": 4000,
+    "notes": ""
+  },
+  {
+    "date": "2026-02-09",
+    "serialNo": "378",
+    "expName": "Monthly Salary",
+    "paymentMode": "Cash",
+    "amount": 10000,
+    "notes": ""
+  },
+  {
+    "date": "2026-02-07",
+    "serialNo": "377",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2026-02-03",
+    "serialNo": "376",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 5000,
+    "notes": ""
+  },
+  {
+    "date": "2026-02-02",
+    "serialNo": "375",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-30",
+    "serialNo": "374",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-26",
+    "serialNo": "373",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 2500,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-26",
+    "serialNo": "372",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-25",
+    "serialNo": "371",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 800,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-20",
+    "serialNo": "370",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 2500,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-20",
+    "serialNo": "369",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-17",
+    "serialNo": "368",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-13",
+    "serialNo": "367",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-11",
+    "serialNo": "366",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-10",
+    "serialNo": "365",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 1200,
+    "notes": "oil change"
+  },
+  {
+    "date": "2026-01-07",
+    "serialNo": "364",
+    "expName": "Bishi amount monthly",
+    "paymentMode": "Cash",
+    "amount": 4000,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-07",
+    "serialNo": "363",
+    "expName": "Monthly Salary",
+    "paymentMode": "Cash",
+    "amount": 10000,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-07",
+    "serialNo": "362",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-04",
+    "serialNo": "361",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-01",
+    "serialNo": "360",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-12-31",
+    "serialNo": "359",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-12-29",
+    "serialNo": "358",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 2000,
+    "notes": ""
+  },
+  {
+    "date": "2025-12-29",
+    "serialNo": "357",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-12-24",
+    "serialNo": "356",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-12-24",
+    "serialNo": "355",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-12-21",
+    "serialNo": "354",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 2000,
+    "notes": ""
+  },
+  {
+    "date": "2025-12-19",
+    "serialNo": "353",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-12-15",
+    "serialNo": "352",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-12-15",
+    "serialNo": "351",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 2500,
+    "notes": ""
+  },
+  {
+    "date": "2025-12-10",
+    "serialNo": "350",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-12-01",
+    "serialNo": "349",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 700,
+    "notes": ""
+  },
+  {
+    "date": "2025-12-09",
+    "serialNo": "348",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-12-07",
+    "serialNo": "347",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-12-06",
+    "serialNo": "346",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-12-04",
+    "serialNo": "345",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-30",
+    "serialNo": "344",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 2000,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-28",
+    "serialNo": "343",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-27",
+    "serialNo": "342",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-26",
+    "serialNo": "341",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-23",
+    "serialNo": "340",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1500,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-23",
+    "serialNo": "339",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-18",
+    "serialNo": "338",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-18",
+    "serialNo": "337",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-17",
+    "serialNo": "336",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-14",
+    "serialNo": "335",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-14",
+    "serialNo": "334",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-11",
+    "serialNo": "333",
+    "expName": "Bishi amount monthly",
+    "paymentMode": "Cash",
+    "amount": 4000,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-12",
+    "serialNo": "332",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-10",
+    "serialNo": "331",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-09",
+    "serialNo": "330",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 2000,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-09",
+    "serialNo": "329",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-05",
+    "serialNo": "328",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-05",
+    "serialNo": "327",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-02",
+    "serialNo": "326",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-30",
+    "serialNo": "325",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-30",
+    "serialNo": "324",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-11",
+    "serialNo": "323",
+    "expName": "Bishi amount monthly",
+    "paymentMode": "Cash",
+    "amount": 4000,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-29",
+    "serialNo": "322",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 2500,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-27",
+    "serialNo": "321",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-26",
+    "serialNo": "320",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-24",
+    "serialNo": "319",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-20",
+    "serialNo": "318",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-19",
+    "serialNo": "317",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-17",
+    "serialNo": "316",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-17",
+    "serialNo": "315",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-14",
+    "serialNo": "314",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-12",
+    "serialNo": "313",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 3470,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-11",
+    "serialNo": "312",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 3400,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-11",
+    "serialNo": "311",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-09",
+    "serialNo": "310",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 800,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-07",
+    "serialNo": "309",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 200,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-05",
+    "serialNo": "308",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 900,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-05",
+    "serialNo": "307",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-03",
+    "serialNo": "306",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 100,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-02",
+    "serialNo": "305",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-30",
+    "serialNo": "304",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-29",
+    "serialNo": "303",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-28",
+    "serialNo": "302",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 400,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-27",
+    "serialNo": "301",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-22",
+    "serialNo": "300",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 600,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-22",
+    "serialNo": "299",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-21",
+    "serialNo": "298",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 900,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-20",
+    "serialNo": "297",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 1250,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-19",
+    "serialNo": "296",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-18",
+    "serialNo": "295",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-17",
+    "serialNo": "294",
+    "expName": "Tata ace insurance",
+    "paymentMode": "Cash",
+    "amount": 15500,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-17",
+    "serialNo": "293",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 100,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-14",
+    "serialNo": "292",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-11",
+    "serialNo": "291",
+    "expName": "Bishi amount monthly",
+    "paymentMode": "Cash",
+    "amount": 4000,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-12",
+    "serialNo": "290",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1240,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-10",
+    "serialNo": "289",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-10",
+    "serialNo": "288",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 300,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-09",
+    "serialNo": "287",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 200,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-09",
+    "serialNo": "286",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 2300,
+    "notes": "piche ka tyre 2nd hand"
+  },
+  {
+    "date": "2025-09-08",
+    "serialNo": "285",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 200,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-08",
+    "serialNo": "284",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-05",
+    "serialNo": "283",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1500,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-05",
+    "serialNo": "282",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-03",
+    "serialNo": "281",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-02",
+    "serialNo": "280",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 300,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-31",
+    "serialNo": "279",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1600,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-30",
+    "serialNo": "278",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 200,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-30",
+    "serialNo": "277",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-26",
+    "serialNo": "276",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-25",
+    "serialNo": "275",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 200,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-23",
+    "serialNo": "274",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-20",
+    "serialNo": "273",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-19",
+    "serialNo": "272",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 3700,
+    "notes": "new Front tyre 3400,   new tube back tyre 300"
+  },
+  {
+    "date": "2025-08-19",
+    "serialNo": "271",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-17",
+    "serialNo": "270",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "UPI",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-16",
+    "serialNo": "269",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-13",
+    "serialNo": "268",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-04",
+    "serialNo": "267",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-12",
+    "serialNo": "266",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 2000,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-11",
+    "serialNo": "265",
+    "expName": "Bishi amount monthly",
+    "paymentMode": "Cash",
+    "amount": 4000,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-10",
+    "serialNo": "264",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-10",
+    "serialNo": "263",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-07",
+    "serialNo": "262",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-07",
+    "serialNo": "261",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-05",
+    "serialNo": "260",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-03",
+    "serialNo": "259",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-02",
+    "serialNo": "258",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-01",
+    "serialNo": "257",
+    "expName": "Raw Material",
+    "paymentMode": "Cash",
+    "amount": 1700,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-20",
+    "serialNo": "256",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1800,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-31",
+    "serialNo": "255",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-30",
+    "serialNo": "254",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-27",
+    "serialNo": "253",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1500,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-27",
+    "serialNo": "252",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-24",
+    "serialNo": "251",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 530,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-23",
+    "serialNo": "250",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-23",
+    "serialNo": "249",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-19",
+    "serialNo": "248",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-16",
+    "serialNo": "247",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-15",
+    "serialNo": "246",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 200,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-12",
+    "serialNo": "245",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 3000,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-12",
+    "serialNo": "244",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-10",
+    "serialNo": "243",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1100,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-10",
+    "serialNo": "242",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-09",
+    "serialNo": "241",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-09",
+    "serialNo": "240",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 28000,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-07",
+    "serialNo": "239",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 100,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-05",
+    "serialNo": "238",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 100,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-05",
+    "serialNo": "237",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1900,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-02",
+    "serialNo": "236",
+    "expName": "Rent Expense",
+    "paymentMode": "Cash",
+    "amount": 450,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-02",
+    "serialNo": "235",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 700,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-01",
+    "serialNo": "234",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 2000,
+    "notes": ""
+  },
+  {
+    "date": "2025-06-29",
+    "serialNo": "233",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-06-28",
+    "serialNo": "232",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-06-27",
+    "serialNo": "231",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-06-26",
+    "serialNo": "230",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-06-24",
+    "serialNo": "229",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-06-24",
+    "serialNo": "228",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-06-22",
+    "serialNo": "227",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1300,
+    "notes": ""
+  },
+  {
+    "date": "2025-06-21",
+    "serialNo": "226",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-06-18",
+    "serialNo": "225",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 4800,
+    "notes": "New battery"
+  },
+  {
+    "date": "2025-06-18",
+    "serialNo": "224",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-06-17",
+    "serialNo": "223",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 700,
+    "notes": ""
+  },
+  {
+    "date": "2025-06-17",
+    "serialNo": "222",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 400,
+    "notes": ""
+  },
+  {
+    "date": "2025-06-16",
+    "serialNo": "221",
+    "expName": "Raw Material",
+    "paymentMode": "Cash",
+    "amount": 250,
+    "notes": ""
+  },
+  {
+    "date": "2025-06-15",
+    "serialNo": "220",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-06-14",
+    "serialNo": "219",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-06-12",
+    "serialNo": "218",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1500,
+    "notes": ""
+  },
+  {
+    "date": "2025-06-11",
+    "serialNo": "217",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-06-11",
+    "serialNo": "216",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-06-05",
+    "serialNo": "215",
+    "expName": "tata ace emi",
+    "paymentMode": "Cash",
+    "amount": 11532,
+    "notes": ""
+  },
+  {
+    "date": "2025-06-08",
+    "serialNo": "214",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1300,
+    "notes": ""
+  },
+  {
+    "date": "2025-06-08",
+    "serialNo": "213",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-06-05",
+    "serialNo": "212",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 600,
+    "notes": ""
+  },
+  {
+    "date": "2025-06-04",
+    "serialNo": "211",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-06-03",
+    "serialNo": "210",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 100,
+    "notes": ""
+  },
+  {
+    "date": "2025-06-02",
+    "serialNo": "209",
+    "expName": "Raw Material",
+    "paymentMode": "Cash",
+    "amount": 2500,
+    "notes": "Converter bada bhilai"
+  },
+  {
+    "date": "2025-06-01",
+    "serialNo": "208",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-06-01",
+    "serialNo": "207",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-31",
+    "serialNo": "206",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-28",
+    "serialNo": "205",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-05",
+    "serialNo": "204",
+    "expName": "tata ace emi",
+    "paymentMode": "Cash",
+    "amount": 11532,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-26",
+    "serialNo": "203",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-25",
+    "serialNo": "202",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-25",
+    "serialNo": "201",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-24",
+    "serialNo": "200",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 350,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-20",
+    "serialNo": "199",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1500,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-19",
+    "serialNo": "198",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-18",
+    "serialNo": "197",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1500,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-16",
+    "serialNo": "196",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-15",
+    "serialNo": "195",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-12",
+    "serialNo": "194",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-12",
+    "serialNo": "193",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 2000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-11",
+    "serialNo": "192",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1300,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-08",
+    "serialNo": "191",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 700,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-08",
+    "serialNo": "190",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-06",
+    "serialNo": "189",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-04",
+    "serialNo": "188",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1800,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-03",
+    "serialNo": "187",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 100,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-02",
+    "serialNo": "186",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-29",
+    "serialNo": "185",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 100,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-28",
+    "serialNo": "184",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-27",
+    "serialNo": "183",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1800,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-26",
+    "serialNo": "182",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 200,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-24",
+    "serialNo": "181",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-21",
+    "serialNo": "180",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-20",
+    "serialNo": "179",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1200,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-18",
+    "serialNo": "178",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-17",
+    "serialNo": "177",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-15",
+    "serialNo": "176",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-15",
+    "serialNo": "175",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 300,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-12",
+    "serialNo": "174",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1560,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-11",
+    "serialNo": "173",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-09",
+    "serialNo": "172",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 3000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-08",
+    "serialNo": "171",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 250,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-08",
+    "serialNo": "170",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 333,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-08",
+    "serialNo": "169",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-07",
+    "serialNo": "168",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-07",
+    "serialNo": "167",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 333,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-06",
+    "serialNo": "166",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 333,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-06",
+    "serialNo": "165",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 810,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-05",
+    "serialNo": "164",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 333,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-04",
+    "serialNo": "163",
+    "expName": "tata ace emi",
+    "paymentMode": "Cash",
+    "amount": 11532,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-04",
+    "serialNo": "162",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 333,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-03",
+    "serialNo": "161",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 333,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-02",
+    "serialNo": "160",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 333,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-01",
+    "serialNo": "159",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-31",
+    "serialNo": "158",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-29",
+    "serialNo": "157",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 100,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-29",
+    "serialNo": "156",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-27",
+    "serialNo": "155",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 3000,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-27",
+    "serialNo": "154",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-25",
+    "serialNo": "153",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-24",
+    "serialNo": "152",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1500,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-22",
+    "serialNo": "151",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-21",
+    "serialNo": "150",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-19",
+    "serialNo": "149",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-18",
+    "serialNo": "148",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-18",
+    "serialNo": "147",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-17",
+    "serialNo": "146",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 400,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-12",
+    "serialNo": "145",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 5000,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-10",
+    "serialNo": "144",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-08",
+    "serialNo": "143",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-07",
+    "serialNo": "142",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-05",
+    "serialNo": "141",
+    "expName": "tata ace emi",
+    "paymentMode": "Cash",
+    "amount": 11532,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-05",
+    "serialNo": "140",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-05",
+    "serialNo": "139",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-03",
+    "serialNo": "138",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-01",
+    "serialNo": "137",
+    "expName": "Raw Material",
+    "paymentMode": "Cash",
+    "amount": 2100,
+    "notes": "regulator 5*170.      convertor 5*250"
+  },
+  {
+    "date": "2025-03-02",
+    "serialNo": "136",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 2000,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-01",
+    "serialNo": "135",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-26",
+    "serialNo": "134",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-25",
+    "serialNo": "133",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-24",
+    "serialNo": "132",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-22",
+    "serialNo": "131",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-21",
+    "serialNo": "130",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 300,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-17",
+    "serialNo": "129",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-16",
+    "serialNo": "128",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-15",
+    "serialNo": "127",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 610,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-13",
+    "serialNo": "126",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-12",
+    "serialNo": "125",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 4250,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-11",
+    "serialNo": "124",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-09",
+    "serialNo": "123",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-27",
+    "serialNo": "122",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 350,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-10",
+    "serialNo": "121",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 400,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-06",
+    "serialNo": "120",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 250,
+    "notes": "1L oil"
+  },
+  {
+    "date": "2025-02-06",
+    "serialNo": "119",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-05",
+    "serialNo": "118",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-05",
+    "serialNo": "117",
+    "expName": "tata ace emi",
+    "paymentMode": "Cash",
+    "amount": 11532,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-01",
+    "serialNo": "116",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-01",
+    "serialNo": "115",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-31",
+    "serialNo": "114",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 2000,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-30",
+    "serialNo": "113",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 350,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-29",
+    "serialNo": "112",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 400,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-28",
+    "serialNo": "111",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-25",
+    "serialNo": "110",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1200,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-25",
+    "serialNo": "109",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-23",
+    "serialNo": "108",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-23",
+    "serialNo": "107",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 100,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-20",
+    "serialNo": "106",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 550,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-18",
+    "serialNo": "105",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-17",
+    "serialNo": "104",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 300,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-17",
+    "serialNo": "103",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-15",
+    "serialNo": "102",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-13",
+    "serialNo": "101",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 520,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-12",
+    "serialNo": "100",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 3280,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-11",
+    "serialNo": "99",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-10",
+    "serialNo": "98",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 320,
+    "notes": "1 din chutti ka cut"
+  },
+  {
+    "date": "2025-01-10",
+    "serialNo": "97",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 2000,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-08",
+    "serialNo": "96",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 620,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-04",
+    "serialNo": "95",
+    "expName": "tata ace emi",
+    "paymentMode": "Cash",
+    "amount": 11532,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-07",
+    "serialNo": "94",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 400,
+    "notes": "advance 6 and 7 january"
+  },
+  {
+    "date": "2025-01-04",
+    "serialNo": "93",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-04",
+    "serialNo": "92",
+    "expName": "Raw Material",
+    "paymentMode": "Cash",
+    "amount": 450,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-04",
+    "serialNo": "91",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 300,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-02",
+    "serialNo": "90",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 550,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-20",
+    "serialNo": "89",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 2000,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-31",
+    "serialNo": "88",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 400,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-31",
+    "serialNo": "87",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-30",
+    "serialNo": "86",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "UPI",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-28",
+    "serialNo": "85",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-24",
+    "serialNo": "84",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 100,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-26",
+    "serialNo": "83",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-24",
+    "serialNo": "82",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 350,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-21",
+    "serialNo": "81",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-17",
+    "serialNo": "80",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-15",
+    "serialNo": "79",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-14",
+    "serialNo": "78",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-11",
+    "serialNo": "77",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 3000,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-10",
+    "serialNo": "76",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-09",
+    "serialNo": "75",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 3000,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-07",
+    "serialNo": "74",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-07",
+    "serialNo": "73",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 970,
+    "notes": "tata ace oil-: 720.     oil filter-: 150. fitting-: 100"
+  },
+  {
+    "date": "2024-12-04",
+    "serialNo": "72",
+    "expName": "tata ace emi",
+    "paymentMode": "Cash",
+    "amount": 11532,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-05",
+    "serialNo": "71",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-26",
+    "serialNo": "70",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 1900,
+    "notes": "Radiator new"
+  },
+  {
+    "date": "2024-11-26",
+    "serialNo": "69",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-25",
+    "serialNo": "68",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 200,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-25",
+    "serialNo": "67",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-24",
+    "serialNo": "66",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-23",
+    "serialNo": "65",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 300,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-23",
+    "serialNo": "64",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 610,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-20",
+    "serialNo": "63",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 510,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-20",
+    "serialNo": "62",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "UPI",
+    "amount": 450,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-17",
+    "serialNo": "61",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-18",
+    "serialNo": "60",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 800,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-13",
+    "serialNo": "59",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-11",
+    "serialNo": "58",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 600,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-09",
+    "serialNo": "57",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 2650,
+    "notes": "Regulator Nut vala 5 -: 1250.and Convertor bada 5-: 1400"
+  },
+  {
+    "date": "2024-11-08",
+    "serialNo": "56",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 800,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-06",
+    "serialNo": "55",
+    "expName": "tata ace emi",
+    "paymentMode": "UPI",
+    "amount": 11532,
+    "notes": ""
+  },
+  {
+    "date": "2024-10-30",
+    "serialNo": "54",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1600,
+    "notes": "driver salary 2 days.      diesel. 2. days"
+  },
+  {
+    "date": "2024-10-26",
+    "serialNo": "53",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": "Driver plus diesel"
+  },
+  {
+    "date": "2024-10-04",
+    "serialNo": "52",
+    "expName": "Tata ace insurance",
+    "paymentMode": "Cash",
+    "amount": 11532,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-04",
+    "serialNo": "51",
+    "expName": "tata ace emi",
+    "paymentMode": "Cash",
+    "amount": 11532,
+    "notes": ""
+  },
+  {
+    "date": "2024-10-24",
+    "serialNo": "50",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 800,
+    "notes": "2 days driver"
+  },
+  {
+    "date": "2024-10-23",
+    "serialNo": "49",
+    "expName": "Telephone & Internet Expense",
+    "paymentMode": "Cash",
+    "amount": 20,
+    "notes": "gst tax"
+  },
+  {
+    "date": "2024-10-22",
+    "serialNo": "48",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 900,
+    "notes": "Driver plus diesel"
+  },
+  {
+    "date": "2024-10-22",
+    "serialNo": "47",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 900,
+    "notes": "Driver plus diesel"
+  },
+  {
+    "date": "2024-10-17",
+    "serialNo": "46",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 600,
+    "notes": ""
+  },
+  {
+    "date": "2024-10-16",
+    "serialNo": "45",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 810,
+    "notes": ""
+  },
+  {
+    "date": "2024-10-14",
+    "serialNo": "44",
+    "expName": "Party Discount",
+    "paymentMode": "Cash",
+    "amount": 370,
+    "notes": "Khalsa hotel 10% discount 2 tanki"
+  },
+  {
+    "date": "2024-10-13",
+    "serialNo": "43",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2024-10-13",
+    "serialNo": "42",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1800,
+    "notes": ""
+  },
+  {
+    "date": "2024-10-10",
+    "serialNo": "41",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1900,
+    "notes": ""
+  },
+  {
+    "date": "2024-10-07",
+    "serialNo": "40",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 300,
+    "notes": ""
+  },
+  {
+    "date": "2024-10-06",
+    "serialNo": "39",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2024-10-06",
+    "serialNo": "38",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2024-10-04",
+    "serialNo": "37",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 550,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-30",
+    "serialNo": "36",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-30",
+    "serialNo": "35",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 2600,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-26",
+    "serialNo": "34",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1500,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-26",
+    "serialNo": "33",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 700,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-23",
+    "serialNo": "32",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1050,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-22",
+    "serialNo": "31",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-21",
+    "serialNo": "30",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Online",
+    "amount": 920,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-21",
+    "serialNo": "29",
+    "expName": "Tata ace fitness",
+    "paymentMode": "Online",
+    "amount": 6500,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-21",
+    "serialNo": "28",
+    "expName": "Tata ace insurance",
+    "paymentMode": "Online",
+    "amount": 15700,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-15",
+    "serialNo": "27",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1100,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-15",
+    "serialNo": "26",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-07",
+    "serialNo": "25",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-06",
+    "serialNo": "24",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 1040,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-04",
+    "serialNo": "23",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 1350,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-02",
+    "serialNo": "22",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 4600,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-01",
+    "serialNo": "21",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-25",
+    "serialNo": "20",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-24",
+    "serialNo": "19",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 700,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-23",
+    "serialNo": "18",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-18",
+    "serialNo": "17",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 1000,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-18",
+    "serialNo": "16",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 100,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-15",
+    "serialNo": "15",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 2350,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-10",
+    "serialNo": "14",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Online",
+    "amount": 2600,
+    "notes": "15 Convertor chota"
+  },
+  {
+    "date": "2024-08-07",
+    "serialNo": "13",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 150,
+    "notes": "Simran restaurant ke liye regulator nut vala"
+  },
+  {
+    "date": "2024-08-06",
+    "serialNo": "12",
+    "expName": "tata ace emi",
+    "paymentMode": "Online",
+    "amount": 11532,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-05",
+    "serialNo": "11",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 430,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-31",
+    "serialNo": "10",
+    "expName": "Raw Material",
+    "paymentMode": "Online",
+    "amount": 3900,
+    "notes": "10 regulator 130/pc.      15 convertor 170/pc"
+  },
+  {
+    "date": "2024-07-30",
+    "serialNo": "9",
+    "expName": "Printing and Stationery",
+    "paymentMode": "Online",
+    "amount": 3000,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-30",
+    "serialNo": "8",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 810,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-29",
+    "serialNo": "7",
+    "expName": "Raw Material",
+    "paymentMode": "Online",
+    "amount": 1600,
+    "notes": "Converter 8 piece"
+  },
+  {
+    "date": "2024-07-26",
+    "serialNo": "6",
+    "expName": "Printing and Stationery",
+    "paymentMode": "Cash",
+    "amount": 720,
+    "notes": "Bill Book printing"
+  },
+  {
+    "date": "2024-07-26",
+    "serialNo": "5",
+    "expName": "Repair & Maintenance",
+    "paymentMode": "Cash",
+    "amount": 150,
+    "notes": "Pipe in Paanj Tara"
+  },
+  {
+    "date": "2024-07-26",
+    "serialNo": "4",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 400,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-24",
+    "serialNo": "3",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 400,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-24",
+    "serialNo": "2",
+    "expName": "Transportation & Travel Expense",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-19",
+    "serialNo": "1",
+    "expName": "Employee Salaries & Advances",
+    "paymentMode": "Cash",
+    "amount": 500,
+    "notes": ""
+  }
+]

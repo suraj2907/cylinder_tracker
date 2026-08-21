@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+import React, { useState, lazy, Suspense, useMemo } from 'react';
 import { LayoutGrid, Users, Calendar, BarChart3, Boxes } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import RestaurantsList from './components/RestaurantsList';
@@ -106,13 +106,25 @@ export default function App() {
     deleteExpense
   } = useExpenses(currentUser);
 
-  const [showReceivePaymentModal, setShowReceivePaymentModal] = React.useState(false);
+  const [showReceivePaymentModal, setShowReceivePaymentModal] = useState(false);
+
+  // Compute low stock items for real-time commercial cylinders alerts (19.2kg & 21kg)
+  const lowStockItems = useMemo(() => {
+    return (itemsCatalog || []).filter(item => {
+      const n = (item.name || '').toLowerCase();
+      // Focus on active commercial filled cylinders
+      const isCommercial = n.includes('19.2') || n.includes('21');
+      if (!isCommercial) return false;
+      const threshold = item.low_stock_threshold !== undefined ? item.low_stock_threshold : 5;
+      return (item.current_stock || 0) <= threshold;
+    });
+  }, [itemsCatalog]);
 
   if (authLoading) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center gap-3">
         <div className="w-12 h-12 rounded-full border-4 border-slate-200 border-t-sky-600 animate-spin"></div>
-        <div className="text-xs font-bold text-slate-850 bg-white px-4 py-2 rounded-xl shadow-soft border border-slate-100">
+        <div className="text-xs font-bold text-slate-800 bg-white px-4 py-2 rounded-xl shadow-soft border border-slate-100">
           Loading Partner Session...
         </div>
       </div>
@@ -132,10 +144,10 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#0F172A] font-inter">
-      {/* Toast Notification */}
+      {/* Toast Notification (Top floating so it never covers mobile bottom navigation) */}
       {toast && (
-        <div className={`fixed bottom-5 left-1/2 -translate-x-1/2 px-5 py-3 rounded-2xl font-bold text-xs z-[9999] shadow-glass transition-all animate-fadeIn ${
-          toast.ok ? 'bg-emerald-600 text-white' : 'bg-orange-600 text-white'
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-2xl font-black text-xs z-[9999] shadow-xl border border-white/20 transition-all animate-fadeIn ${
+          toast.ok ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
         }`}>
           {toast.msg}
         </div>
@@ -143,8 +155,8 @@ export default function App() {
 
       {/* Loading Overlay */}
       {loading && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[9999] flex flex-col items-center justify-center gap-3">
-          <div className="w-12 h-12 rounded-full border-4 border-slate-200 border-t-sky-600 animate-spin"></div>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[9999] flex flex-col items-center justify-center gap-3">
+          <div className="w-10 h-10 rounded-full border-4 border-slate-200 border-t-sky-600 animate-spin"></div>
           <div className="text-xs font-bold text-slate-800 bg-white px-4 py-2 rounded-xl shadow-soft">
             Connecting to Database...
           </div>
@@ -152,13 +164,13 @@ export default function App() {
       )}
 
       {/* LIGHT EXECUTIVE HEADER */}
-      <div className="bg-white border-b border-slate-200/80 sticky top-0 z-50 px-4 md:px-6 py-3 shadow-soft backdrop-blur-md bg-white/95">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+      <div className="bg-white border-b border-slate-200/80 sticky top-0 z-40 px-3 md:px-6 py-2.5 md:py-3 shadow-xs backdrop-blur-md bg-white/95">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
           
           {/* Brand & Partner Identity */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
             {/* LPG Cylinder Icon Badge */}   
-            <div className="w-9 h-9 rounded-2xl bg-white p-1 shadow-sm border border-slate-200 flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-white p-0.5 shadow-xs border border-slate-200 flex items-center justify-center shrink-0">
               <svg viewBox="0 0 512 512" className="w-full h-full">
                 <path d="M 190 75 C 190 60 205 50 225 50 L 287 50 C 307 50 322 60 322 75 L 322 110 L 190 110 Z" fill="none" stroke="#dc2626" strokeWidth="24" strokeLinecap="round" strokeLinejoin="round"/>
                 <rect x="236" y="75" width="40" height="35" rx="6" fill="#fbbf24"/>
@@ -176,49 +188,55 @@ export default function App() {
             </div>
             
             {/* Full Agency & Gaspoint Branding */}
-            <div>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-sm sm:text-base font-black text-slate-900 tracking-tight">M/S. SHREE BALAJI AGENCIES</span>
-                <span className="px-1.5 py-0.5 rounded-md text-[10px] font-black bg-red-50 text-red-700 border border-red-200">
-                  GAS POINT
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-xs sm:text-sm md:text-base font-black tracking-tight text-slate-900 truncate">
+                  Shree Balaji Agencies
+                </h1>
+                <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></span> Live Sync
                 </span>
               </div>
-              <span className="hidden sm:block text-[11px] font-bold text-sky-700 tracking-wide">
-                Cylinder Tracker & Partner Portal
-              </span>
+              <p className="text-[10px] sm:text-[11px] font-semibold text-slate-400 truncate">
+                Gaspoint Petroleum • LPG Distributor
+              </p>
             </div>
           </div>
 
-          {/* Right Header Controls */}
-          <div className="flex items-center gap-2">
-            {/* Global Wallet Indicator Pill */}
-            <span className={`hidden sm:flex px-2.5 py-1 rounded-xl text-xs font-black border items-center gap-1 ${
-              netBookingWallet >= 0 
-                ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
-                : 'bg-amber-50 text-amber-900 border-amber-300'
-            }`}>
-              <span>💰</span>
-              <span>{netBookingWallet >= 0 ? `+₹${netBookingWallet.toLocaleString()}` : `-₹${Math.abs(netBookingWallet).toLocaleString()}`}</span>
-            </span>
-
-            {/* Quick Receive Payment */}
+          {/* User Partner Badge & Actions */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            
+            {/* Activity Stream Drawer Button */}
             <button
-              onClick={() => setShowReceivePaymentModal(true)}
-              className="px-3 py-1.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white shadow-soft transition-all flex items-center gap-1 cursor-pointer"
-              title="Receive Party Payment & Update Ledger"
+              onClick={() => setShowActivityFeed(!showActivityFeed)}
+              className="p-1.5 md:px-3 md:py-1.5 rounded-xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 text-xs font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer"
+              title="Recent Operations Log"
+            >
+              <span>🔔</span>
+              <span className="hidden md:inline">Log</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-sky-100 text-sky-800 text-[10px] font-black">
+                {activities.length}
+              </span>
+            </button>
+
+            {/* Quick Receive Payment Modal Trigger (Desktop) */}
+            <button
+              onClick={() => setShowAddPaymentModal(true)}
+              className="hidden sm:flex px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-extrabold transition-all shadow-soft items-center gap-1.5 cursor-pointer"
+              title="Receive Party Payment"
             >
               <span>💳</span>
-              <span className="hidden sm:inline">Receive Payment</span>
+              <span>Receive Payment</span>
             </button>
 
             {/* Secure Partner User Info & Sign Out Pill */}
-            <div className="flex items-center p-1 bg-slate-100 rounded-xl gap-1">
-              <span className="px-2 py-0.5 bg-white text-slate-900 rounded-lg text-xs font-extrabold shadow-xs">
+            <div className="flex items-center p-0.5 md:p-1 bg-slate-100 rounded-xl gap-0.5 md:gap-1">
+              <span className="px-2 py-0.5 bg-white text-slate-900 rounded-lg text-[11px] md:text-xs font-extrabold shadow-xs">
                 {currentUser === 'Suraj' ? '👨‍💼 Suraj' : '👨‍💻 Shivam'}
               </span>
               <button
                 onClick={logout}
-                className="px-1.5 py-0.5 text-[11px] font-bold text-red-600 hover:text-red-800 uppercase cursor-pointer"
+                className="px-1 py-0.5 text-[10px] font-bold text-red-600 hover:text-red-800 uppercase cursor-pointer"
                 title="Sign out"
               >
                 ✕
@@ -228,32 +246,37 @@ export default function App() {
         </div>
 
         {/* Desktop Tab Navigation Pills */}
-        <div className="max-w-7xl mx-auto hidden lg:flex items-center gap-1.5 flex-wrap mt-3 pt-2.5 border-t border-slate-100">
+        <div className="max-w-7xl mx-auto hidden lg:flex items-center gap-1.5 flex-wrap mt-2.5 pt-2 border-t border-slate-100">
           {TABS.map(t => (
             <button 
               key={t.id} 
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+              className={`px-3 py-1.2 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1 ${
                 tab === t.id 
                   ? 'bg-sky-600 text-white shadow-soft' 
                   : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
               }`}
               onClick={() => setTab(t.id)}>
-              {t.label}
+              <span>{t.label}</span>
+              {t.id === 'inventory' && lowStockItems.length > 0 && (
+                <span className="px-1.5 py-0.2 bg-rose-500 text-white text-[9px] rounded-full font-black animate-pulse">
+                  {lowStockItems.length} Low
+                </span>
+              )}
             </button>
           ))}
         </div>
 
         {/* Mobile Navigation Dropdown & Quick Add */}
-        <div className="flex lg:hidden items-center justify-between gap-2 mt-2.5 pt-2.5 border-t border-slate-100">
+        <div className="flex lg:hidden items-center justify-between gap-2 mt-2 pt-2 border-t border-slate-100">
           <select
             value={tab}
             onChange={e => setTab(e.target.value)}
-            className="bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-slate-900 focus:outline-none text-xs font-black flex-1 shadow-inner cursor-pointer"
+            className="bg-slate-100 border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-900 focus:outline-none text-xs font-black flex-1 shadow-inner cursor-pointer"
           >
             <option value="dashboard">📊 Dashboard</option>
             <option value="restaurants">🏪 Customer Directory & Ledger</option>
             <option value="billing">🧾 Create New Invoice</option>
-            <option value="inventory">📦 Stock & Inventory</option>
+            <option value="inventory">📦 Stock & Inventory {lowStockItems.length > 0 ? `⚠️ (${lowStockItems.length} Low)` : ''}</option>
             <option value="expenses">💸 Expense Tracker</option>
             <option value="salesReport">📈 Reports & Analytics</option>
             <option value="profitLoss">📊 Profit & Loss</option>
@@ -266,11 +289,34 @@ export default function App() {
 
           <button 
             onClick={() => setTab("add")}
-            className="px-3.5 py-2 rounded-xl text-xs font-black bg-sky-600 hover:bg-sky-700 active:scale-95 text-white shadow-soft flex items-center gap-1 cursor-pointer shrink-0">
+            className="px-3 py-1.5 rounded-xl text-xs font-black bg-sky-600 hover:bg-sky-700 active:scale-95 text-white shadow-soft flex items-center gap-1 cursor-pointer shrink-0">
             ➕ Add Entry
           </button>
         </div>
       </div>
+
+      {/* Real-time Low Stock Alert Banner */}
+      {lowStockItems.length > 0 && (
+        <div className="bg-amber-50 border-b border-amber-200 px-3 md:px-6 py-2 text-xs font-bold text-amber-950 flex items-center justify-between gap-2 animate-fadeIn">
+          <div className="max-w-7xl mx-auto flex items-center justify-between w-full gap-2">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="flex h-2 w-2 relative shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+              </span>
+              <span className="text-[11px] truncate">
+                <strong>Low Stock:</strong> {lowStockItems.map(i => `${i.name} (${i.current_stock || 0} left)`).join(', ')}
+              </span>
+            </div>
+            <button
+              onClick={() => setTab('inventory')}
+              className="px-2.5 py-0.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-black text-[9px] uppercase tracking-wider cursor-pointer shadow-xs shrink-0"
+            >
+              Stock →
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Activity Feed Drawer Popup */}
       {showActivityFeed && (
@@ -282,8 +328,8 @@ export default function App() {
         </div>
       )}
 
-      {/* MAIN CONTAINER */}
-      <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
+      {/* MAIN CONTAINER (with pb-28 so mobile content is never hidden behind bottom nav) */}
+      <div className="p-3 md:p-6 max-w-7xl mx-auto space-y-4 md:space-y-6 pb-28 lg:pb-8">
 
         {/* ACTIVE TAB CONTENT */}
         <Suspense fallback={

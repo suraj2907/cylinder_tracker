@@ -29,6 +29,7 @@ function RestaurantsList({
 }) {
   const [selectedHotelForPassbook, setSelectedHotelForPassbook] = useState(null);
   const [editingRestaurant, setEditingRestaurant] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [collectOnly, setCollectOnly] = useState(false);
 
   // Single-pass ultra-fast party financial balance map computation (<1ms)
@@ -40,16 +41,52 @@ function RestaurantsList({
     return Object.values(partyFinancialMap).reduce((acc, val) => acc + (val > 0 ? val : 0), 0);
   }, [partyFinancialMap]);
 
-  // "Pending Payments Only" = money owed (not cylinder count) > 0, sorted alphabetically by name.
-  // "All Parties" keeps whatever sort the Sort dropdown is set to (unchanged).
+  // Combine delivered restaurants + profile-only restaurants so new restaurants show immediately
   const displayedRestaurants = useMemo(() => {
-    if (collectOnly) {
-      return restaurants
-        .filter(r => (partyFinancialMap[norm(r.name)] || 0) > 0)
-        .sort((a, b) => a.name.localeCompare(b.name));
+    const map = new Map();
+    (restaurants || []).forEach(r => map.set(norm(r.name), r));
+
+    Object.values(restaurantProfiles || {}).forEach(p => {
+      if (p && p.name && !map.has(norm(p.name))) {
+        map.set(norm(p.name), {
+          name: p.name,
+          mobile: p.mobile || '',
+          gst_num: p.gst_num || '',
+          address: p.address || '',
+          kg21: 0,
+          kg192: 0,
+          empty: 0,
+          empty21: 0,
+          empty192: 0,
+          total: 0,
+          outstanding: 0
+        });
+      }
+    });
+
+    let list = Array.from(map.values());
+
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(r => r.name.toLowerCase().includes(q));
     }
-    return restaurants;
-  }, [restaurants, collectOnly, partyFinancialMap]);
+
+    if (collectOnly) {
+      list = list.filter(r => (partyFinancialMap[norm(r.name)] || 0) > 0);
+    }
+
+    return list.sort((a, b) => {
+      if (sortBy === "21kg") return b.kg21 - a.kg21;
+      if (sortBy === "19.2kg") return b.kg192 - a.kg192;
+      if (sortBy === "empty") return b.empty - a.empty;
+      if (sortBy === "empty21") return b.empty21 - a.empty21;
+      if (sortBy === "empty192") return b.empty192 - a.empty192;
+      if (sortBy === "outstanding") return b.outstanding - a.outstanding;
+      if (sortBy === "az") return a.name.localeCompare(b.name);
+      if (sortBy === "za") return b.name.localeCompare(a.name);
+      return b.total - a.total;
+    });
+  }, [restaurants, restaurantProfiles, search, collectOnly, partyFinancialMap, sortBy]);
 
   const handleSendReminder = (restaurant, pendingAmount) => {
     const prof = restaurantProfiles[restaurant.name] || restaurant;
@@ -74,16 +111,25 @@ function RestaurantsList({
   return (
     <div className="flex flex-col flex-1 pb-20 max-w-7xl mx-auto w-full animate-fadeIn">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-3 pb-3">
+      <div className="flex items-center justify-between px-4 pt-3 pb-3 gap-2">
         <div>
           <h1 className="text-base font-bold tracking-tight text-[#1A1A1A]">
             Customer Directory & Ledger
           </h1>
           <p className="text-xs text-[#737373]">Live balances & cylinder tracking</p>
         </div>
-        <span className="text-[11px] font-semibold text-[#737373] bg-[#F5F5F5] px-2.5 py-1 rounded-md border border-[#EEEEEE]">
-          {displayedRestaurants.length} Parties
-        </span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 active:scale-95 text-white text-xs font-black transition-all shadow-soft flex items-center gap-1 cursor-pointer shrink-0"
+            title="Add New Customer / Restaurant"
+          >
+            <span>➕ Add Party</span>
+          </button>
+          <span className="text-[11px] font-semibold text-[#737373] bg-[#F5F5F5] px-2.5 py-1 rounded-md border border-[#EEEEEE] shrink-0">
+            {displayedRestaurants.length} Parties
+          </span>
+        </div>
       </div>
 
       {/* Search Bar & Controls */}
@@ -346,6 +392,14 @@ function RestaurantsList({
             {}
           }
           onClose={() => setEditingRestaurant(null)}
+          onSave={onSaveRestaurantProfile}
+        />
+      )}
+
+      {/* Render Add Restaurant Modal */}
+      {showAddModal && (
+        <RestaurantProfileModal
+          onClose={() => setShowAddModal(false)}
           onSave={onSaveRestaurantProfile}
         />
       )}

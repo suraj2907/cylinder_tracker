@@ -1268,17 +1268,24 @@ function PurchaseInvoicePrintModal({ bill, onClose }) {
               </tr>
             </thead>
             <tbody>
-              {Array.isArray(bill.items) && bill.items.map((it, idx) => (
-                <tr key={idx} className="border-b border-slate-100 text-slate-800">
-                  <td className="py-2 px-1 font-bold">{it.item_name}</td>
-                  <td className="py-2 text-right font-black text-slate-900">{it.qty} PCS</td>
-                  <td className="py-2 text-right">₹{Number(it.rate).toFixed(2)}</td>
-                  <td className="py-2 text-right">{it.gst_rate}%</td>
-                  <td className="py-2 text-right px-1 font-black text-slate-900">
-                    ₹{Number(it.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                  </td>
-                </tr>
-              ))}
+              {Array.isArray(bill.items) && bill.items.map((it, idx) => {
+                const itemName = it.description || it.item_name || it.name || (it.item_id ? 'Cylinder' : 'Item');
+                const baseVal = (Number(it.qty) || 1) * (Number(it.rate) || 0);
+                const taxVal = Number(it.tax_amount) || (baseVal * (Number(it.gst_rate) || 0) / 100);
+                const lineTotal = Number(it.line_total) || (baseVal + taxVal);
+
+                return (
+                  <tr key={idx} className="border-b border-slate-100 text-slate-800">
+                    <td className="py-2 px-1 font-extrabold text-slate-900">{itemName}</td>
+                    <td className="py-2 text-right font-black text-slate-900">{it.qty} PCS</td>
+                    <td className="py-2 text-right text-slate-600">₹{Number(it.rate).toFixed(2)}</td>
+                    <td className="py-2 text-right text-slate-600">{it.gst_rate}%</td>
+                    <td className="py-2 text-right px-1 font-black text-slate-900">
+                      ₹{lineTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
 
