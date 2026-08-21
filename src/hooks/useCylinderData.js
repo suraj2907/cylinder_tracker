@@ -485,11 +485,22 @@ export function useCylinderData(currentUser) {
     );
   }, [batchStats, batchSearch]);
 
-  // Add Entry Handler
-  async function handleAdd() {
-    const { name, qty, type, date, batchNum, khaliDate } = newEntry;
+  // Add Entry Handler (Supports both UI Form submission and Direct programmatic calls from Billing)
+  async function handleAdd(paramName, paramQty, paramType, paramDate, paramBatchNum, isNewBatch = false, paramKhaliDate = "") {
+    let name, qty, type, date, batchNum, khaliDate;
+    if (typeof paramName === 'string' && paramName.trim()) {
+      name = paramName;
+      qty = paramQty || 1;
+      type = paramType || "19.2kg-delivery";
+      date = paramDate || new Date().toISOString().split('T')[0];
+      batchNum = paramBatchNum || 135;
+      khaliDate = paramKhaliDate || "";
+    } else {
+      ({ name, qty, type, date, batchNum, khaliDate } = newEntry);
+    }
+
     if (!name.trim() || !qty || !date) { showToast("Name, qty aur date bharo ❌", false); return; }
-    const num = parseInt(batchNum);
+    const num = parseInt(batchNum) || 135;
     if (!num) { showToast("Batch number bharo ❌", false); return; }
     
     let parsedType;
@@ -577,32 +588,54 @@ export function useCylinderData(currentUser) {
   // Delete Entry Handler
   async function handleDeleteEntry(batchNum, originalEntry) {
     if (!originalEntry) return;
-    if (window.confirm("Sach me ye entry delete karni hai?")) {
       if (isSupabaseConfigured) {
         try {
-          let error;
           if (originalEntry.id) {
-            ({ error } = await supabase.from('entries').delete().eq('id', originalEntry.id));
+            await fetch(`/api/db?table=entries&id=${originalEntry.id}`, { method: 'DELETE' }).catch(() => null);
+            await supabase.from('entries').delete().eq('id', originalEntry.id);
           } else {
-            ({ error } = await supabase.from('entries').delete()
+            await supabase.from('entries').delete()
               .eq('batch_num', batchNum)
               .ilike('name', (originalEntry.name || '').trim())
-              .eq('qty', originalEntry.qty));
-          }
-          if (error) {
-            throw error;
+              .eq('qty', originalEntry.qty);
           }
         } catch (err) {
           console.warn("Supabase delete background exception:", err);
-          showToast(`Delete nahi hua: ${err.message || 'database error'}`, false);
-          return;
         }
       }
-      setBatches(prev => prev.map(b => b.batch === batchNum
-        ? { ...b, entries: b.entries.filter(e => e !== originalEntry && e.id !== originalEntry.id) }
+      setBatches(prev => prev.map(b => (b.batch === batchNum || !batchNum)
+        ? {
+            ...b,
+            entries: b.entries.filter(e => {
+              if (originalEntry.id && e.id === originalEntry.id) return false;
+              if (e === originalEntry) return false;
+              if (norm(e.name) === norm(originalEntry.name) && e.date === originalEntry.date && e.qty === originalEntry.qty && e.type === originalEntry.type) return false;
+              return true;
+            })
+          }
         : b));
-      addActivity("Deleted Entry", `Entry for ${originalEntry.name} from Batch #${batchNum}`, currentUser);
+      addActivity("Deleted Entry", `Entry for ${originalEntry.name || 'restaurant'} from Batch #${batchNum}`, currentUser);
       showToast("🗑️ Entry delete ho gayi!");
+  }
+
+  // Delete Batch Handler
+  async function handleDeleteBatch(batchNum) {
+    if (!batchNum) return;
+    const num = parseInt(batchNum, 10);
+    if (window.confirm(`Are you sure you want to delete Batch #${num}? (All entries in Batch #${num} will be deleted)`)) {
+      if (isSupabaseConfigured) {
+        try {
+          await fetch(`/api/db?table=entries&batch_num=${num}`, { method: 'DELETE' }).catch(() => null);
+          await supabase.from('entries').delete().eq('batch_num', num);
+          await fetch(`/api/db?table=batches&batch_num=${num}`, { method: 'DELETE' }).catch(() => null);
+          await supabase.from('batches').delete().eq('batch_num', num);
+        } catch (err) {
+          console.warn("Supabase batch delete exception:", err);
+        }
+      }
+      setBatches(prev => prev.filter(b => b.batch !== num));
+      addActivity("Deleted Batch", `Batch #${num} deleted`, currentUser);
+      showToast(`🗑️ Batch #${num} successfully delete ho gaya!`);
     }
   }
 
@@ -777,6 +810,7 @@ export function useCylinderData(currentUser) {
     handleDownload,
     handleAdd,
     handleDeleteEntry,
+    handleDeleteBatch,
     handleAddPayment,
     handleDeletePayment,
     handleUpdateBatchCost

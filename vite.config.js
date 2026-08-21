@@ -120,6 +120,25 @@ function publicLedgerApiPlugin() {
                 }
               });
               return;
+            } else if (req.method === 'DELETE') {
+              const id = parsedUrl.searchParams.get('id');
+              const batchNum = parsedUrl.searchParams.get('batch_num');
+              if (!id && !batchNum) {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                return res.end(JSON.stringify({ error: 'ID or batch_num required' }));
+              }
+              let query = client.from(table).delete();
+              if (batchNum) {
+                query = query.eq('batch_num', parseInt(batchNum, 10));
+              } else {
+                query = query.eq('id', id);
+              }
+              const { error } = await query;
+              if (error) throw error;
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              return res.end(JSON.stringify({ success: true }));
             }
           } catch (err) {
             res.statusCode = 500;

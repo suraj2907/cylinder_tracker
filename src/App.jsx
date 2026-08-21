@@ -64,6 +64,7 @@ export default function App() {
     handleDownload,
     handleAdd,
     handleDeleteEntry,
+    handleDeleteBatch,
     removeDeliveryEntries,
     handleAddPayment,
     handleDeletePayment,
@@ -78,7 +79,7 @@ export default function App() {
     createBill,
     deleteBill,
     recordBillPayment
-  } = useBilling(currentUser);
+  } = useBilling(currentUser, handleAdd, removeDeliveryEntries);
 
   const {
     items: itemsCatalog,
@@ -302,7 +303,7 @@ export default function App() {
             {tab === "gstReport" && <Gstr3bReport items={itemsCatalog} purchaseBills={purchaseBills} bills={bills} />}
             {tab === "payments" && <PaymentLedger payments={payments} onAddPayment={handleAddPayment} onDeletePayment={handleDeletePayment} batches={batches} onUpdateBatchCost={handleUpdateBatchCost} restMap={restMap} />}
             {tab === "calendar" && <CalendarView dateMap={dateMap} selectedDate={selectedDate} setSelectedDate={setSelectedDate} handleDeleteEntry={handleDeleteEntry} payments={payments} batches={batches} onDeletePayment={handleDeletePayment} />}
-            {tab === "batches" && <BatchesList filteredBatches={filteredBatches} batchSearch={batchSearch} setBatchSearch={setBatchSearch} />}
+            {tab === "batches" && <BatchesList filteredBatches={filteredBatches} batchSearch={batchSearch} setBatchSearch={setBatchSearch} handleDeleteBatch={handleDeleteBatch} />}
             {tab === "add" && <AddEntry newEntry={newEntry} setNewEntry={setNewEntry} handleAdd={handleAdd} restMap={restMap} />}
           </div>
         </Suspense>

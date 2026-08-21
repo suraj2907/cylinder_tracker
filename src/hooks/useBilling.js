@@ -3,7 +3,7 @@ import { supabase } from '../utils/supabaseClient';
 
 const PAGE_SIZE = 1000;
 
-export function useBilling(currentUser) {
+export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntry) {
   const [restaurantProfiles, setRestaurantProfiles] = useState({});
   const [bills, setBills] = useState([]);
   const [loadingBilling, setLoadingBilling] = useState(true);
@@ -82,14 +82,43 @@ export function useBilling(currentUser) {
     return maxNo > 0 ? maxNo + 1 : 3499;
   }, [bills]);
 
-  const saveRestaurantProfile = async (name, { mobile, gst_num, address }) => {
-    const { error } = await supabase
-      .from('restaurants')
-      .upsert({ name, mobile, gst_num, address }, { onConflict: 'name' });
-    if (error) {
-      console.error('Error saving restaurant profile', error);
-      throw error;
+  const saveRestaurantProfile = async (name, { mobile, gst_num, address, previous_balance }) => {
+    const payload = {
+      name,
+      mobile: mobile ? mobile.trim() : null,
+      gst_num: (gst_num && gst_num.trim()) ? gst_num.trim().toUpperCase() : null,
+      address: (address && address.trim()) ? address.trim() : null
+    };
+    if (previous_balance !== undefined && previous_balance !== null && previous_balance !== '') {
+      payload.previous_balance = parseFloat(previous_balance) || 0;
     }
+
+    // Optimistically update React state immediately
+    setRestaurantProfiles(prev => {
+      const next = { ...prev };
+      next[name] = { ...(next[name] || {}), ...payload };
+      next[name.toLowerCase()] = { ...(next[name.toLowerCase()] || {}), ...payload };
+      return next;
+    });
+
+    try {
+      await fetch('/api/db?table=restaurants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch (e) {
+      console.warn('API db fallback', e);
+    }
+
+    try {
+      await supabase
+        .from('restaurants')
+        .upsert(payload, { onConflict: 'name' });
+    } catch (err) {
+      console.warn('Supabase upsert restaurant fallback', err);
+    }
+
     await fetchProfiles();
   };
 
@@ -104,15 +133,33 @@ export function useBilling(currentUser) {
       delete payload.invoice_no;
     }
 
-    const { data, error } = await supabase
-      .from('bills')
-      .insert([payload])
-      .select()
-      .single();
+    let savedBill = null;
+    try {
+      const res = await fetch('/api/db?table=bills', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const result = await res.json();
+        savedBill = Array.isArray(result) ? result[0] : result;
+      }
+    } catch (e) {
+      console.warn('API db fallback for bill insert', e);
+    }
 
-    if (error) {
-      console.error('Error creating bill', error);
-      throw error;
+    if (!savedBill) {
+      const { data, error } = await supabase
+        .from('bills')
+        .insert([payload])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating bill', error);
+        throw error;
+      }
+      savedBill = data;
     }
 
     // --- AUTO-LINKED INVENTORY & ENTRY OPERATIONS ---
@@ -156,32 +203,51 @@ export function useBilling(currentUser) {
         }
 
         if (deliveryType && lineItem.qty > 0) {
-          await supabase.from('entries').insert([{
-            name: targetRestName,
-            type: deliveryType,
-            qty: parseInt(lineItem.qty, 10),
-            date: billData.bill_date || new Date().toISOString().slice(0, 10),
-            batch_num: currentBatchNum,
-            is_return: false,
-            user_name: currentUser
-          }]);
+          const qtyNum = parseInt(lineItem.qty, 10);
+          if (typeof onAddDeliveryEntry === 'function') {
+            onAddDeliveryEntry(
+              targetRestName,
+              qtyNum,
+              deliveryType,
+              billData.bill_date || new Date().toISOString().slice(0, 10),
+              currentBatchNum
+            );
+          } else {
+            await supabase.from('entries').insert([{
+              name: targetRestName,
+              type: deliveryType,
+              qty: qtyNum,
+              date: billData.bill_date || new Date().toISOString().slice(0, 10),
+              batch_num: currentBatchNum,
+              is_return: false,
+              user_name: currentUser
+            }]);
+          }
         }
       }
     }
 
     await fetchBills();
-    return data;
+    return savedBill;
   };
 
   const deleteBill = async (id, onDeliveryRemoved) => {
     // 1. Fetch bill details before deletion to restore stock & clean auto delivery entries
-    const { data: billData } = await supabase.from('bills').select('*').eq('id', id).single();
-    
-    const { error } = await supabase.from('bills').delete().eq('id', id);
-    if (error) {
-      console.error('Error deleting bill', error);
-      throw error;
+    let billData = (bills || []).find(b => b.id === id);
+    if (!billData) {
+      const { data } = await supabase.from('bills').select('*').eq('id', id).single();
+      billData = data;
     }
+    
+    try {
+      await fetch(`/api/db?table=bills&id=${id}`, { method: 'DELETE' });
+    } catch (e) {
+      console.warn('API DB delete fallback', e);
+    }
+    await supabase.from('bills').delete().eq('id', id);
+
+    // Optimistically update bills state so UI updates instantly
+    setBills(prev => prev.filter(b => b.id !== id));
 
     if (billData) {
       // 2. Restore stock in `items` catalog table
@@ -201,18 +267,36 @@ export function useBilling(currentUser) {
         }
       }
 
-      // 3. Remove auto delivery entries from `entries` table
+      // 3. Remove auto delivery entries from `entries` table in Supabase
       if (billData.restaurant_name) {
+        const dDate = billData.bill_date || '';
+        try {
+          const { data: matchedEntries } = await supabase
+            .from('entries')
+            .select('id')
+            .ilike('name', billData.restaurant_name.trim())
+            .eq('date', dDate)
+            .eq('is_return', false);
+          if (matchedEntries && matchedEntries.length > 0) {
+            for (const me of matchedEntries) {
+              await fetch(`/api/db?table=entries&id=${me.id}`, { method: 'DELETE' }).catch(() => null);
+            }
+          }
+        } catch (e) {
+          console.warn('Entries cleanup API fallback', e);
+        }
         await supabase
           .from('entries')
           .delete()
           .ilike('name', billData.restaurant_name.trim())
-          .eq('date', billData.bill_date)
+          .eq('date', dDate)
           .eq('is_return', false);
       }
 
-      if (onDeliveryRemoved) {
-        onDeliveryRemoved(billData.restaurant_name, billData.bill_date);
+      // 4. Remove auto delivery entries from React memory state (Batches, Calendar, Live Holding)
+      const removeCallback = onDeliveryRemoved || onRemoveDeliveryEntry;
+      if (typeof removeCallback === 'function') {
+        removeCallback(billData.restaurant_name, billData.bill_date);
       }
     }
 

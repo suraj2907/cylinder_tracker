@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, memo } from 'react';
-import { formatIsoDate, normType, getInvoiceLabel, getPartyCurrentBalance, norm } from '../utils/dataUtils';
+import { formatIsoDate, normType, getInvoiceLabel, getPartyCurrentBalance, norm, isNewPayment, isNewBill } from '../utils/dataUtils';
 import { supabase } from '../utils/supabaseClient';
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -81,11 +81,12 @@ function RestaurantStatementModal({
     const list = [];
     const normTarget = norm(restaurantName);
 
-    // 1. Historical ledger rows from database
+    // 1. Historical ledger rows from database (exact CSV sequence)
     ledgerRows.forEach((e, idx) => {
       if (!e.entry_date || e.voucher_type === 'Balance') return;
       list.push({
         id: `official_ledger_${idx}_${e.entry_date}_${e.sr_no}`,
+        ledgerIndex: idx,
         kind: e.voucher_type === 'Payment-in' ? 'payment' : (e.voucher_type === 'Invoice' || e.voucher_type === 'Sales Invoice' ? 'bill' : 'ledger'),
         date: e.entry_date,
         voucher: e.voucher_type,
@@ -126,42 +127,41 @@ function RestaurantStatementModal({
       });
     });
 
-    // 3. Extract Real-Time Payment Collections
-    const paymentKeys = new Set();
+    // 3. Extract Real-Time Payment Collections (ONLY new live payments created after legacy import)
     payments.forEach(p => {
-      const pName = norm(p.restaurant_name || p.restaurantName);
-      if (pName === normTarget) {
-        const rawDate = p.date || today;
-        const pDate = formatIsoDate(rawDate);
-        const pAmt = parseFloat(p.amount) || 0;
-        const pKey = `${pDate}_${pAmt}`;
-        paymentKeys.add(pKey);
+      if (isNewPayment(p)) {
+        const pName = norm(p.restaurant_name || p.restaurantName);
+        if (pName === normTarget) {
+          const rawDate = p.date || today;
+          const pDate = formatIsoDate(rawDate);
+          const pAmt = parseFloat(p.amount) || 0;
 
-        list.push({
-          id: p.id ? `pay_${p.id}` : `pay_${pDate}_${pAmt}_${Math.random()}`,
-          kind: 'payment',
-          date: pDate,
-          batchNum: p.batch_num || p.batchNum || '-',
-          restaurantName: p.restaurant_name || p.restaurantName,
-          amount: pAmt,
-          credit: pAmt,
-          debit: 0,
-          voucher: 'Payment-in',
-          paymentMode: p.mode || p.payment_mode || p.paymentMode || 'UPI',
-          userName: p.created_by || p.user_name || 'Suraj',
-          note: p.notes || p.note || '',
-          rawPaymentObj: p
-        });
+          list.push({
+            id: p.id ? `pay_${p.id}` : `pay_${pDate}_${pAmt}_${Math.random()}`,
+            kind: 'payment',
+            date: pDate,
+            batchNum: p.batch_num || p.batchNum || '-',
+            restaurantName: p.restaurant_name || p.restaurantName,
+            amount: pAmt,
+            credit: pAmt,
+            debit: 0,
+            voucher: 'Payment-in',
+            paymentMode: p.mode || p.payment_mode || p.paymentMode || 'UPI',
+            userName: p.created_by || p.user_name || 'Suraj',
+            note: p.notes || p.note || '',
+            rawPaymentObj: p
+          });
+        }
       }
     });
 
-    // 4. Extract Real-Time Sales Invoices (Bills) on/after 18/08/2026
+    // 4. Extract Real-Time Sales Invoices (ONLY new live bills created after legacy import)
     bills.forEach(b => {
-      const pName = norm(b.restaurant_name || "");
-      if (pName === normTarget) {
-        const rawDate = b.bill_date || today;
-        const bDate = formatIsoDate(rawDate);
-        if (bDate >= '2026-08-18') {
+      if (isNewBill(b)) {
+        const pName = norm(b.restaurant_name || "");
+        if (pName === normTarget) {
+          const rawDate = b.bill_date || today;
+          const bDate = formatIsoDate(rawDate);
           list.push({
             id: b.id || `bill_${bDate}_${b.total_amount}_${Math.random()}`,
             kind: 'bill',
@@ -184,10 +184,13 @@ function RestaurantStatementModal({
     // Base balance up to 17/08/2026 from official synced CSV ledgers
     const baseBalance = parseFloat(profile.previous_balance || 0);
 
-    // Precise chronological ascending sort: date asc -> cylinder -> invoice -> payment (by srNo)
+    // Precise chronological ascending sort (date asc -> ledgerIndex asc)
     const sortedAsc = [...list].sort((a, b) => {
       const dateCmp = (a.date || '').localeCompare(b.date || '');
       if (dateCmp !== 0) return dateCmp;
+      if (a.ledgerIndex !== undefined && b.ledgerIndex !== undefined) {
+        return a.ledgerIndex - b.ledgerIndex;
+      }
       const typeRank = { cylinder: 1, ledger: 2, bill: 3, payment: 4 };
       const rankA = typeRank[a.kind] || 2;
       const rankB = typeRank[b.kind] || 2;
@@ -214,11 +217,14 @@ function RestaurantStatementModal({
       };
     });
 
-    // Sort descending for UI display (newest first, with latest payment on top of that date)
+    // Sort descending for UI display (newest date first, newest ledger transaction on top)
     return listWithBalance.sort((a, b) => {
       const dateCmp = (b.date || '').localeCompare(a.date || '');
       if (dateCmp !== 0) return dateCmp;
-      const typeRank = { payment: 1, bill: 2, ledger: 3, cylinder: 4 };
+      if (a.ledgerIndex !== undefined && b.ledgerIndex !== undefined) {
+        return b.ledgerIndex - a.ledgerIndex;
+      }
+      const typeRank = { bill: 1, payment: 2, ledger: 3, cylinder: 4 };
       const rankA = typeRank[a.kind] || 2;
       const rankB = typeRank[b.kind] || 2;
       if (rankA !== rankB) return rankA - rankB;
@@ -289,9 +295,27 @@ function RestaurantStatementModal({
     return getPartyCurrentBalance(restaurantName, restaurantProfiles, bills, payments);
   }, [restaurantName, restaurantProfiles, bills, payments]);
 
+  const performDeleteBill = async (item) => {
+    const invLabel = item.invoiceLabel || (item.rawBillObj ? `INV-${item.rawBillObj.invoice_no}` : 'Invoice');
+    if (window.confirm(`Are you sure you want to delete ${invLabel}?`)) {
+      try {
+        if (item.rawBillObj?.id) {
+          await deleteBill(item.rawBillObj.id, removeDeliveryEntries);
+        } else if (item.isOfficialLedger && item.srNo) {
+          await supabase.from('legacy_ledger_entries').delete().eq('sr_no', item.srNo).ilike('restaurant_name', restaurantName.trim());
+          setLedgerRows(prev => prev.filter(r => r.sr_no !== item.srNo));
+        }
+        alert(`✅ ${invLabel} successfully deleted!`);
+      } catch (err) {
+        console.error('Error deleting bill:', err);
+        alert(`Delete nahi hua: ${err.message || 'Error'}`);
+      }
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[99999] flex items-center justify-center p-2.5 sm:p-5 animate-fadeIn">
-      <div className="bg-white rounded-3xl border border-customBorder shadow-2xl max-w-4xl w-full p-4 sm:p-6 space-y-4 my-auto max-h-[95vh] flex flex-col justify-between overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto no-print">
+      <div className="bg-white rounded-3xl border border-customBorder shadow-2xl max-w-6xl w-full p-4 sm:p-6 space-y-4 my-auto max-h-[95vh] flex flex-col justify-between overflow-hidden">
         
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-customBorder pb-3 flex-wrap gap-2">
@@ -476,7 +500,7 @@ function RestaurantStatementModal({
                   No activity entries recorded for {restaurantName} in this period.
                 </div>
               ) : (
-                <div className="overflow-y-auto border border-slate-200 rounded-2xl max-h-[460px] flex-1 bg-white shadow-inner">
+                <div className="overflow-x-auto overflow-y-auto border border-slate-200 rounded-2xl max-h-[460px] flex-1 bg-white shadow-inner">
                   
                   {/* MOBILE CARDS VIEW (Clean & Spacious on Mobile Screens) */}
                   <div className="block md:hidden divide-y divide-slate-100 no-print">
@@ -545,7 +569,7 @@ function RestaurantStatementModal({
                           )}
                           {item.kind === 'bill' && deleteBill && (
                             <button
-                              onClick={() => handleDeleteBill(item.rawBillObj.id, item.rawBillObj.invoice_no)}
+                              onClick={() => performDeleteBill(item)}
                               className="px-2.5 py-1 rounded-lg bg-red-50 text-red-700 border border-red-200 text-xs font-bold active:scale-95 cursor-pointer"
                             >
                               Delete
@@ -557,27 +581,27 @@ function RestaurantStatementModal({
                   </div>
 
                   {/* DESKTOP TABLE VIEW */}
-                  <table className="hidden md:table w-full text-left text-xs border-collapse">
+                  <table className="hidden md:table w-full min-w-[760px] text-left text-xs border-collapse">
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-mutedSlate">
-                        <th className="px-4 py-3">Date</th>
-                        <th className="px-4 py-3">Type</th>
-                        <th className="px-4 py-3">Details / Invoice</th>
-                        <th className="px-4 py-3 text-right">Batch</th>
-                        <th className="px-4 py-3 text-right">Delivered</th>
-                        <th className="px-4 py-3 text-right">Khali Ret</th>
-                        <th className="px-4 py-3 text-right text-rose-650">Bill Amt (₹)</th>
-                        <th className="px-4 py-3 text-right text-emerald-700">Paid (₹)</th>
-                        <th className="px-4 py-3 text-right text-slate-800">Closing Bal (₹)</th>
-                        <th className="px-4 py-3">By</th>
-                        <th className="px-4 py-3 text-right">Action</th>
+                        <th className="px-3 py-2.5 whitespace-nowrap">Date</th>
+                        <th className="px-3 py-2.5 whitespace-nowrap">Type</th>
+                        <th className="px-3 py-2.5 whitespace-nowrap">Details / Invoice</th>
+                        <th className="px-3 py-2.5 text-right whitespace-nowrap">Batch</th>
+                        <th className="px-3 py-2.5 text-right whitespace-nowrap">Delivered</th>
+                        <th className="px-3 py-2.5 text-right whitespace-nowrap">Khali Ret</th>
+                        <th className="px-3 py-2.5 text-right text-rose-650 whitespace-nowrap">Bill Amt (₹)</th>
+                        <th className="px-3 py-2.5 text-right text-emerald-700 whitespace-nowrap">Paid (₹)</th>
+                        <th className="px-3 py-2.5 text-right text-slate-800 whitespace-nowrap">Closing Bal (₹)</th>
+                        <th className="px-3 py-2.5 whitespace-nowrap">By</th>
+                        <th className="px-3 py-2.5 text-right whitespace-nowrap">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {visibleActivities.map((item, idx) => (
                         <tr key={item.id || idx} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-4 py-3 font-semibold text-slate-700">{item.date}</td>
-                          <td className="px-4 py-3 font-bold">
+                          <td className="px-3 py-2.5 font-semibold text-slate-700 whitespace-nowrap">{item.date}</td>
+                          <td className="px-3 py-2.5 font-bold whitespace-nowrap">
                             {item.kind === 'cylinder' ? (
                               <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-black border ${
                                 item.isReturn ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-sky-50 text-sky-700 border-sky-200'
@@ -596,7 +620,7 @@ function RestaurantStatementModal({
                               </span>
                             )}
                           </td>
-                          <td className="px-4 py-3 font-bold text-slate-800">
+                          <td className="px-3 py-2.5 font-bold text-slate-800">
                             {item.kind === 'cylinder' ? (
                               <span className="font-semibold text-slate-600">{item.type} Cylinder</span>
                             ) : item.kind === 'bill' ? (
@@ -610,26 +634,26 @@ function RestaurantStatementModal({
                               <span className="font-semibold text-slate-600">Collection</span>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-right font-bold text-slate-500">
+                          <td className="px-3 py-2.5 text-right font-bold text-slate-500 whitespace-nowrap">
                             {item.batchNum ? `#${item.batchNum}` : '-'}
                           </td>
-                          <td className="px-4 py-3 text-right font-bold text-slate-800">
+                          <td className="px-3 py-2.5 text-right font-bold text-slate-800 whitespace-nowrap">
                             {item.kind === 'cylinder' && !item.isReturn ? `${item.qty} units` : '-'}
                           </td>
-                          <td className="px-4 py-3 text-right font-bold text-slate-800">
+                          <td className="px-3 py-2.5 text-right font-bold text-slate-800 whitespace-nowrap">
                             {item.kind === 'cylinder' && item.isReturn ? `${item.qty} units` : '-'}
                           </td>
-                          <td className="px-4 py-3 text-right font-black text-rose-600">
+                          <td className="px-3 py-2.5 text-right font-black text-rose-600 whitespace-nowrap">
                             {item.kind === 'bill' ? `₹${item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '-'}
                           </td>
-                          <td className="px-4 py-3 text-right font-black text-emerald-700">
+                          <td className="px-3 py-2.5 text-right font-black text-emerald-700 whitespace-nowrap">
                             {item.kind === 'payment' ? `₹${item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '-'}
                           </td>
-                          <td className="px-4 py-3 text-right font-black text-slate-900 bg-slate-50/50">
+                          <td className="px-3 py-2.5 text-right font-black text-slate-900 bg-slate-50/50 whitespace-nowrap">
                             ₹{(item.runningBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </td>
-                          <td className="px-4 py-3 text-slate-500 font-bold">{item.userName}</td>
-                          <td className="px-4 py-3 text-right no-print">
+                          <td className="px-3 py-2.5 text-slate-500 font-bold whitespace-nowrap">{item.userName}</td>
+                          <td className="px-3 py-2.5 text-right no-print whitespace-nowrap">
                             {item.kind === 'cylinder' && handleDeleteEntry && (
                               <button
                                 onClick={() => handleDeleteEntry(item.batchNum, item.originalEntry || item.rawEntryObj)}
@@ -650,23 +674,7 @@ function RestaurantStatementModal({
                             )}
                             {item.kind === 'bill' && deleteBill && (
                               <button
-                                onClick={async () => {
-                                  const invLabel = item.invoiceLabel || (item.rawBillObj ? `INV-${item.rawBillObj.invoice_no}` : 'Invoice');
-                                  if (window.confirm(`Are you sure you want to delete ${invLabel}?`)) {
-                                    try {
-                                      if (item.rawBillObj?.id) {
-                                        await deleteBill(item.rawBillObj.id, removeDeliveryEntries);
-                                      } else if (item.isOfficialLedger && item.srNo) {
-                                        await supabase.from('legacy_ledger_entries').delete().eq('sr_no', item.srNo).ilike('restaurant_name', restaurantName.trim());
-                                        setLedgerRows(prev => prev.filter(r => r.sr_no !== item.srNo));
-                                      }
-                                      alert(`✅ ${invLabel} successfully deleted!`);
-                                    } catch (err) {
-                                      console.error('Error deleting bill:', err);
-                                      alert(`Delete nahi hua: ${err.message || 'Error'}`);
-                                    }
-                                  }
-                                }}
+                                onClick={() => performDeleteBill(item)}
                                 className="text-red-500 hover:text-red-700 font-bold p-1 text-xs cursor-pointer active:scale-95"
                                 title="Delete Invoice"
                               >
@@ -731,7 +739,7 @@ function RestaurantStatementModal({
                               🖨️ View
                             </button>
                             <button
-                              onClick={() => handleDeleteBill(b.id, b.invoice_no)}
+                              onClick={() => performDeleteBill({ rawBillObj: b, invoiceLabel: getInvoiceLabel(b) })}
                               className="px-2 py-1 rounded-lg bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 text-[11px] font-bold transition-all cursor-pointer"
                               title="Delete Invoice"
                             >
@@ -810,8 +818,12 @@ function RestaurantStatementModal({
               <div className="mb-4 text-xs">
                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Bill To</p>
                 <p className="font-extrabold text-slate-900">{selectedBillForPrint.restaurant_name}</p>
-                {/* GST Details of customer if GST Bill */}
-                {selectedBillForPrint.gst_mode === 'gst' && selectedBillForPrint.gst_num && <p className="text-[10px] text-slate-500 mt-0.5">GSTIN: {selectedBillForPrint.gst_num}</p>}
+                {/* GST Details of customer if party has GST registered */}
+                {(selectedBillForPrint.gst_num || profile?.gst_num || restaurantProfiles?.[selectedBillForPrint?.restaurant_name]?.gst_num) && (
+                  <p className="text-[10px] text-slate-700 font-bold mt-0.5">
+                    GSTIN: {selectedBillForPrint.gst_num || profile?.gst_num || restaurantProfiles?.[selectedBillForPrint?.restaurant_name]?.gst_num}
+                  </p>
+                )}
               </div>
 
               <table className="w-full text-left text-[11px] border-collapse mb-4">

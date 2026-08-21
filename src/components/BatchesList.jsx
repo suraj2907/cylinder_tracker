@@ -3,7 +3,8 @@ import React, { useState } from 'react';
 export default function BatchesList({ 
   filteredBatches = [], 
   batchSearch = "", 
-  setBatchSearch
+  setBatchSearch,
+  handleDeleteBatch
 }) {
   const [expandedEntriesBatch, setExpandedEntriesBatch] = useState(null);
 
@@ -57,13 +58,22 @@ export default function BatchesList({
                   )}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <button
                     onClick={() => setExpandedEntriesBatch(isEntriesExpanded ? null : b.batch)}
-                    className="px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all shadow-sm flex items-center gap-1"
+                    className="px-3.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer"
                   >
                     <span>{isEntriesExpanded ? "🔼 Hide Deliveries" : "🚚 Show Deliveries (" + (b.entries ? b.entries.length : 0) + ")"}</span>
                   </button>
+                  {handleDeleteBatch && (
+                    <button
+                      onClick={() => handleDeleteBatch(b.batch)}
+                      className="px-3 py-1.5 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer active:scale-95"
+                      title={`Delete Batch #${b.batch}`}
+                    >
+                      <span>🗑️ Delete</span>
+                    </button>
+                  )}
                 </div>
               </div>
 

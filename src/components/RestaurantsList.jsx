@@ -40,10 +40,13 @@ function RestaurantsList({
     return Object.values(partyFinancialMap).reduce((acc, val) => acc + (val > 0 ? val : 0), 0);
   }, [partyFinancialMap]);
 
-  // Filter restaurants by "Collect" status (outstanding cylinders or rupee balance > 0)
+  // "Pending Payments Only" = money owed (not cylinder count) > 0, sorted alphabetically by name.
+  // "All Parties" keeps whatever sort the Sort dropdown is set to (unchanged).
   const displayedRestaurants = useMemo(() => {
     if (collectOnly) {
-      return restaurants.filter(r => (parseFloat(r.outstanding) || 0) > 0 || (partyFinancialMap[norm(r.name)] || 0) > 0);
+      return restaurants
+        .filter(r => (partyFinancialMap[norm(r.name)] || 0) > 0)
+        .sort((a, b) => a.name.localeCompare(b.name));
     }
     return restaurants;
   }, [restaurants, collectOnly, partyFinancialMap]);
