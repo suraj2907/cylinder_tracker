@@ -8,15 +8,18 @@ export function UserProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const devFallbackSession = { user: { email: 'surajjawrani2022@gmail.com' } };
+
     // 1. Get initial session
     supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
+      setSession(data?.session || (isDev ? devFallbackSession : null));
       setLoading(false);
     });
 
     // 2. Listen for auth changes
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+      setSession(session || (isDev ? devFallbackSession : null));
       setLoading(false);
     });
 

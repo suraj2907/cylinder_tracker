@@ -13,5 +13,9 @@ if (!supabaseUrl || !supabaseAnonKey) {
 const safeUrl = supabaseUrl && supabaseUrl.trim() !== '' ? supabaseUrl : 'https://placeholder.supabase.co';
 const safeKey = supabaseAnonKey && supabaseAnonKey.trim() !== '' ? supabaseAnonKey : 'placeholder_anon_key';
 
-export const supabase = createClient(safeUrl, safeKey);
+export const supabase = createClient(safeUrl, safeKey, {
+  auth: { persistSession: true }
+});
+
+export const publicClient = supabase;
 

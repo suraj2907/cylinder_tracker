@@ -3,6 +3,7 @@
 export const ALIASES = {
   // Historical CSV normalizations
   "Rahul Panchmukhi Paratha": "Punchmukhi Paratha",
+  "Karnail Singh Bhatia": "Jasbeer Kaur Bhatia",
   "SIMRAN SWEETS": "Simran Restaurant",
   "Parvez Bhiya Kalp": "Kalp",
   "M/S HOTEL AMORA": "Hotel Amora",
@@ -20,7 +21,7 @@ export const ALIASES = {
   "Bombay Misal Vada Pav": "Bombay Misal Pav",
   "Starlite Cafe": "Starlight Cafe",
   "Prateek Shadi Order Gas": "Prateek Shadi",
-  "Bajrang Tadka Point": "Bajrang Tadka",
+  "Bajrang Tadka": "Bajrang Tadka Point",
   "Paanj Tara Restuarant": "Paanj Tara",
   "A King's Food Hub": "A king's food hub",
   "Ravi Bhiya Chai": "Ravi Bhaiya",
@@ -127,7 +128,12 @@ export const ALIASES = {
   // Bajrang
   "Bajrang hotel": "Bajrang Hotel",
   "Bajrang": "Bajrang Hotel",
-  "Bajrang tadka": "Bajrang Tadka",
+  // Bajrang tadka point
+  "Bajrang tadka": "Bajrang Tadka Point",
+  "Bajrang Tadka": "Bajrang Tadka Point",
+  "bajrang tadka": "Bajrang Tadka Point",
+  "Bajrang tadka point": "Bajrang Tadka Point",
+  "bajrang tadka point": "Bajrang Tadka Point",
   // Khalsa
   "Khalaa hotel": "Khalsa Hotel",
   "Khalsa": "Khalsa Hotel",
@@ -222,6 +228,11 @@ export const ALIASES = {
   "Zig zag": "Zig Zag",
   // Gwalior
   "Gwalior chat corner": "Gwalior Chaat Corner",
+  // Hotel Railies
+  "Railies": "Hotel Railies",
+  "railies": "Hotel Railies",
+  "Hotel railies": "Hotel Railies",
+  "hotel railies": "Hotel Railies",
   // Coffee Toffee
   "Coffe toffee": "Coffee Toffee",
   "Coffee toffee": "Coffee Toffee"
@@ -236,7 +247,7 @@ export const VALID_RESTAURANTS = [
   "Apna Ghar Manki",
   "Ashwini Amritulaya",
   "Bajrang Hotel",
-  "Bajrang Tadka",
+  "Bajrang Tadka Point",
   "Bawarchi Dhaba",
   "Bhavi Family Dhaba",
   "Bombay Misal Pav",
@@ -441,21 +452,92 @@ export function computeAll(batches) {
     });
   });
 
-  // Equalize khali returns for zero-outstanding audited hotels
-  ZERO_OUTSTANDING_HOTELS.forEach(targetName => {
-    const normTarget = norm(targetName);
-    if (restMap[normTarget]) {
-      const del21 = restMap[normTarget]["21kg"] || 0;
-      const del192 = restMap[normTarget]["19.2kg"] || 0;
-
-      // Set khali returns equal to deliveries so outstanding = 0
-      restMap[normTarget]["Empty21kg"] = del21;
-      restMap[normTarget]["Empty19.2kg"] = del192;
-      restMap[normTarget]["Empty"] = del21 + del192;
-    }
-  });
-
   return { restMap, dateMap, batchStats };
 }
 
 export const INITIAL_DATA = [];
+
+export function getInvoiceLabel(bill) {
+  if (!bill) return 'INV-0000';
+  const val = bill.invoice_no || bill.legacy_invoice_no || bill.id;
+  if (!val) return 'INV-0000';
+  return `INV-${String(val).padStart(4, '0')}`;
+}
+
+export function isNewBill(b) {
+  if (!b) return false;
+  const invNo = parseInt(b.invoice_no, 10);
+  return (invNo >= 3498) || (b.created_by && !b.legacy_invoice_no);
+}
+
+export function isNewPayment(p) {
+  if (!p) return false;
+  const note = (p.note || p.notes || '');
+  return note.includes('Payment Received (ID') || (p.created_at >= '2026-08-20T18:00:00Z' && !note.includes('Legacy'));
+}
+
+export function getAllPartiesCurrentBalances(restaurantProfiles = {}, bills = [], payments = []) {
+  const map = {};
+
+  // 1. Base closing balances from profiles (synced up to 20th August)
+  Object.keys(restaurantProfiles || {}).forEach(k => {
+    const normP = norm(k);
+    const bal = parseFloat(restaurantProfiles[k].previous_balance || 0);
+    map[normP] = Math.max(0, bal);
+  });
+
+  // 2. Add unpaid portion of newly generated bills
+  (bills || []).forEach(b => {
+    if (isNewBill(b)) {
+      const normP = norm(b.restaurant_name);
+      const unpaid = (parseFloat(b.total_amount) || 0) - (parseFloat(b.amount_paid) || 0);
+      if (unpaid > 0.05) {
+        map[normP] = (map[normP] || 0) + unpaid;
+      }
+    }
+  });
+
+  // 3. Subtract new payment collections recorded in app
+  (payments || []).forEach(p => {
+    if (isNewPayment(p)) {
+      const normP = norm(p.restaurant_name || p.restaurantName);
+      const amt = parseFloat(p.amount) || 0;
+      map[normP] = Math.max(0, (map[normP] || 0) - amt);
+    }
+  });
+
+  return map;
+}
+
+export function getPartyCurrentBalance(partyName, restaurantProfiles = {}, bills = [], payments = []) {
+  if (!partyName) return 0;
+  const normP = norm(partyName);
+  
+  // 1. Base closing balance from profiles
+  let baseBalance = 0;
+  Object.keys(restaurantProfiles || {}).forEach(k => {
+    if (norm(k) === normP) {
+      baseBalance = parseFloat(restaurantProfiles[k].previous_balance || 0);
+    }
+  });
+
+  // 2. Add unpaid portion of newly generated bills
+  let newBillsSum = 0;
+  (bills || []).forEach(b => {
+    if (norm(b.restaurant_name) === normP && isNewBill(b)) {
+      const unpaid = (parseFloat(b.total_amount) || 0) - (parseFloat(b.amount_paid) || 0);
+      if (unpaid > 0.05) newBillsSum += unpaid;
+    }
+  });
+
+  // 3. Subtract new payment collections recorded in app
+  let newPaymentsSum = 0;
+  (payments || []).forEach(p => {
+    const pName = norm(p.restaurant_name || p.restaurantName);
+    if (pName === normP && isNewPayment(p)) {
+      newPaymentsSum += (parseFloat(p.amount) || 0);
+    }
+  });
+
+  return Math.max(0, baseBalance + newBillsSum - newPaymentsSum);
+}

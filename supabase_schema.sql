@@ -83,3 +83,51 @@ CREATE INDEX IF NOT EXISTS idx_entries_batch_num ON public.entries(batch_num);
 CREATE INDEX IF NOT EXISTS idx_entries_name ON public.entries(name);
 CREATE INDEX IF NOT EXISTS idx_payments_batch_num ON public.payments(batch_num);
 CREATE INDEX IF NOT EXISTS idx_payments_restaurant ON public.payments(restaurant_name);
+
+-- ================================================
+-- BILLING FEATURE - RESTAURANT PROFILES & INVOICES
+-- ================================================
+
+-- 7. Create Restaurants Table (profile: mobile, GST, address)
+CREATE TABLE IF NOT EXISTS public.restaurants (
+    name TEXT PRIMARY KEY,
+    mobile TEXT,
+    gst_num TEXT,
+    address TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.restaurants ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Secure partner access - restaurants" ON public.restaurants
+    TO authenticated 
+    USING (auth.jwt() ->> 'email' = 'surajjawrani2022@gmail.com' OR auth.jwt() ->> 'email' = 'shivam09498@gmail.com')
+    WITH CHECK (auth.jwt() ->> 'email' = 'surajjawrani2022@gmail.com' OR auth.jwt() ->> 'email' = 'shivam09498@gmail.com');
+
+ALTER PUBLICATION supabase_realtime ADD TABLE public.restaurants;
+
+-- 8. Create Bills Table (generated invoice history)
+CREATE TABLE IF NOT EXISTS public.bills (
+    id BIGSERIAL PRIMARY KEY,
+    restaurant_name TEXT NOT NULL,
+    bill_date DATE NOT NULL,
+    gst_mode TEXT NOT NULL DEFAULT 'gst', -- 'gst' or 'none'
+    items JSONB NOT NULL,
+    subtotal DECIMAL(10,2) NOT NULL,
+    taxable_amount DECIMAL(10,2) NOT NULL,
+    cgst DECIMAL(10,2) DEFAULT 0,
+    sgst DECIMAL(10,2) DEFAULT 0,
+    total_amount DECIMAL(10,2) NOT NULL,
+    created_by TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.bills ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Secure partner access - bills" ON public.bills
+    TO authenticated 
+    USING (auth.jwt() ->> 'email' = 'surajjawrani2022@gmail.com' OR auth.jwt() ->> 'email' = 'shivam09498@gmail.com')
+    WITH CHECK (auth.jwt() ->> 'email' = 'surajjawrani2022@gmail.com' OR auth.jwt() ->> 'email' = 'shivam09498@gmail.com');
+
+ALTER PUBLICATION supabase_realtime ADD TABLE public.bills;
+CREATE INDEX IF NOT EXISTS idx_bills_restaurant ON public.bills(restaurant_name);

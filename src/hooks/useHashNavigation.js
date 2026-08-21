@@ -4,9 +4,15 @@ export const TABS = [
   { id: "dashboard", label: "📊 Dashboard" },
   { id: "batches", label: "📦 Batches & Supply" },
   { id: "payments", label: "💰 Cashflow & Wallet" },
+  { id: "outstandingBills", label: "⏳ Pending Bills" },
+  { id: "billing", label: "🧾 Generate Bill" },
+  { id: "inventory", label: "📦 Inventory & Stock" },
+  { id: "expenses", label: "💸 Expenses" },
+  { id: "salesReport", label: "📈 Sales Summary" },
+  { id: "profitLoss", label: "📊 Profit & Loss" },
+  { id: "gstReport", label: "🧾 GST Report" },
   { id: "calendar", label: "📅 Calendar Log" },
   { id: "restaurants", label: "🏪 Restaurants" },
-  { id: "gasPredictor", label: "🔮 Gas Predictor" },
   { id: "add", label: "➕ Add Entry" },
 ];
 
