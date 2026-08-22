@@ -535,86 +535,93 @@ function RestaurantStatementModal({
               ) : (
                 <div className="overflow-x-auto overflow-y-auto border border-slate-200 rounded-2xl max-h-[460px] flex-1 bg-white shadow-inner">
                   
-                  {/* MOBILE CARDS VIEW (Clean & Spacious on Mobile Screens) */}
-                  <div className="block md:hidden divide-y divide-slate-100 no-print">
+                  {/* MOBILE CARDS VIEW (Spacious & Clean for Mobile & Tablets) */}
+                  <div className="block lg:hidden divide-y divide-slate-100 no-print">
                     {visibleActivities.map((item, idx) => (
-                      <div key={item.id || idx} className="p-3.5 space-y-2 hover:bg-slate-50 transition-colors">
-                        <div className="flex items-center justify-between">
+                      <div key={item.id || idx} className="p-4 space-y-2.5 hover:bg-slate-50/80 transition-colors bg-white">
+                        
+                        {/* Top Row: Date, Batch & Type Badge */}
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-extrabold text-slate-900">{item.date}</span>
+                            <span className="text-xs font-black text-slate-900 tracking-tight">📅 {item.date}</span>
                             {item.batchNum && (
-                              <span className="text-[11px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                              <span className="text-[11px] font-black text-amber-700 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200 shadow-2xs">
                                 #{item.batchNum}
                               </span>
                             )}
                           </div>
                           
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black shadow-2xs ${
                             item.kind === 'cylinder'
-                              ? (item.isReturn ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-sky-100 text-sky-800 border border-sky-200')
+                              ? (item.isReturn ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-sky-50 text-sky-800 border border-sky-200')
                               : item.kind === 'bill'
-                                ? 'bg-indigo-100 text-indigo-850 border border-indigo-200'
-                                : (item.paymentMode === 'UPI' ? 'bg-sky-100 text-sky-700 border border-sky-200' : 'bg-amber-100 text-amber-800 border border-amber-200')
+                                ? 'bg-indigo-50 text-indigo-900 border border-indigo-200'
+                                : (item.paymentMode === 'UPI' ? 'bg-teal-50 text-teal-800 border border-teal-200' : 'bg-amber-50 text-amber-900 border border-amber-200')
                           }`}>
                             {item.kind === 'cylinder'
-                              ? (item.isReturn ? '♻️ Khali Return' : '🚚 Delivery')
+                              ? (item.isReturn ? '♻️ Khali Return' : '🚚 Supply Delivery')
                               : item.kind === 'bill'
-                                ? '🧾 Invoice Sales'
+                                ? '🧾 Invoice Bill'
                                 : `💳 Payment (${item.paymentMode})`}
                           </span>
                         </div>
 
-                        <div className="flex items-center justify-between pt-0.5">
-                          <div>
+                        {/* Middle Row: Details & Amount */}
+                        <div className="flex items-center justify-between pt-1 gap-2">
+                          <div className="min-w-0">
                             {item.kind === 'cylinder' ? (
                               <div className="text-sm font-black text-slate-900">
                                 {item.qty}x {item.type} {item.isReturn ? 'Khali' : 'Cylinder'}
                               </div>
                             ) : item.kind === 'bill' ? (
-                              <div className="text-sm font-black text-slate-900">
-                                {item.invoiceLabel} <span className="text-xs text-rose-600 font-black">₹{item.amount.toLocaleString()}</span>
+                              <div>
+                                <span className="text-sm font-black text-indigo-950">{item.invoiceLabel}</span>
+                                <span className="ml-2 text-sm text-rose-600 font-black">₹{item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                               </div>
                             ) : (
-                              <div className="text-sm font-black text-emerald-600">
-                                ₹{item.amount.toLocaleString()} <span className="text-xs text-slate-500 font-semibold">Received</span>
+                              <div className="text-sm font-black text-emerald-700">
+                                ₹{item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })} <span className="text-xs text-slate-500 font-semibold">Received</span>
                               </div>
                             )}
-                            <div className="text-[10px] text-slate-400 font-semibold mt-0.5">
-                              Recorded by: {item.userName}
+                            <div className="text-[11px] text-slate-400 font-bold mt-0.5">
+                              Recorded by: <span className="text-slate-600">{item.userName || 'System'}</span>
                             </div>
                           </div>
 
-                          {item.kind === 'cylinder' && handleDeleteEntry && (
-                            <button
-                              onClick={() => handleDeleteEntry(item.batchNum, item.originalEntry)}
-                              className="px-2.5 py-1 rounded-lg bg-red-50 text-red-700 border border-red-200 text-xs font-bold active:scale-95 cursor-pointer"
-                            >
-                              Delete
-                            </button>
-                          )}
-                          {item.kind === 'payment' && onDeletePayment && (
-                            <button
-                              onClick={() => onDeletePayment(item.rawPaymentObj)}
-                              className="px-2.5 py-1 rounded-lg bg-red-50 text-red-700 border border-red-200 text-xs font-bold active:scale-95 cursor-pointer"
-                            >
-                              Delete
-                            </button>
-                          )}
-                          {item.kind === 'bill' && deleteBill && (
-                            <button
-                              onClick={() => performDeleteBill(item)}
-                              className="px-2.5 py-1 rounded-lg bg-red-50 text-red-700 border border-red-200 text-xs font-bold active:scale-95 cursor-pointer"
-                            >
-                              Delete
-                            </button>
-                          )}
+                          {/* Delete Action Button */}
+                          <div className="shrink-0">
+                            {item.kind === 'cylinder' && handleDeleteEntry && (
+                              <button
+                                onClick={() => handleDeleteEntry(item.batchNum, item.originalEntry)}
+                                className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-black active:scale-95 cursor-pointer transition-all shadow-2xs"
+                              >
+                                Delete
+                              </button>
+                            )}
+                            {item.kind === 'payment' && onDeletePayment && (
+                              <button
+                                onClick={() => onDeletePayment(item.rawPaymentObj)}
+                                className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-black active:scale-95 cursor-pointer transition-all shadow-2xs"
+                              >
+                                Delete
+                              </button>
+                            )}
+                            {item.kind === 'bill' && deleteBill && (
+                              <button
+                                onClick={() => performDeleteBill(item)}
+                                className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-black active:scale-95 cursor-pointer transition-all shadow-2xs"
+                              >
+                                Delete
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
 
                   {/* DESKTOP TABLE VIEW */}
-                  <table className="hidden md:table w-full min-w-[760px] text-left text-xs border-collapse">
+                  <table className="hidden lg:table w-full min-w-[760px] text-left text-xs border-collapse">
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-mutedSlate">
                         <th className="px-3 py-2.5 whitespace-nowrap">Date</th>
