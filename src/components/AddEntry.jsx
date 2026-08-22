@@ -9,7 +9,8 @@ export default function AddEntry({ newEntry, setNewEntry, handleAdd, restMap }) 
   useEffect(() => {
     setNewEntry(p => ({
       ...p,
-      type: `${weight}-${activeForm}`
+      type: `${weight}-${activeForm}`,
+      date: p.date || new Date().toISOString().split('T')[0]
     }));
   }, [activeForm, weight, setNewEntry]);
 
