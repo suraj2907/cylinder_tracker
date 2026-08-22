@@ -174,7 +174,10 @@ function RestaurantsList({
         <div className="grid grid-cols-2 p-0.5 bg-[#F5F5F5] rounded-xl border border-[#EEEEEE] max-w-md">
           <button
             id="tab-all-parties"
-            onClick={() => setCollectOnly(false)}
+            onClick={() => {
+              setCollectOnly(false);
+              setSortBy('total');
+            }}
             className={`py-1.5 text-xs rounded-lg transition-all cursor-pointer ${
               !collectOnly
                 ? 'bg-white text-[#1A1A1A] font-semibold shadow-none border border-[#E5E5E5]'
@@ -185,7 +188,10 @@ function RestaurantsList({
           </button>
           <button
             id="tab-pending-only"
-            onClick={() => setCollectOnly(true)}
+            onClick={() => {
+              setCollectOnly(true);
+              setSortBy('az');
+            }}
             className={`py-1.5 text-xs rounded-lg transition-all cursor-pointer ${
               collectOnly
                 ? 'bg-white text-[#1A1A1A] font-semibold shadow-none border border-[#E5E5E5]'
