@@ -467,14 +467,14 @@ export function getInvoiceLabel(bill) {
 export function isNewBill(b) {
   if (!b) return false;
   const invNo = parseInt(b.invoice_no, 10);
-  // Invoices up to #3510 were already included in the imported BillBook base previous_balance
-  return (invNo > 3510) || (!b.legacy_invoice_no && b.created_at >= '2026-08-22T00:00:00Z');
+  // Bills from 21st August onwards (INV-3508+) were created in the app
+  return (invNo >= 3508) || (b.bill_date >= '2026-08-21') || (!b.legacy_invoice_no && b.created_at >= '2026-08-21T00:00:00Z');
 }
 
 export function isNewPayment(p) {
   if (!p) return false;
   const note = (p.note || p.notes || '');
-  return note.includes('Payment Received (ID') || (p.created_at >= '2026-08-22T00:00:00Z' && !note.includes('Legacy') && !note.includes('Official'));
+  return note.includes('Payment Received (ID') || (p.date >= '2026-08-21' && !note.includes('Legacy') && !note.includes('Official'));
 }
 
 export function getAllPartiesCurrentBalances(restaurantProfiles = {}, bills = [], payments = []) {
