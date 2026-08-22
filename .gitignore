@@ -7,14 +7,20 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies & Build artifacts
 node_modules
 dist
 dist-ssr
+
+# Environment Variables & Private Secrets
 *.local
 .env
 .env.*
+.env.local
+.env.production
+.env.development
 
-# Editor directories and files
+# Editor directories and temporary files
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -25,12 +31,27 @@ dist-ssr
 *.sln
 *.sw?
 
-# Database caches and sensitive CSV reports
+# Database caches, JSON test dumps, and sensitive CSV reports
 src/data.json
 src/data_cleaned.json
 import_report.js
+*.csv
+*.xlsx
+*.xls
 public/*.csv
+public/*.xlsx
+
+# Scripts and Temporary Tools
 scripts/
+scripts/*
 scratch/
+scratch/*
 scratch*
+temp/
+*.tmp
+*.bak
+
+# SQL dumps with sensitive data
+*.sql
+!supabase_schema.sql
 
