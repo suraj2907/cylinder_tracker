@@ -167,18 +167,44 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
 
     // 1. Stock Deduction in `items` catalog table
     if (Array.isArray(billData.items)) {
-      for (const lineItem of billData.items) {
-        if (lineItem.item_id && lineItem.qty) {
-          const { data: itemData } = await supabase
-            .from('items')
-            .select('current_stock')
-            .eq('id', lineItem.item_id)
-            .single();
-          if (itemData) {
-            const newStock = Math.max(0, (itemData.current_stock || 0) - parseInt(lineItem.qty, 10));
-            await supabase.from('items').update({ current_stock: newStock }).eq('id', lineItem.item_id);
+      try {
+        const { data: allItems } = await supabase.from('items').select('*');
+        for (const lineItem of billData.items) {
+          const qtyNum = parseInt(lineItem.qty, 10) || 0;
+          if (qtyNum <= 0) continue;
+
+          const desc = (lineItem.description || lineItem.name || '').toLowerCase();
+          let targetItem = null;
+          if (lineItem.item_id) {
+            targetItem = (allItems || []).find(it => it.id === lineItem.item_id);
+          }
+          if (!targetItem) {
+            targetItem = (allItems || []).find(it => {
+              const n = it.name.toLowerCase();
+              if (desc.includes('21') && n.includes('21')) return true;
+              if (desc.includes('15') && n.includes('15')) return true;
+              if ((desc.includes('19.2') || desc.includes('commercial') || desc.includes('lpg') || desc.includes('cylinder')) && n.includes('19.2')) return true;
+              return false;
+            });
+          }
+
+          if (targetItem) {
+            const newStock = Math.max(0, (parseInt(targetItem.current_stock, 10) || 0) - qtyNum);
+            try {
+              await fetch('/api/db?table=items', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: targetItem.id, current_stock: newStock })
+              });
+            } catch (e) {
+              console.warn('API DB items stock deduction fallback', e);
+            }
+            await supabase.from('items').update({ current_stock: newStock }).eq('id', targetItem.id);
+            targetItem.current_stock = newStock;
           }
         }
+      } catch (stockErr) {
+        console.warn('Error deducting stock on createBill:', stockErr);
       }
     }
 
