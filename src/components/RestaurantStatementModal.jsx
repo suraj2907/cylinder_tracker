@@ -29,10 +29,17 @@ function RestaurantStatementModal({
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
 
+  const [activeSection, setActiveSection] = useState('passbook');
   const [activeTab, setActiveTab] = useState("all");
   const [ledgerRows, setLedgerRows] = useState([]);
   const [displayCount, setDisplayCount] = useState(25);
   const [selectedBillForPrint, setSelectedBillForPrint] = useState(null);
+
+  const restaurantBills = useMemo(() => {
+    if (!restaurantName) return [];
+    const normTarget = norm(restaurantName);
+    return bills.filter(b => norm(b.restaurant_name || '') === normTarget);
+  }, [bills, restaurantName]);
 
   // Load historical ledger entries from Supabase
   useEffect(() => {
@@ -194,14 +201,14 @@ function RestaurantStatementModal({
       };
     });
 
-    // Sort for UI display (newest date first; within same date: 1. INVOICE -> 2. SUPPLY -> 3. PAYMENT)
+    // Sort for UI display (newest date first; within same date: Aakhri transaction on top -> 1. PAYMENT -> 2. SUPPLY -> 3. INVOICE)
     return listWithBalance.sort((a, b) => {
       const dateCmp = (b.date || '').localeCompare(a.date || '');
       if (dateCmp !== 0) return dateCmp;
       if (a.ledgerIndex !== undefined && b.ledgerIndex !== undefined) {
         return b.ledgerIndex - a.ledgerIndex;
       }
-      const typeRank = { bill: 1, cylinder: 2, ledger: 3, payment: 4 };
+      const typeRank = { payment: 1, ledger: 2, cylinder: 3, bill: 4 };
       const rankA = typeRank[a.kind] || 2;
       const rankB = typeRank[b.kind] || 2;
       if (rankA !== rankB) return rankA - rankB;

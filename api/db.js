@@ -53,7 +53,8 @@ export default async function handler(req, res) {
       if (Array.isArray(payload)) {
         query = client.from(table).insert(payload);
       } else if (payload.id) {
-        query = client.from(table).upsert(payload);
+        const { id, ...updateFields } = payload;
+        query = client.from(table).update(updateFields).eq('id', id);
       } else {
         query = client.from(table).insert([payload]);
       }

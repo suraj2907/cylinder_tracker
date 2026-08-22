@@ -400,6 +400,15 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
               }
               if (targetItem) {
                 const restoredStock = (parseFloat(targetItem.current_stock) || 0) + qtyNum;
+                try {
+                  await fetch('/api/db?table=items', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: targetItem.id, current_stock: restoredStock })
+                  });
+                } catch (e) {
+                  console.warn('API DB items stock restoration fallback', e);
+                }
                 await supabase.from('items').update({ current_stock: restoredStock }).eq('id', targetItem.id);
                 targetItem.current_stock = restoredStock;
               }

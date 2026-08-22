@@ -126,7 +126,8 @@ function publicLedgerApiPlugin() {
                   if (Array.isArray(payload)) {
                     query = client.from(table).insert(payload);
                   } else if (payload.id) {
-                    query = client.from(table).upsert(payload);
+                    const { id, ...updateFields } = payload;
+                    query = client.from(table).update(updateFields).eq('id', id);
                   } else {
                     query = client.from(table).insert([payload]);
                   }
@@ -177,6 +178,21 @@ function publicLedgerApiPlugin() {
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), publicLedgerApiPlugin()],
+  build: {
+    chunkSizeWarningLimit: 1500,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('xlsx')) return 'vendor-xlsx';
+            if (id.includes('jspdf') || id.includes('html2canvas')) return 'vendor-pdf';
+            if (id.includes('@supabase')) return 'vendor-supabase';
+            if (id.includes('react') || id.includes('react-dom') || id.includes('lucide-react')) return 'vendor-react';
+          }
+        }
+      }
+    }
+  },
   server: {
     port: 5173,
     strictPort: false,

@@ -57,6 +57,36 @@ export function useInventory(currentUser) {
 
   useEffect(() => {
     fetchData();
+
+    // Setup Realtime postgres changes channel for items and inventory
+    const channel = supabase
+      .channel('inventory_realtime_sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'items' },
+        (payload) => {
+          console.log('⚡ Realtime Items Stock Event:', payload);
+          if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
+            const updated = payload.new;
+            setItems(prev => {
+              const idx = prev.findIndex(it => it.id === updated.id);
+              if (idx >= 0) {
+                const next = [...prev];
+                next[idx] = updated;
+                return next;
+              }
+              return [...prev, updated];
+            });
+          } else if (payload.eventType === 'DELETE') {
+            setItems(prev => prev.filter(it => it.id !== payload.old.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [fetchData]);
 
   // Compute live stock dynamically for each item from current database stock
