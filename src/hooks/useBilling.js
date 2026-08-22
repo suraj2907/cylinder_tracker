@@ -109,9 +109,13 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
     return maxNo > 0 ? maxNo + 1 : 3511;
   }, [bills]);
 
-  const saveRestaurantProfile = async (name, { mobile, gst_num, address, previous_balance }) => {
+  const saveRestaurantProfile = async (name, { mobile, gst_num, address, previous_balance, originalName }) => {
+    const finalName = (name || '').trim();
+    const prevName = (originalName || '').trim();
+    const isRenamed = Boolean(prevName && prevName !== finalName);
+
     const payload = {
-      name,
+      name: finalName,
       mobile: mobile ? mobile.trim() : null,
       gst_num: (gst_num && gst_num.trim()) ? gst_num.trim().toUpperCase() : null,
       address: (address && address.trim()) ? address.trim() : null
@@ -123,10 +127,38 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
     // Optimistically update React state immediately
     setRestaurantProfiles(prev => {
       const next = { ...prev };
-      next[name] = { ...(next[name] || {}), ...payload };
-      next[name.toLowerCase()] = { ...(next[name.toLowerCase()] || {}), ...payload };
+      if (isRenamed) {
+        delete next[prevName];
+        delete next[prevName.toLowerCase()];
+      }
+      next[finalName] = { ...(next[finalName] || {}), ...payload };
+      next[finalName.toLowerCase()] = { ...(next[finalName.toLowerCase()] || {}), ...payload };
       return next;
     });
+
+    try {
+      if (isRenamed) {
+        // Update restaurant profile in Supabase
+        const { error: updateErr } = await supabase.from('restaurants').update(payload).eq('name', prevName);
+        if (updateErr) {
+          // If previous row not found by exact string, try upsert
+          await supabase.from('restaurants').upsert(payload, { onConflict: 'name' });
+        }
+        // Cascade rename to bills, payments, entries, legacy_ledger_entries
+        await Promise.all([
+          supabase.from('bills').update({ restaurant_name: finalName }).eq('restaurant_name', prevName),
+          supabase.from('payments').update({ restaurant_name: finalName }).eq('restaurant_name', prevName),
+          supabase.from('entries').update({ name: finalName }).eq('name', prevName),
+          supabase.from('legacy_ledger_entries').update({ restaurant_name: finalName }).eq('restaurant_name', prevName)
+        ]);
+      } else {
+        await supabase
+          .from('restaurants')
+          .upsert(payload, { onConflict: 'name' });
+      }
+    } catch (err) {
+      console.warn('Supabase save restaurant profile error:', err);
+    }
 
     try {
       await fetch('/api/db?table=restaurants', {
@@ -136,14 +168,6 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
       });
     } catch (e) {
       console.warn('API db fallback', e);
-    }
-
-    try {
-      await supabase
-        .from('restaurants')
-        .upsert(payload, { onConflict: 'name' });
-    } catch (err) {
-      console.warn('Supabase upsert restaurant fallback', err);
     }
 
     await fetchProfiles();

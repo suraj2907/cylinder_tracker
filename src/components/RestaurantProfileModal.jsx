@@ -21,12 +21,13 @@ export default function RestaurantProfileModal({ restaurantName = '', existingPr
     try {
       await onSave(finalName, {
         name: finalName,
+        originalName: restaurantName || undefined,
         mobile: mobile.trim(),
         gst_num: gstNum.trim().toUpperCase(),
         address: address.trim(),
         previous_balance: prevBal !== '' ? parseFloat(prevBal) : undefined
       });
-      alert(`✅ ${finalName} database me successfully save ho gaya!`);
+      alert(`✅ ${finalName} profile successfully saved!`);
       onClose();
     } catch (e) {
       alert('Save nahi hua: ' + (e.message || 'Error'));
@@ -50,7 +51,7 @@ export default function RestaurantProfileModal({ restaurantName = '', existingPr
                 {isNew ? 'New Customer / Party' : 'Edit Party Profile'}
               </span>
               <h3 className="text-base font-black text-slate-900 mt-0.5">
-                {isNew ? 'Add New Restaurant' : restaurantName}
+                {isNew ? 'Add New Restaurant' : name || restaurantName}
               </h3>
             </div>
           </div>
@@ -71,20 +72,14 @@ export default function RestaurantProfileModal({ restaurantName = '', existingPr
             <label className="text-xs font-black text-slate-700 uppercase tracking-wider block">
               🏪 Customer / Restaurant Name <span className="text-rose-500">*</span>
             </label>
-            {isNew ? (
-              <input
-                required
-                autoFocus
-                className="mt-1 w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-extrabold text-slate-900 focus:outline-none focus:border-sky-500 focus:bg-white shadow-xs transition-all"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="e.g. Hotel Radhika, Suraj Dhaba, etc."
-              />
-            ) : (
-              <div className="mt-1 w-full bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-black text-slate-700">
-                {restaurantName}
-              </div>
-            )}
+            <input
+              required
+              autoFocus
+              className="mt-1 w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-extrabold text-slate-900 focus:outline-none focus:border-sky-500 focus:bg-white shadow-xs transition-all"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="e.g. Hotel Radhika, Suraj Dhaba, etc."
+            />
           </div>
 
           {/* Phone / Mobile */}
