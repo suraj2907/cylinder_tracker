@@ -69,6 +69,32 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
 
   useEffect(() => {
     Promise.all([fetchProfiles(), fetchBills()]).finally(() => setLoadingBilling(false));
+
+    // Real-time synchronization for Bills across multiple devices (Suraj & Shivam)
+    const channel = supabase
+      .channel('realtime-bills-sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'bills' },
+        (payload) => {
+          console.log('⚡ Realtime Bills Event:', payload);
+          if (payload.eventType === 'INSERT') {
+            const newBill = payload.new;
+            setBills(prev => [newBill, ...prev.filter(b => b.id !== newBill.id && parseInt(b.invoice_no, 10) !== parseInt(newBill.invoice_no, 10))]);
+          } else if (payload.eventType === 'UPDATE') {
+            const updated = payload.new;
+            setBills(prev => prev.map(b => b.id === updated.id ? updated : b));
+          } else if (payload.eventType === 'DELETE') {
+            const oldId = payload.old.id;
+            setBills(prev => prev.filter(b => b.id !== oldId));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [fetchProfiles, fetchBills]);
 
   // Shown to the user as a suggestion/placeholder only — the DB sequence is the real,
@@ -79,7 +105,7 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
       const num = parseInt(b.invoice_no || b.legacy_invoice_no, 10);
       if (!isNaN(num) && num > maxNo) maxNo = num;
     });
-    return maxNo > 0 ? maxNo + 1 : 3499;
+    return maxNo > 0 ? maxNo + 1 : 3511;
   }, [bills]);
 
   const saveRestaurantProfile = async (name, { mobile, gst_num, address, previous_balance }) => {
@@ -123,15 +149,52 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
   };
 
   const createBill = async (billData) => {
+    // 1. Anti-Duplicate Protection: Prevent accidental double-clicks or same-second submissions
+    const targetRestName = billData.restaurant_name;
+    const targetTotal = Number(billData.total_amount);
+    const targetDate = billData.bill_date || new Date().toISOString().slice(0, 10);
+
+    const duplicateRecentBill = (bills || []).find(b =>
+      norm(b.restaurant_name) === norm(targetRestName) &&
+      Math.abs(Number(b.total_amount) - targetTotal) < 0.05 &&
+      b.bill_date === targetDate &&
+      (Date.now() - new Date(b.created_at || Date.now()).getTime()) < 45000
+    );
+
+    if (duplicateRecentBill) {
+      console.warn('Duplicate bill creation prevented:', duplicateRecentBill);
+      throw new Error(`⚠️ Duplicate bill detected! "${targetRestName}" ka ₹${targetTotal} ka bill (INV-${duplicateRecentBill.invoice_no}) abhi-abhi save hua hai.`);
+    }
+
+    // 2. Concurrency-Safe Sequential Invoice Number:
+    // Always fetch latest max invoice number directly from Supabase so Suraj & Shivam never collide
+    let latestMaxNo = 3510;
+    try {
+      const { data: maxInvData } = await supabase
+        .from('bills')
+        .select('invoice_no')
+        .order('invoice_no', { ascending: false })
+        .limit(1)
+        .single();
+      if (maxInvData && maxInvData.invoice_no) {
+        latestMaxNo = Math.max(latestMaxNo, parseInt(maxInvData.invoice_no, 10));
+      }
+    } catch (e) {
+      console.warn('Could not query max invoice_no, using local sequence', e);
+    }
+
+    let invNo = billData.invoice_no ? parseInt(billData.invoice_no, 10) : (latestMaxNo + 1);
+    if (isNaN(invNo) || invNo <= latestMaxNo) {
+      invNo = latestMaxNo + 1;
+    }
+
     // Clean up payload so only existing columns are sent to 'bills' table
     const { restaurant_id, ...cleanBillData } = billData;
-    const payload = { ...cleanBillData, created_by: currentUser };
-
-    if (payload.invoice_no) {
-      payload.invoice_no = parseInt(payload.invoice_no, 10);
-    } else {
-      delete payload.invoice_no;
-    }
+    const payload = { 
+      ...cleanBillData, 
+      invoice_no: invNo,
+      created_by: currentUser || 'Suraj'
+    };
 
     let savedBill = null;
     try {
@@ -162,9 +225,10 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
       savedBill = data;
     }
 
-    // --- AUTO-LINKED INVENTORY & ENTRY OPERATIONS ---
-    const targetRestName = billData.restaurant_name;
+    // Optimistically update React state immediately with no duplicate
+    setBills(prev => [savedBill, ...prev.filter(b => b.id !== savedBill.id && b.invoice_no !== savedBill.invoice_no)]);
 
+    // --- AUTO-LINKED INVENTORY & ENTRY OPERATIONS ---
     // 1. Stock Deduction in `items` catalog table
     if (Array.isArray(billData.items)) {
       try {

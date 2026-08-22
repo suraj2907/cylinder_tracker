@@ -346,8 +346,25 @@ export function useCylinderData(currentUser) {
               setBatches(prev => {
                 const ex = prev.find(b => b.batch === newRec.batch_num);
                 if (ex) {
-                  const exists = ex.entries.some(e => e.id === newRec.id);
-                  if (exists) return prev;
+                  const alreadyHasId = ex.entries.some(e => e.id === newRec.id);
+                  if (alreadyHasId) return prev;
+
+                  // Check if there is a local unsynced temporary entry with matching details
+                  const matchingUnsyncedIdx = ex.entries.findIndex(e =>
+                    e.unsynced &&
+                    norm(e.name) === norm(newRec.name) &&
+                    e.qty === newRec.qty &&
+                    e.type === newRec.type &&
+                    e.date === newRec.date &&
+                    !!e.isReturn === !!newRec.is_return
+                  );
+
+                  if (matchingUnsyncedIdx >= 0) {
+                    const newEntries = [...ex.entries];
+                    newEntries[matchingUnsyncedIdx] = entryObj;
+                    return prev.map(b => b.batch === newRec.batch_num ? { ...b, entries: newEntries } : b);
+                  }
+
                   return prev.map(b => b.batch === newRec.batch_num ? { ...b, entries: [...b.entries, entryObj] } : b);
                 } else {
                   return [...prev, { batch: newRec.batch_num, khaliDate: newRec.date || "", note: "", entries: [entryObj] }].sort((a, b) => b.batch - a.batch);
@@ -374,7 +391,14 @@ export function useCylinderData(currentUser) {
             console.log('⚡ Realtime Payments Event:', payload);
             if (payload.eventType === 'INSERT') {
               const newPay = payload.new;
-              setPayments(prev => [newPay, ...prev.filter(p => p.id !== newPay.id)]);
+              setPayments(prev => {
+                const filtered = prev.filter(p => {
+                  if (p.id === newPay.id) return false;
+                  if (p.unsynced && norm(p.restaurant_name || p.restaurantName) === norm(newPay.restaurant_name) && parseFloat(p.amount) === parseFloat(newPay.amount) && p.date === newPay.date) return false;
+                  return true;
+                });
+                return [newPay, ...filtered];
+              });
               const partner = newPay.user_name || 'Partner';
               if (partner !== currentUserRef.current) {
                 showToast(`💳 ${partner} recorded ₹${newPay.amount} payment for ${newPay.restaurant_name}!`);
