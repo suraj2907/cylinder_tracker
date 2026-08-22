@@ -371,30 +371,43 @@ export default function PublicLedgerView({ token }) {
         doc.text(`Phone No: +91- ${restaurantProfile.mobile}`, 14, 47);
       }
 
-      // Summary Box (Right)
-      const boxX = pageWidth - 80;
-      const boxY = 28;
-      const boxWidth = 66;
+      // Summary Box (Right) - perfectly aligned to right table edge (196mm)
+      const boxWidth = 75;
+      const boxX = pageWidth - 14 - boxWidth;
+      const boxY = 26;
       const boxHeight = 25;
       doc.setDrawColor(200, 200, 200);
       doc.setFillColor(255, 255, 255);
       doc.rect(boxX, boxY, boxWidth, boxHeight);
 
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8);
-      doc.setTextColor(50, 50, 50);
-      doc.text(`Date: ${dateRangeLabel}`, boxX + 3, boxY + 5);
-
-      doc.line(boxX, boxY + 6.5, boxX + boxWidth, boxY + 6.5);
-
-      doc.setFont('helvetica', 'bold');
-      doc.text(`Total Receivable Amount: ₹${totalsSummary.finalBalance.toFixed(1)}`, boxX + 3, boxY + 10.5);
-      
-      doc.setFont('helvetica', 'normal');
       doc.setFontSize(7.5);
-      doc.text(`Overdue Amount: ₹${totalsSummary.overdueAmount.toFixed(1)}`, boxX + 3, boxY + 14.5);
-      doc.text(`Total Sales Amount: ₹${totalsSummary.totalDebit.toFixed(1)}`, boxX + 3, boxY + 18.5);
-      doc.text(`Total Received Amount: ₹${totalsSummary.totalCredit.toFixed(1)}`, boxX + 3, boxY + 22.5);
+      doc.setTextColor(60, 60, 60);
+      doc.text(`Date: ${dateRangeLabel}`, boxX + 3, boxY + 4.5);
+
+      doc.line(boxX, boxY + 6, boxX + boxWidth, boxY + 6);
+
+      // Total Receivable (Bold)
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(20, 20, 20);
+      doc.text('Total Receivable Amount:', boxX + 3, boxY + 10.5);
+      doc.text(`Rs. ${totalsSummary.finalBalance.toFixed(1)}`, boxX + boxWidth - 3, boxY + 10.5, { align: 'right' });
+      
+      // Overdue Amount
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(70, 70, 70);
+      doc.text('Overdue Amount:', boxX + 3, boxY + 14.5);
+      doc.text(`Rs. ${totalsSummary.overdueAmount.toFixed(1)}`, boxX + boxWidth - 3, boxY + 14.5, { align: 'right' });
+
+      // Total Sales Amount
+      doc.text('Total Sales Amount:', boxX + 3, boxY + 18);
+      doc.text(`Rs. ${totalsSummary.totalDebit.toFixed(1)}`, boxX + boxWidth - 3, boxY + 18, { align: 'right' });
+
+      // Total Received Amount
+      doc.text('Total Received Amount:', boxX + 3, boxY + 21.5);
+      doc.text(`Rs. ${totalsSummary.totalCredit.toFixed(1)}`, boxX + boxWidth - 3, boxY + 21.5, { align: 'right' });
 
       // Build Table Data
       const tableRows = [];
