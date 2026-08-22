@@ -67,8 +67,13 @@ function RestaurantsList({
     let list = Array.from(map.values());
 
     if (search) {
-      const q = search.toLowerCase();
-      list = list.filter(r => r.name.toLowerCase().includes(q));
+      const q = search.toLowerCase().trim();
+      const qNorm = q.replace(/u/g, 'a');
+      list = list.filter(r => {
+        const n = r.name.toLowerCase();
+        const nNorm = n.replace(/u/g, 'a');
+        return n.includes(q) || nNorm.includes(qNorm) || (r.mobile && String(r.mobile).includes(q));
+      });
     }
 
     if (collectOnly) {
