@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../utils/supabaseClient';
+import { norm } from '../utils/dataUtils';
 
 const PAGE_SIZE = 1000;
 
