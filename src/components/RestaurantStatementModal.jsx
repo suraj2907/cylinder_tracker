@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, memo } from 'react';
 import { formatIsoDate, normType, getInvoiceLabel, getPartyCurrentBalance, norm, isNewPayment, isNewBill } from '../utils/dataUtils';
+import { exportPartyLedgerPDF, exportPartyLedgerExcel } from '../utils/exportUtils';
 import { supabase } from '../utils/supabaseClient';
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -21,62 +22,38 @@ function RestaurantStatementModal({
   const currentMonthStr = today.slice(0, 7);
 
   const profile = restaurantProfiles[restaurantName] || {};
-  const openingBalance = parseFloat(profile.previous_balance || 0);
 
   const [filterPeriod, setFilterPeriod] = useState(currentMonthStr);
   const [rangeMode, setRangeMode] = useState(false);
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
 
-  const [activeSection, setActiveSection] = useState('passbook');
-  const [selectedBillForPrint, setSelectedBillForPrint] = useState(null);
-  const [displayCount, setDisplayCount] = useState(40);
+  const [activeTab, setActiveTab] = useState("all");
   const [ledgerRows, setLedgerRows] = useState([]);
+  const [displayCount, setDisplayCount] = useState(25);
+  const [selectedBillForPrint, setSelectedBillForPrint] = useState(null);
 
-  const restaurantBills = useMemo(() => {
-    if (!restaurantName) return [];
-    const normTarget = norm(restaurantName);
-    return bills.filter(b => norm(b.restaurant_name || '') === normTarget);
-  }, [bills, restaurantName]);
-
-  // Fetch this restaurant's historical ledger rows from the database using case-insensitive ilike
+  // Load historical ledger entries from Supabase
   useEffect(() => {
-    let active = true;
-    if (!restaurantName) return;
+    async function loadOfficialLedger() {
+      try {
+        const { data, error } = await supabase
+          .from('legacy_ledger_entries')
+          .select('*')
+          .ilike('restaurant_name', restaurantName.trim())
+          .order('entry_date', { ascending: true });
 
-    fetch(`/api/db?table=legacy_ledger_entries&ilike=restaurant_name&value=${encodeURIComponent(restaurantName.trim())}&order=entry_date&asc=true`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (active && Array.isArray(data) && data.length > 0) {
+        if (!error && data) {
           setLedgerRows(data);
-          return;
         }
-        supabase
-          .from('legacy_ledger_entries')
-          .select('*')
-          .ilike('restaurant_name', restaurantName.trim())
-          .order('entry_date', { ascending: true })
-          .then(({ data: sbData, error }) => {
-            if (error) { console.error('Error fetching ledger history', error); return; }
-            if (active) setLedgerRows(sbData || []);
-          });
-      })
-      .catch(() => {
-        supabase
-          .from('legacy_ledger_entries')
-          .select('*')
-          .ilike('restaurant_name', restaurantName.trim())
-          .order('entry_date', { ascending: true })
-          .then(({ data: sbData, error }) => {
-            if (error) { console.error('Error fetching ledger history', error); return; }
-            if (active) setLedgerRows(sbData || []);
-          });
-      });
-
-    return () => { active = false; };
+      } catch (err) {
+        console.warn('Error loading legacy ledger:', err);
+      }
+    }
+    loadOfficialLedger();
   }, [restaurantName]);
 
-  // Unified activity timeline for this restaurant
+  // Combine and sort all activities for this restaurant
   const allRestaurantActivities = useMemo(() => {
     const list = [];
     const normTarget = norm(restaurantName);
@@ -181,32 +158,31 @@ function RestaurantStatementModal({
       }
     });
 
-    // Base balance up to 17/08/2026 from official synced CSV ledgers
+    // Base balance from official synced profiles
     const baseBalance = parseFloat(profile.previous_balance || 0);
 
-    // Precise chronological ascending sort (date asc -> ledgerIndex asc)
+    // Precise chronological ascending sort:
+    // Pattern on same date: 1. INVOICE -> 2. SUPPLY -> 3. PAYMENT
     const sortedAsc = [...list].sort((a, b) => {
       const dateCmp = (a.date || '').localeCompare(b.date || '');
       if (dateCmp !== 0) return dateCmp;
       if (a.ledgerIndex !== undefined && b.ledgerIndex !== undefined) {
         return a.ledgerIndex - b.ledgerIndex;
       }
-      const typeRank = { cylinder: 1, ledger: 2, bill: 3, payment: 4 };
+      const typeRank = { bill: 1, cylinder: 2, ledger: 3, payment: 4 };
       const rankA = typeRank[a.kind] || 2;
       const rankB = typeRank[b.kind] || 2;
       if (rankA !== rankB) return rankA - rankB;
       return (a.srNo || 0) - (b.srNo || 0);
     });
     
-    let currentBalance = 0;
+    let currentBalance = baseBalance;
     const listWithBalance = sortedAsc.map(item => {
       if (item.isOfficialLedger && item.officialBalance !== null && !isNaN(item.officialBalance)) {
         currentBalance = item.officialBalance;
       } else {
         if (item.kind === 'bill') {
-          const paidOnBill = item.rawBillObj ? (parseFloat(item.rawBillObj.amount_paid) || 0) : 0;
-          const unpaidOnBill = Math.max(0, item.amount - paidOnBill);
-          currentBalance += unpaidOnBill;
+          currentBalance += item.amount;
         } else if (item.kind === 'payment') {
           currentBalance -= item.amount;
         }
@@ -217,20 +193,20 @@ function RestaurantStatementModal({
       };
     });
 
-    // Sort descending for UI display (newest date first, newest ledger transaction on top)
+    // Sort for UI display (newest date first; within same date: 1. INVOICE -> 2. SUPPLY -> 3. PAYMENT)
     return listWithBalance.sort((a, b) => {
       const dateCmp = (b.date || '').localeCompare(a.date || '');
       if (dateCmp !== 0) return dateCmp;
       if (a.ledgerIndex !== undefined && b.ledgerIndex !== undefined) {
         return b.ledgerIndex - a.ledgerIndex;
       }
-      const typeRank = { bill: 1, payment: 2, ledger: 3, cylinder: 4 };
+      const typeRank = { bill: 1, cylinder: 2, ledger: 3, payment: 4 };
       const rankA = typeRank[a.kind] || 2;
       const rankB = typeRank[b.kind] || 2;
       if (rankA !== rankB) return rankA - rankB;
       return (b.srNo || 0) - (a.srNo || 0);
     });
-  }, [restaurantName, ledgerRows, batches, payments, bills, restaurantProfiles, today]);
+  }, [restaurantName, ledgerRows, batches, payments, bills, restaurantProfiles, today, profile.previous_balance]);
 
   // Filter activities based on Month / Date Range / All Time
   const filteredActivities = useMemo(() => {
@@ -387,59 +363,87 @@ function RestaurantStatementModal({
           </div>
         </div>
 
-        {/* Filter Period Controls */}
-        <div className="flex items-center justify-between gap-2 flex-wrap bg-slate-50 p-2 rounded-xl border border-slate-200">
-          <div className="flex items-center gap-1.5 p-0.5 bg-white border border-slate-200 rounded-lg">
-            <button
-              onClick={() => setRangeMode(false)}
-              className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                !rangeMode ? 'bg-sky-600 text-white shadow-sm font-extrabold' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Month View
-            </button>
-            <button
-              onClick={() => setRangeMode(true)}
-              className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                rangeMode ? 'bg-sky-600 text-white shadow-sm font-extrabold' : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              Date Range
-            </button>
+        {/* Filter Period Controls & Export Buttons */}
+        <div className="flex items-center justify-between gap-2 flex-wrap bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1 p-0.5 bg-white border border-slate-200 rounded-lg">
+              <button
+                onClick={() => setRangeMode(false)}
+                className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                  !rangeMode ? 'bg-sky-600 text-white shadow-sm font-extrabold' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Month View
+              </button>
+              <button
+                onClick={() => setRangeMode(true)}
+                className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                  rangeMode ? 'bg-sky-600 text-white shadow-sm font-extrabold' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Date Range
+              </button>
+            </div>
+
+            {!rangeMode ? (
+              <select
+                value={filterPeriod}
+                onChange={e => setFilterPeriod(e.target.value)}
+                className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 shadow-sm focus:border-sky-500"
+              >
+                <option value="all">All Time (Complete History)</option>
+                {availableMonths.map(mStr => {
+                  const [y, m] = mStr.split('-');
+                  const mName = MFULL[parseInt(m) - 1] || mStr;
+                  return (
+                    <option key={mStr} value={mStr}>{mName} {y}</option>
+                  );
+                })}
+              </select>
+            ) : (
+              <div className="flex items-center gap-2 flex-wrap">
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={e => setStartDate(e.target.value)}
+                  className="px-2 py-0.5 rounded-lg border border-slate-300 bg-white text-xs font-bold"
+                />
+                <span className="text-xs text-slate-400 font-bold">to</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={e => setEndDate(e.target.value)}
+                  className="px-2 py-0.5 rounded-lg border border-slate-300 bg-white text-xs font-bold"
+                />
+              </div>
+            )}
           </div>
 
-          {!rangeMode ? (
-            <select
-              value={filterPeriod}
-              onChange={e => setFilterPeriod(e.target.value)}
-              className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 shadow-sm focus:border-sky-500"
+          {/* Download Party Statement Buttons */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const pLabel = rangeMode ? `${startDate} to ${endDate}` : (filterPeriod === 'all' ? 'All Time' : filterPeriod);
+                exportPartyLedgerPDF(restaurantName, filteredActivities, profile, pLabel, stats);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+              title="Download PDF Ledger Statement"
             >
-              <option value="all">All Time (Complete History)</option>
-              {availableMonths.map(mStr => {
-                const [y, m] = mStr.split('-');
-                const mName = MFULL[parseInt(m) - 1] || mStr;
-                return (
-                  <option key={mStr} value={mStr}>{mName} {y}</option>
-                );
-              })}
-            </select>
-          ) : (
-            <div className="flex items-center gap-2 flex-wrap">
-              <input
-                type="date"
-                value={startDate}
-                onChange={e => setStartDate(e.target.value)}
-                className="px-2 py-0.5 rounded-lg border border-slate-300 bg-white text-xs font-bold"
-              />
-              <span className="text-xs text-slate-400 font-bold">to</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={e => setEndDate(e.target.value)}
-                className="px-2 py-0.5 rounded-lg border border-slate-300 bg-white text-xs font-bold"
-              />
-            </div>
-          )}
+              <span>📄</span>
+              <span>Download PDF</span>
+            </button>
+            <button
+              onClick={() => {
+                const pLabel = rangeMode ? `${startDate} to ${endDate}` : (filterPeriod === 'all' ? 'All Time' : filterPeriod);
+                exportPartyLedgerExcel(restaurantName, filteredActivities, profile, pLabel, stats);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+              title="Download Excel Spreadsheet"
+            >
+              <span>📊</span>
+              <span>Export Excel</span>
+            </button>
+          </div>
         </div>
 
         {/* Summary KPIs Strip for this Hotel */}
@@ -890,26 +894,38 @@ function RestaurantStatementModal({
               </table>
 
               <div className="flex justify-end pt-2 border-t border-slate-200">
-                <div className="w-52 space-y-1 text-[11px]">
+                <div className="w-60 space-y-1.5 text-[11px]">
                   {selectedBillForPrint.gst_mode === 'gst' && (
                     <>
                       <div className="flex justify-between text-slate-500">
                         <span>Taxable Amount</span>
-                        <span>₹{Number(selectedBillForPrint.taxable_amount || 0).toFixed(2)}</span>
+                        <span>₹{Number(selectedBillForPrint.taxable_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                       </div>
                       <div className="flex justify-between text-slate-500">
                         <span>CGST @9%</span>
-                        <span>₹{Number(selectedBillForPrint.cgst || 0).toFixed(2)}</span>
+                        <span>₹{Number(selectedBillForPrint.cgst || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                       </div>
                       <div className="flex justify-between text-slate-500">
                         <span>SGST @9%</span>
-                        <span>₹{Number(selectedBillForPrint.sgst || 0).toFixed(2)}</span>
+                        <span>₹{Number(selectedBillForPrint.sgst || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                       </div>
                     </>
                   )}
-                  <div className="flex justify-between border-t border-slate-350 pt-1 font-black text-xs text-slate-900">
-                    <span>Total</span>
-                    <span>₹{Number(selectedBillForPrint.total_amount || 0).toFixed(2)}</span>
+                  <div className="flex justify-between border-t border-slate-300 pt-1 font-black text-xs text-slate-900">
+                    <span>Total Amount</span>
+                    <span>₹{Number(selectedBillForPrint.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  </div>
+
+                  {/* Received & Balance Due breakdown */}
+                  <div className="flex justify-between text-emerald-700 font-bold border-t border-slate-200 pt-1">
+                    <span>Received Amount</span>
+                    <span>₹{Number(selectedBillForPrint.amount_paid || (selectedBillForPrint.payment_status === 'paid' ? selectedBillForPrint.total_amount : 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between font-black text-xs border-t border-slate-200 pt-1">
+                    <span className={Number(selectedBillForPrint.total_amount || 0) - Number(selectedBillForPrint.amount_paid || (selectedBillForPrint.payment_status === 'paid' ? selectedBillForPrint.total_amount : 0)) > 0 ? 'text-rose-600' : 'text-slate-800'}>Balance Due</span>
+                    <span className={Number(selectedBillForPrint.total_amount || 0) - Number(selectedBillForPrint.amount_paid || (selectedBillForPrint.payment_status === 'paid' ? selectedBillForPrint.total_amount : 0)) > 0 ? 'text-rose-600 font-black' : 'text-emerald-700'}>
+                      ₹{Math.max(0, Number(selectedBillForPrint.total_amount || 0) - Number(selectedBillForPrint.amount_paid || (selectedBillForPrint.payment_status === 'paid' ? selectedBillForPrint.total_amount : 0))).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </span>
                   </div>
                 </div>
               </div>
