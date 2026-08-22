@@ -24,32 +24,50 @@ function publicLedgerApiPlugin() {
             const { createClient } = await import('@supabase/supabase-js');
             const client = createClient(supabaseUrl, serviceKey);
 
-            const { data: restData } = await client
+            const rawTarget = partyName.trim();
+            const { data: restList } = await client
               .from('restaurants')
               .select('name, mobile, previous_balance, address, gst_num')
-              .ilike('name', partyName)
-              .single();
+              .or(`name.ilike.%${rawTarget}%,name.ilike.${rawTarget}`)
+              .limit(5);
 
-            const canonicalName = restData?.name || partyName;
+            const restData = restList?.[0] || null;
+            const canonicalName = restData?.name || rawTarget;
 
-            const { data: legacyRows } = await client
-              .from('legacy_ledger_entries')
-              .select('*')
-              .ilike('restaurant_name', canonicalName)
-              .not('entry_date', 'is', null)
-              .order('entry_date', { ascending: true });
+            const searchTerms = [rawTarget, canonicalName];
+            if (restData?.name) searchTerms.push(restData.name);
+            const stopWords = ['hotel', 'cafe', 'dhaba', 'dhabha', 'restaurant', 'restuarant', 'private', 'limited', 'project', 'and', 'the'];
+            rawTarget.split(/\s+/).forEach(w => {
+              const cleanW = w.toLowerCase().replace(/[^a-z0-9]/g, '');
+              if (cleanW.length >= 4 && !stopWords.includes(cleanW)) {
+                searchTerms.push(cleanW);
+              }
+            });
 
-            const { data: billsData } = await client
-              .from('bills')
-              .select('*')
-              .ilike('restaurant_name', canonicalName)
-              .order('bill_date', { ascending: true });
+            const orFilter = [...new Set(searchTerms)].map(t => `restaurant_name.ilike.%${t}%`).join(',');
 
-            const { data: paymentsData } = await client
-              .from('payments')
-              .select('*')
-              .ilike('restaurant_name', canonicalName)
-              .order('date', { ascending: true });
+            const [
+              { data: legacyRows },
+              { data: billsData },
+              { data: paymentsData }
+            ] = await Promise.all([
+              client
+                .from('legacy_ledger_entries')
+                .select('*')
+                .or(orFilter)
+                .not('entry_date', 'is', null)
+                .order('entry_date', { ascending: true }),
+              client
+                .from('bills')
+                .select('*')
+                .or(orFilter)
+                .order('bill_date', { ascending: true }),
+              client
+                .from('payments')
+                .select('*')
+                .or(orFilter)
+                .order('date', { ascending: true })
+            ]);
 
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');

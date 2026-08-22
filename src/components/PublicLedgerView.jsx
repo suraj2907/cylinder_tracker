@@ -47,11 +47,58 @@ export default function PublicLedgerView({ token }) {
           return;
         }
 
-        const response = await fetch(`/api/public-ledger?party=${encodeURIComponent(partyName)}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch public statement payload');
+        let payload = null;
+        try {
+          const response = await fetch(`/api/public-ledger?party=${encodeURIComponent(partyName)}`);
+          if (response.ok) {
+            payload = await response.json();
+          }
+        } catch (apiErr) {
+          console.warn('Public API endpoint error, using direct Supabase client fallback', apiErr);
         }
-        const payload = await response.json();
+
+        if (!payload || !payload.restaurant) {
+          // Direct Supabase Client Fallback
+          const rawTarget = partyName.trim();
+          const { data: restList } = await publicClient
+            .from('restaurants')
+            .select('name, mobile, previous_balance, address, gst_num')
+            .or(`name.ilike.%${rawTarget}%,name.ilike.${rawTarget}`)
+            .limit(5);
+
+          const restData = restList?.[0] || null;
+          const canonicalName = restData?.name || rawTarget;
+
+          const [
+            { data: legacyRows },
+            { data: billsData },
+            { data: paymentsData }
+          ] = await Promise.all([
+            publicClient
+              .from('legacy_ledger_entries')
+              .select('*')
+              .or(`restaurant_name.ilike.%${rawTarget}%,restaurant_name.ilike.%${canonicalName}%`)
+              .not('entry_date', 'is', null)
+              .order('entry_date', { ascending: true }),
+            publicClient
+              .from('bills')
+              .select('*')
+              .or(`restaurant_name.ilike.%${rawTarget}%,restaurant_name.ilike.%${canonicalName}%`)
+              .order('bill_date', { ascending: true }),
+            publicClient
+              .from('payments')
+              .select('*')
+              .or(`restaurant_name.ilike.%${rawTarget}%,restaurant_name.ilike.%${canonicalName}%`)
+              .order('date', { ascending: true })
+          ]);
+
+          payload = {
+            restaurant: restData || { name: canonicalName, previous_balance: 0 },
+            legacyRows: legacyRows || [],
+            bills: billsData || [],
+            payments: paymentsData || []
+          };
+        }
 
         setRestaurantProfile(payload.restaurant || { name: partyName, previous_balance: 0 });
         setLedgerRows(Array.isArray(payload.legacyRows) ? payload.legacyRows : []);

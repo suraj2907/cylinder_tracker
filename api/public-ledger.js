@@ -9,32 +9,52 @@ export default async function handler(req, res) {
   const supabase = createClient(supabaseUrl, serviceKey);
 
   try {
-    const { data: restData } = await supabase
+    const rawTarget = partyName.trim();
+    // Case-insensitive search with limit to avoid single() multi-row crash
+    const { data: restList } = await supabase
       .from('restaurants')
       .select('name, mobile, previous_balance, address, gst_num')
-      .ilike('name', partyName)
-      .single();
+      .or(`name.ilike.%${rawTarget}%,name.ilike.${rawTarget}`)
+      .limit(5);
 
-    const canonicalName = restData?.name || partyName;
+    const restData = restList?.[0] || null;
+    const canonicalName = restData?.name || rawTarget;
 
-    const { data: legacyRows } = await supabase
-      .from('legacy_ledger_entries')
-      .select('*')
-      .ilike('restaurant_name', canonicalName)
-      .not('entry_date', 'is', null)
-      .order('entry_date', { ascending: true });
+    const searchTerms = [rawTarget, canonicalName];
+    if (restData?.name) searchTerms.push(restData.name);
+    // Add significant keywords like 'gurudev', 'railies', 'magnaura', 'panchmukhi'
+    const stopWords = ['hotel', 'cafe', 'dhaba', 'dhabha', 'restaurant', 'restuarant', 'private', 'limited', 'project', 'and', 'the'];
+    rawTarget.split(/\s+/).forEach(w => {
+      const cleanW = w.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (cleanW.length >= 4 && !stopWords.includes(cleanW)) {
+        searchTerms.push(cleanW);
+      }
+    });
 
-    const { data: billsData } = await supabase
-      .from('bills')
-      .select('*')
-      .ilike('restaurant_name', canonicalName)
-      .order('bill_date', { ascending: true });
+    const orFilter = [...new Set(searchTerms)].map(t => `restaurant_name.ilike.%${t}%`).join(',');
 
-    const { data: paymentsData } = await supabase
-      .from('payments')
-      .select('*')
-      .ilike('restaurant_name', canonicalName)
-      .order('date', { ascending: true });
+    const [
+      { data: legacyRows, error: err1 },
+      { data: billsData, error: err2 },
+      { data: paymentsData, error: err3 }
+    ] = await Promise.all([
+      supabase
+        .from('legacy_ledger_entries')
+        .select('*')
+        .or(orFilter)
+        .not('entry_date', 'is', null)
+        .order('entry_date', { ascending: true }),
+      supabase
+        .from('bills')
+        .select('*')
+        .or(orFilter)
+        .order('bill_date', { ascending: true }),
+      supabase
+        .from('payments')
+        .select('*')
+        .or(orFilter)
+        .order('date', { ascending: true })
+    ]);
 
     return res.status(200).json({
       restaurant: restData || { name: canonicalName, previous_balance: 0 },
@@ -43,6 +63,7 @@ export default async function handler(req, res) {
       payments: paymentsData || []
     });
   } catch (err) {
+    console.error('Public ledger error:', err);
     return res.status(500).json({ error: err.message });
   }
 }
