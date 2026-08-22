@@ -487,13 +487,13 @@ export function getAllPartiesCurrentBalances(restaurantProfiles = {}, bills = []
     map[normP] = Math.max(0, bal);
   });
 
-  // 2. Add unpaid portion of newly generated bills
+  // 2. Add total amount of newly generated bills
   (bills || []).forEach(b => {
     if (isNewBill(b)) {
       const normP = norm(b.restaurant_name);
-      const unpaid = (parseFloat(b.total_amount) || 0) - (parseFloat(b.amount_paid) || 0);
-      if (unpaid > 0.05) {
-        map[normP] = (map[normP] || 0) + unpaid;
+      const amt = parseFloat(b.total_amount) || 0;
+      if (amt > 0.05) {
+        map[normP] = (map[normP] || 0) + amt;
       }
     }
   });
@@ -522,12 +522,12 @@ export function getPartyCurrentBalance(partyName, restaurantProfiles = {}, bills
     }
   });
 
-  // 2. Add unpaid portion of newly generated bills
+  // 2. Add total amount of newly generated bills
   let newBillsSum = 0;
   (bills || []).forEach(b => {
     if (norm(b.restaurant_name) === normP && isNewBill(b)) {
-      const unpaid = (parseFloat(b.total_amount) || 0) - (parseFloat(b.amount_paid) || 0);
-      if (unpaid > 0.05) newBillsSum += unpaid;
+      const amt = parseFloat(b.total_amount) || 0;
+      if (amt > 0.05) newBillsSum += amt;
     }
   });
 

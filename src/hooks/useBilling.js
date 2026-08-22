@@ -262,6 +262,32 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
       }
     }
 
+    // 3. Auto Payment Collection in `payments` table for Instant Paid Invoices
+    const paidAmt = parseFloat(billData.amount_paid || (billData.payment_status === 'paid' ? billData.total_amount : 0)) || 0;
+    if (paidAmt > 0) {
+      const invLabel = `INV-${String(invNo).padStart(4, '0')}`;
+      const payMode = (billData.payment_type || 'cash').toLowerCase().includes('upi') ? 'UPI' : 'Cash';
+      const payPayload = {
+        batch_num: currentBatchNum,
+        restaurant_name: targetRestName,
+        amount: paidAmt,
+        payment_mode: payMode,
+        user_name: currentUser || 'Suraj',
+        date: billData.bill_date || new Date().toISOString().slice(0, 10),
+        note: `Payment Received (${invLabel})`
+      };
+      try {
+        await fetch('/api/db?table=payments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payPayload)
+        });
+      } catch (e) {
+        console.warn('API DB payment insert fallback', e);
+      }
+      await supabase.from('payments').insert([payPayload]);
+    }
+
     await fetchBills();
     return savedBill;
   };
@@ -349,6 +375,17 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
       const removeCallback = onDeliveryRemoved || onRemoveDeliveryEntry;
       if (typeof removeCallback === 'function') {
         removeCallback(billData.restaurant_name, billData.bill_date);
+      }
+
+      // 5. Remove matching auto payment from `payments` table if invoice had logged payment
+      if (billData.invoice_no) {
+        try {
+          const invNote = `Payment Received (INV-${String(billData.invoice_no).padStart(4, '0')})`;
+          await fetch(`/api/db?table=payments&note=ilike.*${encodeURIComponent(invNote)}*`, { method: 'DELETE' }).catch(() => null);
+          await supabase.from('payments').delete().ilike('note', `%${invNote}%`);
+        } catch (payErr) {
+          console.warn('Error removing auto payment on bill delete:', payErr);
+        }
       }
     }
 
