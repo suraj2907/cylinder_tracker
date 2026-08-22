@@ -22,6 +22,7 @@ function RestaurantStatementModal({
   const currentMonthStr = today.slice(0, 7);
 
   const profile = restaurantProfiles[restaurantName] || {};
+  const openingBalance = parseFloat(profile.previous_balance || 0);
 
   const [filterPeriod, setFilterPeriod] = useState(currentMonthStr);
   const [rangeMode, setRangeMode] = useState(false);
