@@ -474,7 +474,7 @@ export function isNewBill(b) {
 export function isNewPayment(p) {
   if (!p) return false;
   const note = (p.note || p.notes || '');
-  return note.includes('Payment Received (ID') || (p.date >= '2026-08-20' && !note.includes('Legacy') && !note.includes('Official'));
+  return note.includes('Payment Received (ID') || (p.date >= '2026-08-21' && !note.includes('Legacy') && !note.includes('Official'));
 }
 
 export function getAllPartiesCurrentBalances(restaurantProfiles = {}, bills = [], payments = []) {
