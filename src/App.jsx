@@ -219,14 +219,15 @@ export default function App() {
               </span>
             </button>
 
-            {/* Quick Receive Payment Modal Trigger (Desktop) */}
+            {/* Quick Receive Payment Modal Trigger */}
             <button
               onClick={() => setShowAddPaymentModal(true)}
-              className="hidden sm:flex px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-extrabold transition-all shadow-soft items-center gap-1.5 cursor-pointer"
+              className="px-2 sm:px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-black transition-all shadow-soft flex items-center gap-1 cursor-pointer shrink-0"
               title="Receive Party Payment"
             >
               <span>💳</span>
-              <span>Receive Payment</span>
+              <span className="hidden sm:inline">Receive Payment</span>
+              <span className="inline sm:hidden">Pay</span>
             </button>
 
             {/* Secure Partner User Info & Sign Out Pill */}
@@ -266,12 +267,12 @@ export default function App() {
           ))}
         </div>
 
-        {/* Mobile Navigation Dropdown & Quick Add */}
-        <div className="flex lg:hidden items-center justify-between gap-2 mt-2 pt-2 border-t border-slate-100">
+        {/* Mobile Navigation Dropdown & Quick Action Buttons */}
+        <div className="flex lg:hidden items-center justify-between gap-1.5 mt-2 pt-2 border-t border-slate-100">
           <select
             value={tab}
             onChange={e => setTab(e.target.value)}
-            className="bg-slate-100 border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-900 focus:outline-none text-xs font-black flex-1 shadow-inner cursor-pointer"
+            className="bg-slate-100 border border-slate-200 rounded-xl px-2 py-1.5 text-slate-900 focus:outline-none text-xs font-black flex-1 min-w-0 shadow-inner cursor-pointer"
           >
             <option value="dashboard">📊 Dashboard</option>
             <option value="restaurants">🏪 Customer Directory & Ledger</option>
@@ -288,9 +289,18 @@ export default function App() {
           </select>
 
           <button 
+            onClick={() => setShowAddPaymentModal(true)}
+            className="px-2.5 py-1.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white shadow-soft flex items-center gap-1 cursor-pointer shrink-0"
+            title="Receive Payment"
+          >
+            💳 Pay
+          </button>
+
+          <button 
             onClick={() => setTab("add")}
-            className="px-3 py-1.5 rounded-xl text-xs font-black bg-sky-600 hover:bg-sky-700 active:scale-95 text-white shadow-soft flex items-center gap-1 cursor-pointer shrink-0">
-            ➕ Add Entry
+            className="px-2.5 py-1.5 rounded-xl text-xs font-black bg-sky-600 hover:bg-sky-700 active:scale-95 text-white shadow-soft flex items-center gap-1 cursor-pointer shrink-0"
+          >
+            ➕ Entry
           </button>
         </div>
       </div>
