@@ -281,6 +281,33 @@ function RestaurantStatementModal({
     return { del21, del192, totalDel, ret21, ret192, totalRet, out21, out192, totalOut, paidCash, paidUPI, totalPaid };
   }, [filteredActivities]);
 
+  // Calculate Lifetime Overall Cylinder Holding for this party (across complete history)
+  const overallStats = useMemo(() => {
+    let del21 = 0, del192 = 0;
+    let ret21 = 0, ret192 = 0;
+
+    allRestaurantActivities.forEach(item => {
+      if (item.kind === 'cylinder') {
+        const is21 = item.type === "21kg";
+        if (item.isReturn) {
+          if (is21) ret21 += item.qty;
+          else ret192 += item.qty;
+        } else {
+          if (is21) del21 += item.qty;
+          else del192 += item.qty;
+        }
+      }
+    });
+
+    const totalDel = del21 + del192;
+    const totalRet = ret21 + ret192;
+    const out21 = Math.max(0, del21 - ret21);
+    const out192 = Math.max(0, del192 - ret192);
+    const totalOut = totalDel - totalRet;
+
+    return { del21, del192, totalDel, ret21, ret192, totalRet, out21, out192, totalOut };
+  }, [allRestaurantActivities]);
+
   // Available Months for dropdown
   const availableMonths = useMemo(() => {
     const s = new Set();
@@ -355,7 +382,7 @@ function RestaurantStatementModal({
           <div className="text-right">
             <div className="text-xs font-bold text-slate-800">{restaurantName}</div>
             <div className="text-[11px] text-slate-500 font-medium">
-              Holding: <span className="font-bold text-amber-700">{stats.totalOut} Cylinders</span> {profile.mobile ? `• +91-${profile.mobile}` : ''}
+              Holding: <span className="font-bold text-amber-700">{overallStats.totalOut} Cylinders</span> {profile.mobile ? `• +91-${profile.mobile}` : ''}
             </div>
           </div>
         </div>
@@ -437,14 +464,20 @@ function RestaurantStatementModal({
 
           {/* Outstanding Empty Card */}
           <div className={`py-1.5 px-2.5 rounded-xl border ${
-            stats.totalOut > 0 ? 'bg-amber-50/80 border-amber-300' : 'bg-emerald-50/80 border-emerald-200'
+            overallStats.totalOut > 0 ? 'bg-amber-50/80 border-amber-300' : 'bg-emerald-50/80 border-emerald-200'
           }`}>
-            <div className="text-[9px] font-bold uppercase tracking-wider text-slate-700">⚠️ Outstanding Khali</div>
-            <div className={`text-sm font-black ${stats.totalOut > 0 ? 'text-amber-950' : 'text-emerald-900'}`}>
-              {stats.totalOut} cylinders
+            <div className="text-[9px] font-bold uppercase tracking-wider text-slate-700">
+              {filterPeriod === 'all' && !rangeMode ? '⚠️ Outstanding Khali' : '⚠️ Live Total Holding'}
+            </div>
+            <div className={`text-sm font-black ${overallStats.totalOut > 0 ? 'text-amber-950' : 'text-emerald-900'}`}>
+              {overallStats.totalOut} cylinders
             </div>
             <div className="text-[9px] font-bold text-slate-700">
-              19.2kg: {stats.out192} | 21kg: {stats.out21}
+              {filterPeriod === 'all' && !rangeMode ? (
+                `19.2kg: ${overallStats.out192} | 21kg: ${overallStats.out21}`
+              ) : (
+                `Period Net: ${stats.totalOut >= 0 ? `+${stats.totalOut}` : `${stats.totalOut}`} units`
+              )}
             </div>
           </div>
 
