@@ -41,14 +41,23 @@ function RestaurantStatementModal({
     return bills.filter(b => norm(b.restaurant_name || '') === normTarget);
   }, [bills, restaurantName]);
 
-  // Load historical ledger entries from Supabase
+  // Load historical ledger entries from API with Supabase fallback
   useEffect(() => {
     async function loadOfficialLedger() {
+      if (!restaurantName) return;
       try {
+        const response = await fetch(`/api/public-ledger?party=${encodeURIComponent(restaurantName.trim())}`);
+        if (response.ok) {
+          const json = await response.json();
+          if (json.legacyRows && json.legacyRows.length > 0) {
+            setLedgerRows(json.legacyRows);
+            return;
+          }
+        }
         const { data, error } = await supabase
           .from('legacy_ledger_entries')
           .select('*')
-          .ilike('restaurant_name', restaurantName.trim())
+          .ilike('restaurant_name', `%${restaurantName.trim()}%`)
           .order('entry_date', { ascending: true });
 
         if (!error && data) {
@@ -230,8 +239,11 @@ function RestaurantStatementModal({
   }, [allRestaurantActivities, filterPeriod, rangeMode, startDate, endDate]);
 
   const visibleActivities = useMemo(() => {
+    if (filterPeriod === 'all' && displayCount === 25) {
+      return filteredActivities.slice(0, 100);
+    }
     return filteredActivities.slice(0, displayCount);
-  }, [filteredActivities, displayCount]);
+  }, [filteredActivities, displayCount, filterPeriod]);
 
   // Calculate Summary KPIs for filtered period
   const stats = useMemo(() => {
@@ -545,7 +557,8 @@ function RestaurantStatementModal({
                   No activity entries recorded for {restaurantName} in this period.
                 </div>
               ) : (
-                <div className="overflow-x-auto overflow-y-auto border border-slate-200 rounded-2xl max-h-[460px] flex-1 bg-white shadow-inner">
+                <>
+                  <div className="overflow-x-auto overflow-y-auto border border-slate-200 rounded-2xl max-h-[460px] flex-1 bg-white shadow-inner">
                   
                   {/* MOBILE CARDS VIEW (Spacious & Clean for Mobile & Tablets) */}
                   <div className="block lg:hidden divide-y divide-slate-100 no-print">
@@ -739,7 +752,30 @@ function RestaurantStatementModal({
                     </tbody>
                   </table>
                 </div>
-              )}
+
+                {visibleActivities.length < filteredActivities.length && (
+                  <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 no-print">
+                    <span>
+                      Showing {visibleActivities.length} of {filteredActivities.length} total entries
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setDisplayCount(prev => prev + 100)}
+                        className="px-2.5 py-1 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-lg text-xs font-black transition-all cursor-pointer"
+                      >
+                        + Load More (+100)
+                      </button>
+                      <button
+                        onClick={() => setDisplayCount(filteredActivities.length)}
+                        className="px-2.5 py-1 bg-slate-900 hover:bg-black text-white rounded-lg text-xs font-black transition-all cursor-pointer"
+                      >
+                        ⚡ Show All ({filteredActivities.length})
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
             </>
           ) : (
             // INVOICES LIST VIEW

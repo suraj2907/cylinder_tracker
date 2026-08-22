@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
 export const exportToPDF = (restaurants, tot21, tot192, totAll) => {
@@ -30,7 +30,7 @@ export const exportToPDF = (restaurants, tot21, tot192, totAll) => {
     tableRows.push(rowData);
   });
 
-  doc.autoTable({
+  autoTable(doc, {
     head: [tableColumn],
     body: tableRows,
     startY: 50,
@@ -159,7 +159,7 @@ export const exportPartyLedgerPDF = (partyName, activities = [], profile = {}, p
     ];
   });
 
-  doc.autoTable({
+  autoTable(doc, {
     head: [tableColumn],
     body: tableRows,
     startY: 64,
