@@ -72,32 +72,48 @@ export default function CalendarView({
       }
     });
 
-    // 2. Add Cylinder Deliveries from Sales Invoices (Bills)
+    // 2. Add Standalone Cylinder Deliveries from Sales Invoices ONLY if no batch delivery exists for that party on that date
+    const batchDeliveriesMap = new Set();
+    Object.entries(dateMap).forEach(([dateStr, dObj]) => {
+      const normDate = formatIsoDate(dateStr);
+      if (dObj && dObj.details) {
+        dObj.details.forEach(item => {
+          if (!item.isReturn) {
+            batchDeliveriesMap.add(`${normDate}_${norm(item.name)}`);
+          }
+        });
+      }
+    });
+
     (bills || []).forEach(b => {
       if (b.bill_date && Array.isArray(b.items)) {
         const bDate = formatIsoDate(b.bill_date);
-        b.items.forEach(it => {
-          const q = parseInt(it.qty, 10) || 0;
-          if (q > 0) {
-            const desc = (it.description || it.item_name || it.name || '').toLowerCase();
-            let cylType = '19.2kg';
-            if (desc.includes('21')) cylType = '21kg';
-            else if (desc.includes('15')) cylType = '15kg';
-            
-            list.push({
-              id: `bill_cyl_${b.id}_${it.item_id || it.description}_${Math.random()}`,
-              kind: 'cylinder',
-              date: bDate,
-              batchNum: b.invoice_no ? `INV-${b.invoice_no}` : 'Bill',
-              restaurantName: b.restaurant_name,
-              qty: q,
-              type: cylType,
-              isReturn: false,
-              userName: b.created_by || 'Suraj',
-              rawBillObj: b
-            });
-          }
-        });
+        const normParty = norm(b.restaurant_name);
+        // Only include bill cylinders if this party DOES NOT already have a batch delivery on this date
+        if (!batchDeliveriesMap.has(`${bDate}_${normParty}`)) {
+          b.items.forEach(it => {
+            const q = parseInt(it.qty, 10) || 0;
+            if (q > 0) {
+              const desc = (it.description || it.item_name || it.name || '').toLowerCase();
+              let cylType = '19.2kg';
+              if (desc.includes('21')) cylType = '21kg';
+              else if (desc.includes('15')) cylType = '15kg';
+              
+              list.push({
+                id: `bill_cyl_${b.id}_${it.item_id || it.description}_${Math.random()}`,
+                kind: 'cylinder',
+                date: bDate,
+                batchNum: b.invoice_no ? `INV-${b.invoice_no}` : 'Bill',
+                restaurantName: b.restaurant_name,
+                qty: q,
+                type: cylType,
+                isReturn: false,
+                userName: b.created_by || 'Suraj',
+                rawBillObj: b
+              });
+            }
+          });
+        }
       }
     });
 
@@ -346,11 +362,12 @@ export default function CalendarView({
                 const dayPayments = payments.filter(p => formatIsoDate(p.date) === key);
                 const isTod = key === today, isSel = key === selectedDate;
                 
-                // Aggregate bill deliveries on this date
+                // Aggregate standalone bill deliveries on this date (only if party not already in batch data)
+                const dayBatchPartyNames = new Set((data?.details || []).filter(item => !item.isReturn).map(item => norm(item.name)));
                 const dayBills = (bills || []).filter(b => b.bill_date && formatIsoDate(b.bill_date) === key);
                 let bill21 = 0, bill192 = 0;
                 dayBills.forEach(b => {
-                  if (Array.isArray(b.items)) {
+                  if (Array.isArray(b.items) && !dayBatchPartyNames.has(norm(b.restaurant_name))) {
                     b.items.forEach(it => {
                       const q = parseInt(it.qty, 10) || 0;
                       const desc = (it.description || it.item_name || it.name || '').toLowerCase();
