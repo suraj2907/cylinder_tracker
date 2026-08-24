@@ -837,42 +837,286 @@ function RestaurantStatementModal({
                         <th className="px-4 py-3 text-right no-print">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {restaurantBills.map(b => (
-                        <tr key={b.id} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-4 py-3 font-extrabold text-slate-900">
-                            {getInvoiceLabel(b)}
-                          </td>
-                          <td className="px-4 py-3 font-semibold text-slate-600">{b.bill_date}</td>
-                          <td className="px-4 py-3 font-bold">
-                            <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-black border ${
-                              b.gst_mode === 'gst' ? 'bg-sky-50 text-sky-700 border-sky-200' : 'bg-slate-100 text-slate-600 border-slate-200'
-                            }`}>
-                              {b.gst_mode === 'gst' ? 'GST Tax Invoice' : 'Plain Bill'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-right font-black text-slate-955">
-                            ₹{Number(b.total_amount).toLocaleString()}
-                          </td>
-                          <td className="px-4 py-3 text-right no-print flex justify-end gap-1.5">
+  const handleShareBillOnWhatsApp = (bill) => {
+    if (!bill) return;
+    const phone = profile.mobile || restaurantProfiles?.[bill.restaurant_name]?.mobile || '';
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    const recipient = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+    const invLabel = getInvoiceLabel(bill);
+
+    const itemsArr = Array.isArray(bill.items) ? bill.items : [];
+    const itemsSummary = itemsArr.map((it, idx) => 
+      `${idx + 1}. *${it.description || it.item_name || 'Cylinder'}* - ${it.qty} PCS @ ₹${Number(it.rate).toLocaleString('en-IN')}`
+    ).join('\n');
+
+    const totalAmt = Number(bill.total_amount || 0);
+    const paidAmt = Number(bill.amount_paid || (bill.payment_status === 'paid' ? bill.total_amount : 0));
+    const balanceDue = Math.max(0, totalAmt - paidAmt);
+
+    const message = `🧾 *INVOICE FROM SHREE BALAJI AGENCIES*\n` +
+      `━━━━━━━━━━━━━━━━━━━━━\n` +
+      `🏢 *Party:* ${bill.restaurant_name || restaurantName}\n` +
+      `📄 *Invoice No:* ${invLabel}\n` +
+      `📅 *Date:* ${bill.bill_date}\n` +
+      `━━━━━━━━━━━━━━━━━━━━━\n` +
+      `📦 *Items:*\n${itemsSummary || '1. LPG Cylinder Delivery'}\n` +
+      `━━━━━━━━━━━━━━━━━━━━━\n` +
+      `💰 *Total Amount:* ₹${totalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` +
+      (balanceDue > 0 ? `⚠️ *Balance Due:* ₹${balanceDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` : `✅ *Status:* PAID\n`) +
+      `💳 *Payment UPI:* 9407922288-3@ybl\n` +
+      `━━━━━━━━━━━━━━━━━━━━━\n` +
+      `Thank you for your business! 🙏`;
+
+    const encoded = encodeURIComponent(message);
+    const url = recipient ? `https://wa.me/${recipient}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
+    window.open(url, '_blank');
+  };
+
+  const getBillProfile = (rName) => {
+    return profile?.name === rName ? profile : (restaurantProfiles?.[rName] || profile || {});
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+      <div className="bg-white border border-customBorder rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-4xl p-4 sm:p-6 space-y-4 max-h-[92vh] flex flex-col animate-fadeIn">
+        
+        {/* Passbook Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-customBorder pb-3.5 shrink-0">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Party Statement</span>
+            </div>
+            <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight mt-0.5">
+              {restaurantName}
+            </h2>
+            <div className="flex items-center gap-3 text-xs text-slate-500 font-semibold mt-1">
+              <span>Current Pending: <strong className={currentNetPending > 0 ? 'text-rose-600' : 'text-emerald-600'}>₹{currentNetPending.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong></span>
+              {profile.mobile && <span>📞 {profile.mobile}</span>}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => setActiveSection('passbook')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeSection === 'passbook' ? 'bg-slate-900 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              📖 Passbook Ledger
+            </button>
+            <button
+              onClick={() => setActiveSection('invoices')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeSection === 'invoices' ? 'bg-slate-900 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              🧾 Invoices ({restaurantBills.length})
+            </button>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold flex items-center justify-center cursor-pointer transition-colors ml-auto sm:ml-2"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        {/* Modal Main Content Container */}
+        <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+          {activeSection === 'invoices' ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-black uppercase text-slate-700 tracking-wider">
+                  Generated Sales Invoices for {restaurantName}
+                </h3>
+                <span className="text-[11px] font-bold text-slate-400">Total: {restaurantBills.length} Invoices</span>
+              </div>
+
+              <div className="overflow-x-auto border border-customBorder rounded-2xl">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-customBorder text-slate-500 font-bold uppercase text-[10px]">
+                      <th className="px-3.5 py-2.5">Invoice #</th>
+                      <th className="px-3.5 py-2.5">Date</th>
+                      <th className="px-3.5 py-2.5">Type</th>
+                      <th className="px-3.5 py-2.5 text-right">Amount (₹)</th>
+                      <th className="px-3.5 py-2.5 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {restaurantBills.map(b => (
+                      <tr key={b.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="px-3.5 py-3 font-black text-sky-900">
+                          {getInvoiceLabel(b)}
+                        </td>
+                        <td className="px-3.5 py-3 font-bold text-slate-600">{b.bill_date}</td>
+                        <td className="px-3.5 py-3 font-bold">
+                          <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-black border ${
+                            b.gst_mode === 'gst' ? 'bg-sky-50 text-sky-700 border-sky-200' : 'bg-slate-100 text-slate-600 border-slate-200'
+                          }`}>
+                            {b.gst_mode === 'gst' ? 'GST Invoice' : 'Plain Bill'}
+                          </span>
+                        </td>
+                        <td className="px-3.5 py-3 text-right font-black text-slate-900">
+                          ₹{Number(b.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="px-3.5 py-3 text-right no-print">
+                          <div className="flex justify-end items-center gap-1.5">
+                            <button
+                              onClick={() => handleShareBillOnWhatsApp(b)}
+                              className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black transition-all shadow-xs cursor-pointer flex items-center gap-1 active:scale-95"
+                              title="Send Invoice on WhatsApp"
+                            >
+                              <span>📤</span> WhatsApp
+                            </button>
                             <button
                               onClick={() => setSelectedBillForPrint(b)}
-                              className="px-2.5 py-1 rounded-lg bg-sky-50 border border-sky-200 text-sky-800 hover:bg-sky-100 text-[11px] font-extrabold transition-all shadow-xs cursor-pointer"
+                              className="px-2.5 py-1 rounded-xl bg-sky-50 border border-sky-200 text-sky-800 hover:bg-sky-100 text-[11px] font-black transition-all shadow-xs cursor-pointer flex items-center gap-1"
                             >
-                              🖨️ View
+                              <span>🖨️</span> View
                             </button>
                             <button
                               onClick={() => performDeleteBill({ rawBillObj: b, invoiceLabel: getInvoiceLabel(b) })}
-                              className="px-2 py-1 rounded-lg bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 text-[11px] font-bold transition-all cursor-pointer"
+                              className="px-2 py-1 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 text-[11px] font-bold transition-all cursor-pointer"
                               title="Delete Invoice"
                             >
                               🗑️
                             </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {restaurantBills.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="text-center py-10 text-xs font-semibold text-slate-400">
+                          Abhi tak is party ka koi invoice record nahi hua hai.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Passbook Filter Controls & Summary Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 bg-slate-50 p-3 sm:p-4 rounded-2xl border border-slate-200 shrink-0">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Total Delivered</span>
+                  <span className="text-base font-black text-slate-900">{periodStats.delivered} Cyl</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Total Empty Return</span>
+                  <span className="text-base font-black text-slate-900">{periodStats.returned} Cyl</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Total Payments</span>
+                  <span className="text-base font-black text-emerald-700">₹{periodStats.paymentsTotal.toLocaleString('en-IN')}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Total Invoices</span>
+                  <span className="text-base font-black text-sky-800">₹{periodStats.billsTotal.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+
+              {/* Filter Tabs & Export Buttons */}
+              <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1">
+                <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
+                  {['all', 'cylinder', 'payment', 'bill'].map(tabKey => (
+                    <button
+                      key={tabKey}
+                      onClick={() => setActiveTab(tabKey)}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold capitalize transition-all cursor-pointer ${
+                        activeTab === tabKey ? 'bg-white shadow-xs text-slate-900' : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      {tabKey === 'all' ? 'All Activities' : tabKey === 'cylinder' ? 'Cylinders' : tabKey === 'payment' ? 'Payments' : 'Invoices'}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-2 ml-auto">
+                  <button
+                    onClick={() => exportPartyLedgerPDF(restaurantName, filteredActivities, profile, currentNetPending)}
+                    className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
+                  >
+                    📄 PDF
+                  </button>
+                  <button
+                    onClick={() => exportPartyLedgerExcel(restaurantName, filteredActivities, profile, currentNetPending)}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
+                  >
+                    📊 Excel
+                  </button>
+                </div>
+              </div>
+
+              {/* Activity Timeline List */}
+              <div className="border border-customBorder rounded-2xl overflow-hidden">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-customBorder text-slate-500 font-bold uppercase text-[10px]">
+                      <th className="px-3.5 py-2.5">Date</th>
+                      <th className="px-3.5 py-2.5">Activity</th>
+                      <th className="px-3.5 py-2.5">Particulars</th>
+                      <th className="px-3.5 py-2.5 text-right">Debit (+)</th>
+                      <th className="px-3.5 py-2.5 text-right">Credit (-)</th>
+                      <th className="px-3.5 py-2.5 text-right">Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {displayedActivities.map((act, idx) => (
+                      <tr key={act.id || idx} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="px-3.5 py-2.5 font-semibold text-slate-600 whitespace-nowrap">{act.date}</td>
+                        <td className="px-3.5 py-2.5">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase border ${
+                            act.kind === 'payment' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                            act.kind === 'bill' ? 'bg-sky-50 text-sky-800 border-sky-200' :
+                            'bg-slate-100 text-slate-700 border-slate-200'
+                          }`}>
+                            {act.kind === 'cylinder' ? (act.isReturn ? 'Khali Return' : 'Delivery') : act.voucher || act.kind}
+                          </span>
+                        </td>
+                        <td className="px-3.5 py-2.5 text-slate-800 font-bold">
+                          {act.kind === 'cylinder' ? (
+                            <span>{act.qty} PCS ({act.type}) {act.batchNum ? `• Batch #${act.batchNum}` : ''}</span>
+                          ) : act.kind === 'payment' ? (
+                            <span>Payment Received {act.paymentMode ? `(${act.paymentMode})` : ''}</span>
+                          ) : (
+                            <span>Invoice {act.invoiceLabel || ''}</span>
+                          )}
+                        </td>
+                        <td className="px-3.5 py-2.5 text-right font-black text-rose-600">
+                          {act.debit > 0 ? `₹${act.debit.toLocaleString('en-IN')}` : '-'}
+                        </td>
+                        <td className="px-3.5 py-2.5 text-right font-black text-emerald-700">
+                          {act.credit > 0 ? `₹${act.credit.toLocaleString('en-IN')}` : '-'}
+                        </td>
+                        <td className="px-3.5 py-2.5 text-right font-black text-slate-900">
+                          {act.runningBalance !== undefined ? `₹${Math.round(act.runningBalance).toLocaleString('en-IN')}` : '-'}
+                        </td>
+                      </tr>
+                    ))}
+                    {displayedActivities.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="text-center py-10 text-xs font-semibold text-slate-400">
+                          No transactions found for the selected period.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {filteredActivities.length > displayCount && (
+                <div className="text-center pt-2">
+                  <button
+                    onClick={() => setDisplayCount(prev => prev + 25)}
+                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    Show More ({filteredActivities.length - displayCount} remaining)
+                  </button>
                 </div>
               )}
             </>
@@ -880,9 +1124,9 @@ function RestaurantStatementModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="pt-3 border-t border-customBorder flex items-center justify-between no-print">
-          <span className="text-xs font-semibold text-slate-500">
-            Statement for {restaurantName}
+        <div className="pt-3 border-t border-customBorder flex items-center justify-between no-print shrink-0">
+          <span className="text-xs font-semibold text-slate-500 truncate">
+            {restaurantName} • Shree Balaji Agencies
           </span>
           <button
             onClick={onClose}
@@ -894,123 +1138,197 @@ function RestaurantStatementModal({
 
       </div>
 
-      {/* Invoice Print Overlay Modal (Only render on top when print is clicked) */}
+      {/* Invoice Print & WhatsApp Preview Modal */}
       {selectedBillForPrint && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-[100] p-4 overflow-y-auto no-print">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto relative animate-fadeIn">
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center z-[100] p-2 sm:p-4 overflow-y-auto no-print">
+          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl max-w-2xl w-full p-4 sm:p-6 space-y-4 max-h-[94vh] overflow-y-auto relative animate-fadeIn flex flex-col">
             
             {/* Top controls */}
-            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-              <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider">
-                Invoice Print Preview
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3 shrink-0 flex-wrap gap-2">
+              <h3 className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                <span>🧾</span> Invoice Preview ({getInvoiceLabel(selectedBillForPrint)})
               </h3>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleShareBillOnWhatsApp(selectedBillForPrint)}
+                  className="px-3 sm:px-4 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-black hover:bg-emerald-700 transition-all shadow-sm cursor-pointer flex items-center gap-1.5 active:scale-95"
+                >
+                  📤 Send WhatsApp
+                </button>
                 <button
                   onClick={() => window.print()}
-                  className="px-4 py-2 rounded-xl bg-sky-600 text-white text-xs font-black uppercase tracking-wider hover:bg-sky-700 transition-all shadow-sm cursor-pointer"
+                  className="px-3 sm:px-4 py-1.5 rounded-xl bg-sky-600 text-white text-xs font-black hover:bg-sky-700 transition-all shadow-sm cursor-pointer flex items-center gap-1.5 active:scale-95"
                 >
                   🖨️ Print / Save PDF
                 </button>
                 <button
                   onClick={() => setSelectedBillForPrint(null)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-black uppercase tracking-wider hover:bg-slate-200 transition-all border cursor-pointer"
+                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold flex items-center justify-center cursor-pointer transition-colors"
                 >
-                  Close Preview
+                  ✕
                 </button>
               </div>
             </div>
 
             {/* Print Area content */}
-            <div id="bill-print-area" className="border border-slate-200 rounded-2xl p-6 bg-white">
-              <div className="flex justify-between items-start border-b border-slate-200 pb-4 mb-4">
+            <div id="bill-print-area" className="border border-slate-200 rounded-3xl p-4 sm:p-6 bg-white shadow-soft text-xs overflow-hidden space-y-4">
+              {/* Header */}
+              <div className="flex justify-between items-start border-b border-slate-200 pb-4 gap-3">
                 <div>
-                  <h2 className="text-lg font-black text-slate-900">M/S SHREE BALAJI AGENCIES</h2>
-                  <p className="text-[10px] text-slate-500 mt-1">Kamthi Line Beside SBI ATM, Rajnandgaon, Chhattisgarh, 491441</p>
-                  <p className="text-[10px] text-slate-500">📞 9407922288 | ✉️ msspagency@gmail.com</p>
-                  {selectedBillForPrint.gst_mode === 'gst' && <p className="text-[10px] text-slate-500 font-bold">GSTIN: 22SNZPS3600E1ZH</p>}
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span className="text-[9px] font-black text-emerald-700 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">Authorized LPG Distributor</span>
+                  </div>
+                  <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">M/S SHREE BALAJI AGENCIES</h2>
+                  <p className="text-[10px] text-slate-600 font-medium mt-0.5">Kamthi Line Beside SBI ATM, Rajnandgaon, CG, 491441</p>
+                  <p className="text-[10px] text-slate-600 font-semibold">📞 9407922288 | ✉️ msspagency@gmail.com</p>
+                  {selectedBillForPrint.gst_mode === 'gst' && (
+                    <p className="text-[10.5px] font-extrabold text-slate-800 mt-0.5">
+                      GSTIN: <span className="text-sky-800 font-black">22SNZPS3600E1ZH</span>
+                    </p>
+                  )}
                 </div>
-                <div className="text-right">
-                  <span className="inline-block px-2.5 py-0.5 bg-slate-950 text-white text-[9px] font-black rounded uppercase tracking-wider">
-                    {selectedBillForPrint.gst_mode === 'gst' ? 'TAX INVOICE' : 'BILL'}
+
+                <div className="text-right shrink-0">
+                  <span className={`inline-block px-3 py-1 text-[10px] font-black rounded-xl uppercase tracking-wider ${
+                    selectedBillForPrint.gst_mode === 'gst' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-800 border border-slate-300'
+                  }`}>
+                    {selectedBillForPrint.gst_mode === 'gst' ? 'TAX INVOICE' : 'PLAIN BILL'}
                   </span>
-                  <p className="text-xs font-bold text-slate-700 mt-2">Invoice No: {getInvoiceLabel(selectedBillForPrint)}</p>
-                  <p className="text-[10px] text-slate-500">Date: {selectedBillForPrint.bill_date}</p>
+                  <p className="text-xs font-black text-sky-800 mt-1.5">Invoice No: {getInvoiceLabel(selectedBillForPrint)}</p>
+                  <p className="text-[10.5px] text-slate-600 font-bold">Date: {selectedBillForPrint.bill_date}</p>
                 </div>
               </div>
 
-              <div className="mb-4 text-xs">
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Bill To</p>
-                <p className="font-extrabold text-slate-900">{selectedBillForPrint.restaurant_name}</p>
-                {/* GST Details of customer if party has GST registered */}
-                {(selectedBillForPrint.gst_num || profile?.gst_num || restaurantProfiles?.[selectedBillForPrint?.restaurant_name]?.gst_num) && (
-                  <p className="text-[10px] text-slate-700 font-bold mt-0.5">
-                    GSTIN: {selectedBillForPrint.gst_num || profile?.gst_num || restaurantProfiles?.[selectedBillForPrint?.restaurant_name]?.gst_num}
+              {/* Bill To & Customer Info */}
+              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">BILL TO</span>
+                <p className="font-black text-slate-900 text-xs sm:text-sm">{selectedBillForPrint.restaurant_name}</p>
+                {getBillProfile(selectedBillForPrint.restaurant_name).address && (
+                  <p className="text-slate-600 text-[11px] font-medium">{getBillProfile(selectedBillForPrint.restaurant_name).address}</p>
+                )}
+                {getBillProfile(selectedBillForPrint.restaurant_name).mobile && (
+                  <p className="text-slate-700 text-[11px] font-bold">Phone: +91 {getBillProfile(selectedBillForPrint.restaurant_name).mobile}</p>
+                )}
+                {(selectedBillForPrint.gst_num || getBillProfile(selectedBillForPrint.restaurant_name).gst_num) && (
+                  <p className="text-slate-800 text-[11px] font-black">
+                    GSTIN: {selectedBillForPrint.gst_num || getBillProfile(selectedBillForPrint.restaurant_name).gst_num}
                   </p>
                 )}
               </div>
 
-              <table className="w-full text-left text-[11px] border-collapse mb-4">
-                <thead>
-                  <tr className="border-b border-slate-300 font-bold text-slate-700">
-                    <th className="py-2">Item</th>
-                    {selectedBillForPrint.gst_mode === 'gst' && <th className="py-2">HSN</th>}
-                    <th className="py-2 text-right">Qty</th>
-                    <th className="py-2 text-right">Rate</th>
-                    <th className="py-2 text-right">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {Array.isArray(selectedBillForPrint.items) && selectedBillForPrint.items.map((it, i) => (
-                    <tr key={i}>
-                      <td className="py-2 text-slate-800">{it.description}</td>
-                      {selectedBillForPrint.gst_mode === 'gst' && <td className="py-2 text-slate-600">{it.hsn || '27111900'}</td>}
-                      <td className="py-2 text-right text-slate-700">{it.qty}</td>
-                      <td className="py-2 text-right text-slate-700">₹{Number(it.rate).toFixed(2)}</td>
-                      <td className="py-2 text-right text-slate-900 font-semibold">₹{(it.qty * it.rate).toFixed(2)}</td>
+              {/* Line Items Table */}
+              <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-200 font-black text-slate-700 bg-slate-100/70 text-[10px] uppercase tracking-wider">
+                      <th className="py-2.5 px-3">#</th>
+                      <th className="py-2.5 px-3">Item Description</th>
+                      {selectedBillForPrint.gst_mode === 'gst' && <th className="py-2.5 px-3">HSN</th>}
+                      <th className="py-2.5 px-3 text-right">Qty</th>
+                      <th className="py-2.5 px-3 text-right">Rate (₹)</th>
+                      <th className="py-2.5 px-3 text-right">Amount (₹)</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {Array.isArray(selectedBillForPrint.items) && selectedBillForPrint.items.map((it, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/50">
+                        <td className="py-2.5 px-3 font-medium text-slate-400">{idx + 1}</td>
+                        <td className="py-2.5 px-3 font-black text-slate-900">{it.description || it.item_name || 'Cylinder'}</td>
+                        {selectedBillForPrint.gst_mode === 'gst' && <td className="py-2.5 px-3 text-slate-500 font-semibold">{it.hsn || '27111900'}</td>}
+                        <td className="py-2.5 px-3 text-right font-black text-slate-900">{it.qty} PCS</td>
+                        <td className="py-2.5 px-3 text-right font-semibold">₹{Number(it.rate).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td className="py-2.5 px-3 text-right font-black text-slate-900">
+                          ₹{((parseFloat(it.qty) || 0) * (parseFloat(it.rate) || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-slate-100/70 font-black text-slate-900 border-t-2 border-slate-300">
+                      <td colSpan={selectedBillForPrint.gst_mode === 'gst' ? 3 : 2} className="py-2.5 px-3 text-[11px] uppercase tracking-wider">TOTAL PCS</td>
+                      <td className="py-2.5 px-3 text-right font-black">
+                        {(selectedBillForPrint.items || []).reduce((sum, it) => sum + (parseFloat(it.qty) || 0), 0)} PCS
+                      </td>
+                      <td className="py-2.5 px-3"></td>
+                      <td className="py-2.5 px-3 text-right font-black text-sm text-sky-900">
+                        ₹{Number(selectedBillForPrint.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
 
-              <div className="flex justify-end pt-2 border-t border-slate-200">
-                <div className="w-60 space-y-1.5 text-[11px]">
+              {/* Subtotals & Bank details Footer Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                {/* Bank Details & QR */}
+                <div className="space-y-3">
+                  <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-[10.5px] space-y-1">
+                    <span className="text-[9px] font-black text-slate-700 uppercase tracking-widest block mb-0.5">Bank Details</span>
+                    <div className="grid grid-cols-3 gap-y-0.5 text-slate-600">
+                      <span className="font-semibold text-slate-400">Account:</span>
+                      <span className="col-span-2 font-black text-slate-900">MS SHREE BALAJI AGENCIES</span>
+                      <span className="font-semibold text-slate-400">A/C No:</span>
+                      <span className="col-span-2 font-black text-slate-900">43204193003</span>
+                      <span className="font-semibold text-slate-400">IFSC:</span>
+                      <span className="col-span-2 font-black text-slate-900">SBIN0000464</span>
+                      <span className="font-semibold text-slate-400">Branch:</span>
+                      <span className="col-span-2 font-bold text-slate-800">SBI, Rajnandgaon</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 p-2.5 bg-slate-50 border border-slate-200 rounded-2xl">
+                    <img src="/payment-qr.png" alt="Payment QR" className="w-12 h-12 border border-slate-200 rounded-xl shrink-0 bg-white p-0.5" />
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-black text-slate-900 block">UPI ID: 9407922288-3@ybl</span>
+                      <span className="text-[8.5px] text-slate-400 font-semibold block">Scan with GPay, PhonePe, Paytm</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tax Breakdown & Balance Due */}
+                <div className="space-y-2.5 bg-slate-50 p-4 rounded-2xl border border-slate-200">
                   {selectedBillForPrint.gst_mode === 'gst' && (
-                    <>
-                      <div className="flex justify-between text-slate-500">
+                    <div className="space-y-1.5 text-xs border-b border-slate-200 pb-2 text-slate-600">
+                      <div className="flex justify-between">
                         <span>Taxable Amount</span>
-                        <span>₹{Number(selectedBillForPrint.taxable_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                        <span className="font-black text-slate-900">₹{Number(selectedBillForPrint.taxable_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
-                      <div className="flex justify-between text-slate-500">
-                        <span>CGST @9%</span>
-                        <span>₹{Number(selectedBillForPrint.cgst || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                      <div className="flex justify-between text-slate-500 font-semibold">
+                        <span>CGST @ 9%</span>
+                        <span className="font-bold text-slate-900">₹{Number(selectedBillForPrint.cgst || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
-                      <div className="flex justify-between text-slate-500">
-                        <span>SGST @9%</span>
-                        <span>₹{Number(selectedBillForPrint.sgst || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                      <div className="flex justify-between text-slate-500 font-semibold">
+                        <span>SGST @ 9%</span>
+                        <span className="font-bold text-slate-900">₹{Number(selectedBillForPrint.sgst || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
-                    </>
+                    </div>
                   )}
-                  <div className="flex justify-between border-t border-slate-300 pt-1 font-black text-xs text-slate-900">
-                    <span>Total Amount</span>
-                    <span>₹{Number(selectedBillForPrint.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+
+                  <div className="flex justify-between items-center py-0.5">
+                    <span className="text-xs font-black uppercase text-slate-700 tracking-wider">Total Invoice Amount</span>
+                    <span className="text-sm font-black text-slate-900">
+                      ₹{Number(selectedBillForPrint.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
                   </div>
 
-                  {/* Received & Balance Due breakdown */}
-                  <div className="flex justify-between text-emerald-700 font-bold border-t border-slate-200 pt-1">
-                    <span>Received Amount</span>
-                    <span>₹{Number(selectedBillForPrint.amount_paid || (selectedBillForPrint.payment_status === 'paid' ? selectedBillForPrint.total_amount : 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                  <div className="flex justify-between font-black text-xs border-t border-slate-200 pt-1">
-                    <span className={Number(selectedBillForPrint.total_amount || 0) - Number(selectedBillForPrint.amount_paid || (selectedBillForPrint.payment_status === 'paid' ? selectedBillForPrint.total_amount : 0)) > 0 ? 'text-rose-600' : 'text-slate-800'}>Balance Due</span>
-                    <span className={Number(selectedBillForPrint.total_amount || 0) - Number(selectedBillForPrint.amount_paid || (selectedBillForPrint.payment_status === 'paid' ? selectedBillForPrint.total_amount : 0)) > 0 ? 'text-rose-600 font-black' : 'text-emerald-700'}>
-                      ₹{Math.max(0, Number(selectedBillForPrint.total_amount || 0) - Number(selectedBillForPrint.amount_paid || (selectedBillForPrint.payment_status === 'paid' ? selectedBillForPrint.total_amount : 0))).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                    </span>
+                  <div className="space-y-1 text-xs border-t border-b border-slate-200 py-2">
+                    <div className="flex justify-between items-center text-slate-500 font-semibold">
+                      <span>Received / Paid</span>
+                      <span className="text-slate-700 font-bold">₹{Number(selectedBillForPrint.amount_paid || (selectedBillForPrint.payment_status === 'paid' ? selectedBillForPrint.total_amount : 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="font-black text-rose-700">Balance Due</span>
+                      <span className="font-black text-rose-700 text-sm">
+                        ₹{Math.max(0, Number(selectedBillForPrint.total_amount || 0) - Number(selectedBillForPrint.amount_paid || (selectedBillForPrint.payment_status === 'paid' ? selectedBillForPrint.total_amount : 0))).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-5 pt-3 border-t border-slate-100 text-[9px] text-slate-400">
-                <p>Terms: Goods once sold will not be taken back. Empty cylinder returnable; loss/damage chargeable.</p>
+              <div className="pt-2 text-[9px] text-slate-400">
+                <p>Terms: Goods once sold will not be taken back. Empty cylinders returnable; loss/damage chargeable.</p>
               </div>
             </div>
 
