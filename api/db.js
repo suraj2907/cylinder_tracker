@@ -10,6 +10,11 @@ export default async function handler(req, res) {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || Buffer.from('c2Jfc2VjcmV0X3c2dUdLNWdaQ3QxQlh3SE0tRl9MWndfTHUxM2ZPMUQ=', 'base64').toString('utf-8');
   const client = createClient(supabaseUrl, serviceKey);
 
+  // Prevent edge & browser caching
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
   try {
     if (req.method === 'GET') {
       const explicitLimit = req.query.limit ? parseInt(req.query.limit, 10) : null;
