@@ -37,13 +37,20 @@ export function UserProvider({ children }) {
       redirectTo: window.location.origin
     }
   });
-  const logout = () => supabase.auth.signOut();
-
-  // Map logged-in email to existing 'Suraj' or 'Shivam' profile identity
-  const email = session?.user?.email?.toLowerCase();
-  const currentUser = email 
-    ? (email === 'shivam09498@gmail.com' ? 'Shivam' : 'Suraj') 
-    : 'Suraj';
+  // Map logged-in email / Google account metadata to 'Suraj' or 'Shivam' profile identity
+  const email = (session?.user?.email || '').toLowerCase();
+  const metaName = (session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.name || '').toLowerCase();
+  
+  let currentUser = 'Suraj';
+  if (email.includes('shivam') || metaName.includes('shivam')) {
+    currentUser = 'Shivam';
+  } else if (email.includes('suraj') || metaName.includes('suraj')) {
+    currentUser = 'Suraj';
+  } else if (session?.user?.user_metadata?.name) {
+    currentUser = session.user.user_metadata.name.split(' ')[0];
+  } else if (email) {
+    currentUser = email.split('@')[0];
+  }
 
   return (
     <UserContext.Provider value={{ session, currentUser, login, loginWithGoogle, logout, loading }}>
