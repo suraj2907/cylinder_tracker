@@ -249,3 +249,279 @@ export const exportPartyLedgerExcel = (partyName, activities = [], profile = {},
   XLSX.utils.book_append_sheet(wb, ws, "Customer Ledger");
   XLSX.writeFile(wb, `Ledger_${safeName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
 };
+
+// Generate professional vector Tax Invoice PDF document
+export const generateInvoicePDFDoc = (bill, profile = {}) => {
+  const doc = new jsPDF('p', 'mm', 'a4');
+  const invLabel = bill.invoiceLabel || (bill.invoice_no ? `INV-${String(bill.invoice_no).padStart(4, '0')}` : 'INVOICE');
+  const isGst = bill.gst_mode === 'gst';
+
+  // Header Banner
+  doc.setFillColor(15, 23, 42); // Dark slate
+  doc.rect(0, 0, 210, 26, 'F');
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('M/S SHREE BALAJI AGENCIES', 14, 11);
+
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(203, 213, 225);
+  doc.text('Authorized Commercial LPG Distributor • Kamthi Line Beside SBI ATM, Rajnandgaon (C.G.) 491441', 14, 17);
+  doc.text('Phone: 9407922288 | Email: msspagency@gmail.com | GSTIN: 22SNZPS3600E1ZH', 14, 22);
+
+  // Invoice Title Badge
+  doc.setFillColor(isGst ? 2 : 71, isGst ? 132 : 85, isGst ? 199 : 105);
+  doc.roundedRect(150, 7, 46, 12, 1.5, 1.5, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(9.5);
+  doc.setFont('helvetica', 'bold');
+  doc.text(isGst ? 'TAX INVOICE' : 'PLAIN BILL', 173, 15, { align: 'center' });
+
+  // Bill To & Invoice Meta block
+  doc.setTextColor(30, 41, 59);
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'bold');
+  doc.text('BILL TO:', 14, 34);
+  
+  doc.setFontSize(11);
+  doc.setTextColor(15, 23, 42);
+  doc.text(bill.restaurant_name || profile.name || 'Customer', 14, 40);
+
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(71, 85, 105);
+  let yPos = 45;
+  if (profile.address) {
+    doc.text(`Address: ${profile.address}`, 14, yPos);
+    yPos += 5;
+  }
+  const phoneStr = profile.mobile ? `Phone: +91-${profile.mobile}` : '';
+  const partyGst = bill.gst_num || profile.gst_num ? `GSTIN: ${bill.gst_num || profile.gst_num}` : '';
+  doc.text([phoneStr, partyGst].filter(Boolean).join(' | '), 14, yPos);
+
+  // Invoice Details on the Right
+  doc.setFontSize(8.5);
+  doc.setTextColor(71, 85, 105);
+  doc.text(`Invoice No:`, 140, 34);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(14, 116, 144);
+  doc.text(invLabel, 196, 34, { align: 'right' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(71, 85, 105);
+  doc.text(`Invoice Date:`, 140, 40);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(15, 23, 42);
+  doc.text(bill.bill_date || new Date().toISOString().slice(0, 10), 196, 40, { align: 'right' });
+
+  if (bill.batch_num) {
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text(`Batch #:`, 140, 46);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Batch #${bill.batch_num}`, 196, 46, { align: 'right' });
+  }
+
+  // Items Table
+  const tableColumn = isGst 
+    ? ["#", "Item Description", "HSN", "Qty", "Rate (Rs.)", "Amount (Rs.)"]
+    : ["#", "Item Description", "Qty", "Rate (Rs.)", "Amount (Rs.)"];
+
+  const itemsArr = Array.isArray(bill.items) ? bill.items : [];
+  const tableRows = itemsArr.map((it, idx) => {
+    const qty = parseFloat(it.qty) || 0;
+    const rate = parseFloat(it.rate) || 0;
+    const amt = qty * rate;
+    return isGst ? [
+      idx + 1,
+      it.description || it.item_name || 'Cylinder',
+      it.hsn || '27111900',
+      `${qty} PCS`,
+      Number(rate).toLocaleString('en-IN', { minimumFractionDigits: 2 }),
+      Number(amt).toLocaleString('en-IN', { minimumFractionDigits: 2 })
+    ] : [
+      idx + 1,
+      it.description || it.item_name || 'Cylinder',
+      `${qty} PCS`,
+      Number(rate).toLocaleString('en-IN', { minimumFractionDigits: 2 }),
+      Number(amt).toLocaleString('en-IN', { minimumFractionDigits: 2 })
+    ];
+  });
+
+  const tableStartY = Math.max(yPos + 7, 52);
+  autoTable(doc, {
+    head: [tableColumn],
+    body: tableRows,
+    startY: tableStartY,
+    theme: 'grid',
+    styles: { fontSize: 8.5, cellPadding: 3, textColor: [30, 41, 59] },
+    headStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' },
+    columnStyles: isGst ? {
+      0: { cellWidth: 10, halign: 'center' },
+      1: { cellWidth: 70 },
+      2: { cellWidth: 26, halign: 'center' },
+      3: { cellWidth: 22, halign: 'right', fontStyle: 'bold' },
+      4: { cellWidth: 26, halign: 'right' },
+      5: { cellWidth: 28, halign: 'right', fontStyle: 'bold' }
+    } : {
+      0: { cellWidth: 12, halign: 'center' },
+      1: { cellWidth: 90 },
+      2: { cellWidth: 26, halign: 'right', fontStyle: 'bold' },
+      3: { cellWidth: 26, halign: 'right' },
+      4: { cellWidth: 28, halign: 'right', fontStyle: 'bold' }
+    }
+  });
+
+  const finalY = doc.lastAutoTable.finalY + 6;
+
+  // Summary box on right
+  const totAmt = Number(bill.total_amount || 0);
+  const taxable = Number(bill.taxable_amount || 0);
+  const cgst = Number(bill.cgst || 0);
+  const sgst = Number(bill.sgst || 0);
+  const paidAmt = Number(bill.amount_paid || (bill.payment_status === 'paid' ? totAmt : 0));
+  const balDue = Math.max(0, totAmt - paidAmt);
+
+  // Bank details Box (Left)
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(14, finalY, 100, 36, 2, 2, 'F');
+  doc.setDrawColor(226, 232, 240);
+  doc.roundedRect(14, finalY, 100, 36, 2, 2, 'S');
+
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(71, 85, 105);
+  doc.text('BANK DETAILS FOR PAYMENT', 18, finalY + 6);
+
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(30, 41, 59);
+  doc.text('Bank: State Bank of India', 18, finalY + 12);
+  doc.text('Account Name: MS SHREE BALAJI AGENCIES', 18, finalY + 17);
+  doc.text('A/C No: 43204193003  |  IFSC: SBIN0000464', 18, finalY + 22);
+  doc.text('Branch: SBI, Rajnandgaon', 18, finalY + 27);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(14, 116, 144);
+  doc.text('UPI ID: 9407922288-3@ybl (GPay / PhonePe / Paytm)', 18, finalY + 32);
+
+  // Totals Breakdown Box (Right)
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(118, finalY, 78, 36, 2, 2, 'F');
+  doc.setDrawColor(226, 232, 240);
+  doc.roundedRect(118, finalY, 78, 36, 2, 2, 'S');
+
+  let rY = finalY + 6;
+  if (isGst) {
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text('Taxable Amount:', 122, rY);
+    doc.text(`Rs. ${taxable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
+    rY += 5;
+    doc.text('CGST @ 9%:', 122, rY);
+    doc.text(`Rs. ${cgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
+    rY += 5;
+    doc.text('SGST @ 9%:', 122, rY);
+    doc.text(`Rs. ${sgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
+    rY += 6;
+  }
+
+  doc.setFontSize(9.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(15, 23, 42);
+  doc.text('Total Invoice Amount:', 122, rY);
+  doc.text(`Rs. ${totAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
+  rY += 6;
+
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(5, 150, 105);
+  doc.text('Received Amount:', 122, rY);
+  doc.text(`Rs. ${paidAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
+  rY += 5;
+
+  doc.setFontSize(9.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(225, 29, 72);
+  doc.text('Balance Due:', 122, rY);
+  doc.text(`Rs. ${balDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
+
+  // Footer note
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(148, 163, 184);
+  doc.text('Terms: Goods once sold will not be taken back. Empty cylinders returnable; loss/damage chargeable.', 14, finalY + 46);
+  doc.text('Authorized Signatory • M/S SHREE BALAJI AGENCIES', 196, finalY + 46, { align: 'right' });
+
+  return doc;
+};
+
+// Export individual invoice as PDF download
+export const exportBillPDF = (bill, profile = {}) => {
+  const doc = generateInvoicePDFDoc(bill, profile);
+  const invLabel = bill.invoiceLabel || (bill.invoice_no ? `INV-${String(bill.invoice_no).padStart(4, '0')}` : 'INVOICE');
+  const safeName = (bill.restaurant_name || profile.name || 'Customer').replace(/[^a-zA-Z0-9]/g, '_');
+  doc.save(`Invoice_${invLabel}_${safeName}.pdf`);
+};
+
+// Share invoice PDF directly into WhatsApp on mobile, or download & open WhatsApp
+export const shareInvoicePDFOnWhatsApp = async (bill, profile = {}) => {
+  const doc = generateInvoicePDFDoc(bill, profile);
+  const invLabel = bill.invoiceLabel || (bill.invoice_no ? `INV-${String(bill.invoice_no).padStart(4, '0')}` : 'INVOICE');
+  const safeName = (bill.restaurant_name || profile.name || 'Customer').replace(/[^a-zA-Z0-9]/g, '_');
+  const fileName = `Invoice_${invLabel}_${safeName}.pdf`;
+
+  const phone = profile.mobile || bill.mobile || '';
+  const cleanPhone = phone.replace(/[^0-9]/g, '');
+  const recipient = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+
+  const itemsArr = Array.isArray(bill.items) ? bill.items : [];
+  const itemsSummary = itemsArr.map((it, idx) => 
+    `${idx + 1}. *${it.description || it.item_name || 'Cylinder'}* - ${it.qty} PCS @ ₹${Number(it.rate).toLocaleString('en-IN')}`
+  ).join('\n');
+
+  const totAmt = Number(bill.total_amount || 0);
+  const paidAmt = Number(bill.amount_paid || (bill.payment_status === 'paid' ? totAmt : 0));
+  const balDue = Math.max(0, totAmt - paidAmt);
+
+  const message = `🧾 *INVOICE FROM SHREE BALAJI AGENCIES*\n` +
+    `━━━━━━━━━━━━━━━━━━━━━\n` +
+    `🏢 *Party:* ${bill.restaurant_name || profile.name || 'Customer'}\n` +
+    `📄 *Invoice No:* ${invLabel}\n` +
+    `📅 *Date:* ${bill.bill_date || new Date().toISOString().slice(0, 10)}\n` +
+    `━━━━━━━━━━━━━━━━━━━━━\n` +
+    `📦 *Items:*\n${itemsSummary || '1. LPG Commercial Cylinder'}\n` +
+    `━━━━━━━━━━━━━━━━━━━━━\n` +
+    `💰 *Total Amount:* ₹${totAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` +
+    (balDue > 0 ? `⚠️ *Balance Due:* ₹${balDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` : `✅ *Status:* PAID\n`) +
+    `💳 *Payment UPI:* 9407922288-3@ybl\n` +
+    `━━━━━━━━━━━━━━━━━━━━━\n` +
+    `Thank you for your business! 🙏`;
+
+  const pdfBlob = doc.output('blob');
+  const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+  // 1. Mobile Web Share API: Directly attaches and sends PDF file in WhatsApp!
+  if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+    try {
+      await navigator.share({
+        files: [pdfFile],
+        title: `Invoice ${invLabel}`,
+        text: message
+      });
+      return;
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.warn('Native share error, falling back:', err);
+      }
+    }
+  }
+
+  // 2. Fallback: Download PDF file & open WhatsApp
+  doc.save(fileName);
+  const encoded = encodeURIComponent(message);
+  const url = recipient ? `https://wa.me/${recipient}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
+  window.open(url, '_blank');
+};

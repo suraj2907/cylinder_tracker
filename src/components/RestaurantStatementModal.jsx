@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, memo } from 'react';
 import { formatIsoDate, normType, getInvoiceLabel, getPartyCurrentBalance, norm, isNewPayment, isNewBill } from '../utils/dataUtils';
-import { exportPartyLedgerPDF, exportPartyLedgerExcel } from '../utils/exportUtils';
+import { exportPartyLedgerPDF, exportPartyLedgerExcel, shareInvoicePDFOnWhatsApp, exportBillPDF } from '../utils/exportUtils';
 import { supabase } from '../utils/supabaseClient';
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -353,39 +353,10 @@ function RestaurantStatementModal({
     }
   };
 
-  const handleShareBillOnWhatsApp = (bill) => {
+  const handleShareBillOnWhatsApp = async (bill) => {
     if (!bill) return;
-    const phone = profile.mobile || restaurantProfiles?.[bill.restaurant_name]?.mobile || '';
-    const cleanPhone = phone.replace(/[^0-9]/g, '');
-    const recipient = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
-    const invLabel = getInvoiceLabel(bill);
-
-    const itemsArr = Array.isArray(bill.items) ? bill.items : [];
-    const itemsSummary = itemsArr.map((it, idx) => 
-      `${idx + 1}. *${it.description || it.item_name || 'Cylinder'}* - ${it.qty} PCS @ ₹${Number(it.rate).toLocaleString('en-IN')}`
-    ).join('\n');
-
-    const totalAmt = Number(bill.total_amount || 0);
-    const paidAmt = Number(bill.amount_paid || (bill.payment_status === 'paid' ? bill.total_amount : 0));
-    const balanceDue = Math.max(0, totalAmt - paidAmt);
-
-    const message = `🧾 *INVOICE FROM SHREE BALAJI AGENCIES*\n` +
-      `━━━━━━━━━━━━━━━━━━━━━\n` +
-      `🏢 *Party:* ${bill.restaurant_name || restaurantName}\n` +
-      `📄 *Invoice No:* ${invLabel}\n` +
-      `📅 *Date:* ${bill.bill_date}\n` +
-      `━━━━━━━━━━━━━━━━━━━━━\n` +
-      `📦 *Items:*\n${itemsSummary || '1. LPG Cylinder Delivery'}\n` +
-      `━━━━━━━━━━━━━━━━━━━━━\n` +
-      `💰 *Total Amount:* ₹${totalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` +
-      (balanceDue > 0 ? `⚠️ *Balance Due:* ₹${balanceDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` : `✅ *Status:* PAID\n`) +
-      `💳 *Payment UPI:* 9407922288-3@ybl\n` +
-      `━━━━━━━━━━━━━━━━━━━━━\n` +
-      `Thank you for your business! 🙏`;
-
-    const encoded = encodeURIComponent(message);
-    const url = recipient ? `https://wa.me/${recipient}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
-    window.open(url, '_blank');
+    const bProf = getBillProfile(bill.restaurant_name);
+    await shareInvoicePDFOnWhatsApp(bill, bProf);
   };
 
   const getBillProfile = (rName) => {
@@ -957,13 +928,19 @@ function RestaurantStatementModal({
                   onClick={() => handleShareBillOnWhatsApp(selectedBillForPrint)}
                   className="px-3 sm:px-4 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-black hover:bg-emerald-700 transition-all shadow-sm cursor-pointer flex items-center gap-1.5 active:scale-95"
                 >
-                  📤 Send WhatsApp
+                  📤 Send WhatsApp PDF
+                </button>
+                <button
+                  onClick={() => exportBillPDF(selectedBillForPrint, getBillProfile(selectedBillForPrint.restaurant_name))}
+                  className="px-3 sm:px-4 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-black hover:bg-slate-800 transition-all shadow-sm cursor-pointer flex items-center gap-1.5 active:scale-95"
+                >
+                  📄 Download PDF
                 </button>
                 <button
                   onClick={() => window.print()}
                   className="px-3 sm:px-4 py-1.5 rounded-xl bg-sky-600 text-white text-xs font-black hover:bg-sky-700 transition-all shadow-sm cursor-pointer flex items-center gap-1.5 active:scale-95"
                 >
-                  🖨️ Print / Save PDF
+                  🖨️ Print
                 </button>
                 <button
                   onClick={() => setSelectedBillForPrint(null)}

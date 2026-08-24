@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { getInvoiceLabel, norm } from '../utils/dataUtils';
+import { shareInvoicePDFOnWhatsApp, exportBillPDF } from '../utils/exportUtils';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -319,32 +320,22 @@ export default function GenerateBill({
     window.print();
   };
 
-  const handleShareBillOnWhatsApp = () => {
+  const handleShareBillOnWhatsApp = async () => {
     if (!savedBill) return;
-    const phone = profile.mobile || '';
-    const cleanPhone = phone.replace(/[^0-9]/g, '');
-    const recipient = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
-
-    const itemsSummary = items.map((it, idx) => 
-      `${idx + 1}. *${it.description}* - ${it.qty} PCS @ ₹${Number(it.rate).toLocaleString('en-IN')}`
-    ).join('\n');
-
-    const message = `🧾 *INVOICE FROM SHREE BALAJI AGENCIES*\n` +
-      `━━━━━━━━━━━━━━━━━━━━━\n` +
-      `🏢 *Party:* ${selectedRestaurant}\n` +
-      `📄 *Invoice No:* ${invoiceLabel}\n` +
-      `📅 *Date:* ${billDate}\n` +
-      `━━━━━━━━━━━━━━━━━━━━━\n` +
-      `📦 *Items:*\n${itemsSummary}\n` +
-      `━━━━━━━━━━━━━━━━━━━━━\n` +
-      `💰 *Total Amount:* ₹${totals.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` +
-      `💳 *Payment UPI:* 9407922288-3@ybl\n` +
-      `━━━━━━━━━━━━━━━━━━━━━\n` +
-      `Thank you for your business! 🙏`;
-
-    const encoded = encodeURIComponent(message);
-    const url = recipient ? `https://wa.me/${recipient}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
-    window.open(url, '_blank');
+    const billObj = {
+      ...savedBill,
+      restaurant_name: selectedRestaurant,
+      items: items,
+      total_amount: totals.total,
+      taxable_amount: totals.taxable,
+      cgst: totals.cgst,
+      sgst: totals.sgst,
+      gst_mode: gstMode,
+      bill_date: billDate,
+      invoice_no: savedBill.invoice_no || customInvoiceNo,
+      gst_num: customGstNum || profile.gst_num
+    };
+    await shareInvoicePDFOnWhatsApp(billObj, profile);
   };
 
   const invoiceLabel = savedBill ? getInvoiceLabel(savedBill) : null;
@@ -372,15 +363,36 @@ export default function GenerateBill({
           <div className="flex items-center gap-2">
             <button
               onClick={handleShareBillOnWhatsApp}
-              className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-black hover:bg-emerald-700 cursor-pointer flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
+              className="px-3.5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-black hover:bg-emerald-700 cursor-pointer flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
             >
-              📤 Send WhatsApp
+              📤 Send WhatsApp PDF
+            </button>
+            <button
+              onClick={() => {
+                const billObj = {
+                  ...savedBill,
+                  restaurant_name: selectedRestaurant,
+                  items: items,
+                  total_amount: totals.total,
+                  taxable_amount: totals.taxable,
+                  cgst: totals.cgst,
+                  sgst: totals.sgst,
+                  gst_mode: gstMode,
+                  bill_date: billDate,
+                  invoice_no: savedBill.invoice_no || customInvoiceNo,
+                  gst_num: customGstNum || profile.gst_num
+                };
+                exportBillPDF(billObj, profile);
+              }}
+              className="px-3.5 py-2 rounded-xl bg-slate-900 text-white text-xs font-black hover:bg-slate-800 cursor-pointer flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
+            >
+              📄 Download PDF
             </button>
             <button
               onClick={handlePrint}
-              className="px-4 py-2 rounded-xl bg-sky-600 text-white text-xs font-black hover:bg-sky-700 cursor-pointer flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
+              className="px-3.5 py-2 rounded-xl bg-sky-600 text-white text-xs font-black hover:bg-sky-700 cursor-pointer flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
             >
-              🖨️ Print / Save PDF
+              🖨️ Print
             </button>
           </div>
         </div>
