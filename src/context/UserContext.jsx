@@ -37,6 +37,8 @@ export function UserProvider({ children }) {
       redirectTo: window.location.origin
     }
   });
+  const logout = () => supabase.auth.signOut();
+
   // Map logged-in email / Google account metadata to 'Suraj' or 'Shivam' profile identity
   const email = (session?.user?.email || '').toLowerCase();
   const metaName = (session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.name || '').toLowerCase();
