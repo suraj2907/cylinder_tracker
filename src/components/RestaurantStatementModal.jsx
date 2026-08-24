@@ -353,6 +353,45 @@ function RestaurantStatementModal({
     }
   };
 
+  const handleShareBillOnWhatsApp = (bill) => {
+    if (!bill) return;
+    const phone = profile.mobile || restaurantProfiles?.[bill.restaurant_name]?.mobile || '';
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    const recipient = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+    const invLabel = getInvoiceLabel(bill);
+
+    const itemsArr = Array.isArray(bill.items) ? bill.items : [];
+    const itemsSummary = itemsArr.map((it, idx) => 
+      `${idx + 1}. *${it.description || it.item_name || 'Cylinder'}* - ${it.qty} PCS @ ₹${Number(it.rate).toLocaleString('en-IN')}`
+    ).join('\n');
+
+    const totalAmt = Number(bill.total_amount || 0);
+    const paidAmt = Number(bill.amount_paid || (bill.payment_status === 'paid' ? bill.total_amount : 0));
+    const balanceDue = Math.max(0, totalAmt - paidAmt);
+
+    const message = `🧾 *INVOICE FROM SHREE BALAJI AGENCIES*\n` +
+      `━━━━━━━━━━━━━━━━━━━━━\n` +
+      `🏢 *Party:* ${bill.restaurant_name || restaurantName}\n` +
+      `📄 *Invoice No:* ${invLabel}\n` +
+      `📅 *Date:* ${bill.bill_date}\n` +
+      `━━━━━━━━━━━━━━━━━━━━━\n` +
+      `📦 *Items:*\n${itemsSummary || '1. LPG Cylinder Delivery'}\n` +
+      `━━━━━━━━━━━━━━━━━━━━━\n` +
+      `💰 *Total Amount:* ₹${totalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` +
+      (balanceDue > 0 ? `⚠️ *Balance Due:* ₹${balanceDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` : `✅ *Status:* PAID\n`) +
+      `💳 *Payment UPI:* 9407922288-3@ybl\n` +
+      `━━━━━━━━━━━━━━━━━━━━━\n` +
+      `Thank you for your business! 🙏`;
+
+    const encoded = encodeURIComponent(message);
+    const url = recipient ? `https://wa.me/${recipient}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
+    window.open(url, '_blank');
+  };
+
+  const getBillProfile = (rName) => {
+    return profile?.name === rName ? profile : (restaurantProfiles?.[rName] || profile || {});
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto no-print">
       <div className="bg-white rounded-3xl border border-customBorder shadow-2xl max-w-6xl w-full p-4 sm:p-6 space-y-4 my-auto max-h-[95vh] flex flex-col justify-between overflow-hidden">
