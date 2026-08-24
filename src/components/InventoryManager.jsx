@@ -445,6 +445,7 @@ export default function InventoryManager({
       {recordingPurchase && (
         <PurchaseBillModal
           items={items}
+          purchaseBills={purchaseBills}
           onClose={() => setRecordingPurchase(false)}
           onSavePurchase={savePurchaseBill}
         />
@@ -1049,9 +1050,19 @@ function InventoryFormsModal({ mode, items, onClose, onSaveItem }) {
 // ----------------------------------------------------
 // SUB-COMPONENT: Multi-Item Purchase Bill Modal
 // ----------------------------------------------------
-function PurchaseBillModal({ items, onClose, onSavePurchase }) {
+function PurchaseBillModal({ items, purchaseBills = [], onClose, onSavePurchase }) {
+  const nextPurchaseInvoiceNo = useMemo(() => {
+    let maxNo = 0;
+    (purchaseBills || []).forEach(p => {
+      const raw = String(p.invoice_no || '').replace(/\D/g, '');
+      const num = parseInt(raw, 10);
+      if (!isNaN(num) && num > maxNo) maxNo = num;
+    });
+    return maxNo > 0 ? String(maxNo + 1) : '148';
+  }, [purchaseBills]);
+
   const [supplierName, setSupplierName] = useState('Gaspoint Petroleum (India) Limited');
-  const [invoiceNo, setInvoiceNo] = useState('');
+  const [invoiceNo, setInvoiceNo] = useState(nextPurchaseInvoiceNo);
   const [purchaseDate, setPurchaseDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [purchaseNote, setPurchaseNote] = useState('');
   
@@ -1144,7 +1155,7 @@ function PurchaseBillModal({ items, onClose, onSavePurchase }) {
         cgst: calculations.cgst,
         sgst: calculations.sgst,
         total_amount: calculations.total,
-        invoice_no: invoiceNo,
+        invoice_no: invoiceNo || nextPurchaseInvoiceNo,
         note: purchaseNote
       });
 
@@ -1181,12 +1192,15 @@ function PurchaseBillModal({ items, onClose, onSavePurchase }) {
             />
           </div>
           <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase">Purchase Invoice #</label>
+            <div className="flex justify-between items-center">
+              <label className="text-[10px] font-bold text-slate-500 uppercase">Purchase Invoice #</label>
+              <span className="text-[9px] font-bold text-sky-700 bg-sky-50 px-1.5 py-0.2 rounded">Auto</span>
+            </div>
             <input
-              className="mt-1 w-full border border-customBorder bg-white rounded-xl px-3 py-2 text-xs font-bold"
+              className="mt-1 w-full border border-customBorder bg-white rounded-xl px-3 py-2 text-xs font-black text-sky-900"
               value={invoiceNo}
               onChange={e => setInvoiceNo(e.target.value)}
-              placeholder="e.g. 145"
+              placeholder="e.g. 148"
             />
           </div>
           <div>
