@@ -278,13 +278,6 @@ function RestaurantStatementModal({
           if (is21) del21 += item.qty;
           else del192 += item.qty;
         }
-      } else if (item.kind === 'bill' && Array.isArray(item.rawBillObj?.items)) {
-        item.rawBillObj.items.forEach(it => {
-          const q = parseFloat(it.qty) || 0;
-          const desc = (it.description || it.item_name || it.name || '').toLowerCase();
-          if (desc.includes('21')) del21 += q;
-          else if (desc.includes('19.2') || desc.includes('commercial') || desc.includes('lpg') || (!desc.includes('pipe') && !desc.includes('regulator') && !desc.includes('convertor') && !desc.includes('empty'))) del192 += q;
-        });
       } else if (item.kind === 'payment') {
         if (item.paymentMode === 'UPI') paidUPI += item.amount;
         else paidCash += item.amount;
@@ -316,13 +309,6 @@ function RestaurantStatementModal({
           if (is21) del21 += item.qty;
           else del192 += item.qty;
         }
-      } else if (item.kind === 'bill' && Array.isArray(item.rawBillObj?.items)) {
-        item.rawBillObj.items.forEach(it => {
-          const q = parseFloat(it.qty) || 0;
-          const desc = (it.description || it.item_name || it.name || '').toLowerCase();
-          if (desc.includes('21')) del21 += q;
-          else if (desc.includes('19.2') || desc.includes('commercial') || desc.includes('lpg') || (!desc.includes('pipe') && !desc.includes('regulator') && !desc.includes('convertor') && !desc.includes('empty'))) del192 += q;
-        });
       }
     });
 

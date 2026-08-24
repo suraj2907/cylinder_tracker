@@ -64,27 +64,6 @@ function RestaurantsList({
       }
     });
 
-    // Add live cylinders delivered via newly generated bills
-    (bills || []).forEach(b => {
-      if (isNewBill(b) && Array.isArray(b.items)) {
-        const normName = norm(b.restaurant_name);
-        const existing = map.get(normName);
-        if (existing) {
-          let add21 = 0, add192 = 0;
-          b.items.forEach(it => {
-            const q = parseFloat(it.qty) || 0;
-            const desc = (it.description || it.item_name || it.name || '').toLowerCase();
-            if (desc.includes('21')) add21 += q;
-            else if (desc.includes('19.2') || desc.includes('commercial') || desc.includes('lpg') || (!desc.includes('pipe') && !desc.includes('regulator') && !desc.includes('convertor') && !desc.includes('empty'))) add192 += q;
-          });
-          existing.kg21 += add21;
-          existing.kg192 += add192;
-          existing.total += (add21 + add192);
-          existing.outstanding += (add21 + add192);
-        }
-      }
-    });
-
     let list = Array.from(map.values());
 
     if (search) {
