@@ -265,11 +265,11 @@ export default function GenerateBill({
     });
 
     return {
-      subtotal,
-      taxable,
-      cgst,
-      sgst,
-      total: subtotal
+      subtotal: Number(subtotal.toFixed(2)),
+      taxable: Number(taxable.toFixed(2)),
+      cgst: Number(cgst.toFixed(2)),
+      sgst: Number(sgst.toFixed(2)),
+      total: Number(subtotal.toFixed(2))
     };
   }, [items, gstMode, itemsCatalog]);
 
@@ -284,7 +284,6 @@ export default function GenerateBill({
     }
     setSaving(true);
     try {
-      // Due Date = Bill Date + 7 days
       const d = new Date(billDate);
       d.setDate(d.getDate() + 7);
       const dueDate = d.toISOString().slice(0, 10);
@@ -300,63 +299,52 @@ export default function GenerateBill({
         gst_mode: gstMode,
         items,
         subtotal: totals.subtotal,
-        taxable_amount: Number(totals.taxable.toFixed(2)),
-        cgst: Number(totals.cgst.toFixed(2)),
-        sgst: Number(totals.sgst.toFixed(2)),
-        total_amount: Number(totals.total.toFixed(2)),
+        taxable_amount: totals.taxable,
+        cgst: totals.cgst,
+        sgst: totals.sgst,
+        total_amount: totals.total,
         due_date: dueDate,
         payment_status: 'unpaid',
         amount_paid: 0
       });
       setSavedBill(bill);
-    } catch (e) {
-      alert('Bill save nahi hua: ' + e.message);
+    } catch (err) {
+      alert('Bill save nahi hua: ' + err.message);
     } finally {
       setSaving(false);
     }
   };
 
-  const handlePrint = () => window.print();
-
-  const generateBillPdfBlob = async () => {
-    const element = document.getElementById('bill-print-area');
-    const canvas = await html2canvas(element, { scale: 2, backgroundColor: '#ffffff' });
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF({ unit: 'px', format: [canvas.width, canvas.height] });
-    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-    return pdf.output('blob');
+  const handlePrint = () => {
+    window.print();
   };
 
-  const handleShareBillOnWhatsApp = async () => {
-    const invoiceLabel = `INV-${String(savedBill.invoice_no).padStart(4, '0')}`;
-    const fileName = `${invoiceLabel}-${selectedRestaurant}.pdf`;
+  const handleShareBillOnWhatsApp = () => {
+    if (!savedBill) return;
+    const phone = profile.mobile || '';
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    const recipient = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
 
-    try {
-      const blob = await generateBillPdfBlob();
-      const file = new File([blob], fileName, { type: 'application/pdf' });
+    const itemsSummary = items.map((it, idx) => 
+      `${idx + 1}. *${it.description}* - ${it.qty} PCS @ ₹${Number(it.rate).toLocaleString('en-IN')}`
+    ).join('\n');
 
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        // Opens the phone's native share sheet — user picks WhatsApp, PDF attaches automatically
-        await navigator.share({
-          files: [file],
-          title: invoiceLabel,
-          text: `Invoice ${invoiceLabel} from M/S Shree Balaji Agencies`
-        });
-        return;
-      }
-    } catch (err) {
-      console.warn('Native file share not available, falling back to link share', err);
-    }
+    const message = `🧾 *INVOICE FROM SHREE BALAJI AGENCIES*\n` +
+      `━━━━━━━━━━━━━━━━━━━━━\n` +
+      `🏢 *Party:* ${selectedRestaurant}\n` +
+      `📄 *Invoice No:* ${invoiceLabel}\n` +
+      `📅 *Date:* ${billDate}\n` +
+      `━━━━━━━━━━━━━━━━━━━━━\n` +
+      `📦 *Items:*\n${itemsSummary}\n` +
+      `━━━━━━━━━━━━━━━━━━━━━\n` +
+      `💰 *Total Amount:* ₹${totals.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` +
+      `💳 *Payment UPI:* 9407922288-3@ybl\n` +
+      `━━━━━━━━━━━━━━━━━━━━━\n` +
+      `Thank you for your business! 🙏`;
 
-    // Fallback: desktop / unsupported browsers — send a WhatsApp text with a link instead
-    let phone = (restaurantProfiles[selectedRestaurant]?.mobile || '').replace(/\D/g, '');
-    if (phone.length === 10) phone = '91' + phone;
-    const message = `Hi, here is your invoice ${invoiceLabel} from M/S Shree Balaji Agencies. Amount: ₹${totals.total.toFixed(2)}. Please find the bill attached — if you don't see it, let us know and we'll resend.`;
-    if (phone) {
-      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
-    } else {
-      alert('WhatsApp number saved nahi hai is party ka.');
-    }
+    const encoded = encodeURIComponent(message);
+    const url = recipient ? `https://wa.me/${recipient}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
+    window.open(url, '_blank');
   };
 
   const invoiceLabel = savedBill ? getInvoiceLabel(savedBill) : null;
@@ -364,11 +352,11 @@ export default function GenerateBill({
   const savedAmountPaid = Number(savedBill?.amount_paid || 0);
   const savedBalance = Math.max(0, Number(savedBill?.total_amount || totals.total) - savedAmountPaid);
 
-
   if (savedBill) {
     return (
-      <div>
-        <div className="flex justify-between items-center mb-4 no-print flex-wrap gap-2">
+      <div className="space-y-4 max-w-3xl mx-auto animate-fadeIn pb-16">
+        {/* Top Actions Bar */}
+        <div className="flex justify-between items-center no-print flex-wrap gap-2.5 bg-white p-4 rounded-2xl border border-slate-200 shadow-soft">
           <button
             onClick={() => {
               const nextNo = (savedBill?.invoice_no ? parseInt(savedBill.invoice_no, 10) + 1 : nextSuggestedInvoiceNo);
@@ -377,20 +365,20 @@ export default function GenerateBill({
               setItems([emptyItem()]);
               setSelectedRestaurant('');
             }}
-            className="text-sm font-bold text-sky-700 hover:underline cursor-pointer"
+            className="text-xs font-black text-sky-700 hover:text-sky-900 flex items-center gap-1 cursor-pointer bg-sky-50 px-3 py-2 rounded-xl border border-sky-200"
           >
             ← Naya Bill Banao
           </button>
           <div className="flex items-center gap-2">
             <button
               onClick={handleShareBillOnWhatsApp}
-              className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 cursor-pointer flex items-center gap-1.5 shadow-sm transition-all"
+              className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-black hover:bg-emerald-700 cursor-pointer flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
             >
-              📤 Send on WhatsApp
+              📤 Send WhatsApp
             </button>
             <button
               onClick={handlePrint}
-              className="px-4 py-2 rounded-xl bg-sky-600 text-white text-sm font-bold hover:bg-sky-700 cursor-pointer flex items-center gap-1.5 shadow-sm transition-all"
+              className="px-4 py-2 rounded-xl bg-sky-600 text-white text-xs font-black hover:bg-sky-700 cursor-pointer flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
             >
               🖨️ Print / Save PDF
             </button>
@@ -398,184 +386,200 @@ export default function GenerateBill({
         </div>
 
         {/* Printable Section */}
-        <div className="overflow-x-auto">
-          <div id="bill-print-area" className="bg-white border border-slate-300 rounded-2xl p-4 sm:p-8 max-w-2xl mx-auto shadow-xs text-xs">
-            <div className="flex justify-between items-start border-b border-slate-200 pb-4 mb-4">
+        <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-8 shadow-soft text-xs overflow-hidden" id="bill-print-area">
+          {/* Header */}
+          <div className="flex justify-between items-start border-b border-slate-200 pb-5 mb-5 gap-4">
             <div>
-              <h2 className="text-lg font-black text-slate-900">M/S SHREE BALAJI AGENCIES</h2>
-              <p className="text-[10px] text-slate-500 mt-1">Kamthi Line Beside SBI ATM, Rajnandgaon, Chhattisgarh, 491441</p>
-              <p className="text-[10px] text-slate-500">📞 9407922288 | ✉️ msspagency@gmail.com</p>
-              {gstMode === 'gst' && <p className="text-[10px] text-slate-500 font-semibold">GSTIN: 22SNZPS3600E1ZH</p>}
+              <div className="flex items-center gap-2 mb-1">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">Authorized LPG Distributor</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">M/S SHREE BALAJI AGENCIES</h2>
+              <p className="text-[11px] text-slate-600 font-medium mt-1">Kamthi Line Beside SBI ATM, Rajnandgaon, Chhattisgarh, 491441</p>
+              <p className="text-[11px] text-slate-600 font-semibold mt-0.5">📞 9407922288 | ✉️ msspagency@gmail.com</p>
+              {gstMode === 'gst' && (
+                <p className="text-[11px] font-extrabold text-slate-800 mt-1">
+                  GSTIN: <span className="text-sky-800 font-black">22SNZPS3600E1ZH</span>
+                </p>
+              )}
             </div>
-            <div className="text-right">
-              <span className="inline-block px-3 py-1 bg-slate-900 text-white text-xs font-black rounded-lg">
+
+            <div className="text-right shrink-0">
+              <span className={`inline-block px-3.5 py-1.5 text-[11px] font-black rounded-xl uppercase tracking-wider ${
+                gstMode === 'gst' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-800 border border-slate-300'
+              }`}>
                 {gstMode === 'gst' ? 'TAX INVOICE' : 'PLAIN BILL'}
               </span>
-              <p className="text-xs font-bold text-slate-700 mt-2">Invoice No: {invoiceLabel}</p>
-              <p className="text-[10px] text-slate-500 font-semibold">Date: {billDate}</p>
-              <p className="text-[10px] text-slate-500 font-semibold">Due Date: {savedBill.due_date || billDate}</p>
+              <p className="text-sm font-black text-sky-800 mt-2">Invoice No: {invoiceLabel}</p>
+              <p className="text-xs text-slate-600 font-bold mt-0.5">Date: {billDate}</p>
+              <p className="text-xs text-slate-500 font-semibold">Due Date: {savedBill.due_date || billDate}</p>
             </div>
           </div>
 
           {/* Bill To & Ship To Details */}
-          <div className="grid grid-cols-2 gap-4 mb-4 text-[11px]">
-            <div className="space-y-0.5">
-              <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">Bill To</p>
-              <p className="font-extrabold text-slate-900 text-xs">{selectedRestaurant}</p>
-              {profile.address ? <p className="text-slate-600 font-medium">{profile.address}</p> : null}
-              {profile.mobile ? <p className="text-slate-600 font-medium">Phone No: +91- {profile.mobile}</p> : null}
-              {profile.gst_num ? <p className="text-slate-600 font-semibold">GSTIN: {profile.gst_num}</p> : null}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+            <div className="space-y-1">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">BILL TO</span>
+              <p className="font-black text-slate-900 text-sm">{selectedRestaurant}</p>
+              {profile.address ? <p className="text-slate-600 text-xs font-medium leading-relaxed">{profile.address}</p> : null}
+              {profile.mobile ? <p className="text-slate-700 text-xs font-bold">Phone: +91 {profile.mobile}</p> : null}
+              {profile.gst_num ? <p className="text-slate-800 text-xs font-black">GSTIN: {profile.gst_num}</p> : null}
             </div>
-            <div className="space-y-0.5">
-              <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">Ship To</p>
-              <p className="font-extrabold text-slate-900 text-xs">{selectedRestaurant}</p>
-              {profile.address ? <p className="text-slate-600 font-medium">{profile.address}</p> : null}
-              {profile.mobile ? <p className="text-slate-600 font-medium">Phone No: +91- {profile.mobile}</p> : null}
+            <div className="space-y-1 sm:border-l sm:border-slate-200 sm:pl-4">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">SHIP TO</span>
+              <p className="font-black text-slate-900 text-sm">{selectedRestaurant}</p>
+              {profile.address ? <p className="text-slate-600 text-xs font-medium leading-relaxed">{profile.address}</p> : null}
+              {profile.mobile ? <p className="text-slate-700 text-xs font-bold">Phone: +91 {profile.mobile}</p> : null}
             </div>
           </div>
 
-          <table className="w-full text-left text-xs border-collapse mb-4">
-            <thead>
-              <tr className="border-b border-slate-300 font-bold text-slate-700 bg-slate-50/50">
-                <th className="py-2.5 px-2">No</th>
-                <th className="py-2.5 px-2">Items</th>
-                {gstMode === 'gst' && <th className="py-2.5 px-2">HSN No.</th>}
-                <th className="py-2.5 px-2 text-right">Qty.</th>
-                <th className="py-2.5 px-2 text-right">Rate</th>
-                {gstMode === 'gst' && <th className="py-2.5 px-2 text-right">Tax</th>}
-                <th className="py-2.5 px-2 text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((it, idx) => {
-                const itemObj = itemsCatalog.find(cat => cat.id === it.item_id);
-                const isGstFree = (itemObj && (itemObj.gst_applicable === false || 
-                                               itemObj.name.toLowerCase().includes('empty') || 
-                                               itemObj.name.toLowerCase().includes('khali'))) ||
-                                   (it.description && (it.description.toLowerCase().includes('empty') || 
-                                                       it.description.toLowerCase().includes('khali')));
-                const lineGstRate = isGstFree ? 0 : (parseFloat(it.gst_rate) || 18);
-                const lineTotal = (parseFloat(it.qty) || 0) * (parseFloat(it.rate) || 0);
+          {/* Line Items Table */}
+          <div className="overflow-x-auto border border-slate-200 rounded-2xl mb-6">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 font-black text-slate-700 bg-slate-100/70 text-[11px] uppercase tracking-wider">
+                  <th className="py-3 px-3.5">#</th>
+                  <th className="py-3 px-3.5">Item Description</th>
+                  {gstMode === 'gst' && <th className="py-3 px-3.5">HSN Code</th>}
+                  <th className="py-3 px-3.5 text-right">Qty</th>
+                  <th className="py-3 px-3.5 text-right">Rate (₹)</th>
+                  {gstMode === 'gst' && <th className="py-3 px-3.5 text-right">GST</th>}
+                  <th className="py-3 px-3.5 text-right">Amount (₹)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {items.map((it, idx) => {
+                  const itemObj = itemsCatalog.find(cat => cat.id === it.item_id);
+                  const isGstFree = (itemObj && (itemObj.gst_applicable === false || 
+                                                 itemObj.name.toLowerCase().includes('empty') || 
+                                                 itemObj.name.toLowerCase().includes('khali'))) ||
+                                     (it.description && (it.description.toLowerCase().includes('empty') || 
+                                                         it.description.toLowerCase().includes('khali')));
+                  const lineGstRate = isGstFree ? 0 : (parseFloat(it.gst_rate) || 18);
+                  const lineTotal = (parseFloat(it.qty) || 0) * (parseFloat(it.rate) || 0);
 
-                let lineTaxAmount = 0;
-                if (gstMode === 'gst' && lineGstRate > 0) {
-                  const lineTaxable = lineTotal / (1 + lineGstRate / 100);
-                  lineTaxAmount = lineTotal - lineTaxable;
-                }
+                  let lineTaxAmount = 0;
+                  if (gstMode === 'gst' && lineGstRate > 0) {
+                    const lineTaxable = lineTotal / (1 + lineGstRate / 100);
+                    lineTaxAmount = lineTotal - lineTaxable;
+                  }
 
-                return (
-                  <tr key={idx} className="border-b border-slate-200 text-slate-800 hover:bg-slate-50/50">
-                    <td className="py-2.5 px-2 font-medium text-slate-500">{idx + 1}</td>
-                    <td className="py-2.5 px-2 font-extrabold text-slate-900">{it.description}</td>
-                    {gstMode === 'gst' && <td className="py-2.5 px-2 text-slate-500 font-semibold">{isGstFree ? '-' : it.hsn}</td>}
-                    <td className="py-2.5 px-2 text-right font-black text-slate-900">{it.qty} PCS</td>
-                    <td className="py-2.5 px-2 text-right">₹{Number(it.rate).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                    {gstMode === 'gst' && (
-                      <td className="py-2.5 px-2 text-right font-bold text-slate-650">
-                        ₹{lineTaxAmount.toFixed(2)}
-                        <span className="text-[9px] text-slate-400 font-bold block">({lineGstRate}%)</span>
+                  return (
+                    <tr key={idx} className="text-slate-800 hover:bg-slate-50/50">
+                      <td className="py-3 px-3.5 font-medium text-slate-400">{idx + 1}</td>
+                      <td className="py-3 px-3.5 font-black text-slate-900">{it.description}</td>
+                      {gstMode === 'gst' && <td className="py-3 px-3.5 text-slate-500 font-semibold">{isGstFree ? '-' : it.hsn}</td>}
+                      <td className="py-3 px-3.5 text-right font-black text-slate-900">{it.qty} PCS</td>
+                      <td className="py-3 px-3.5 text-right font-semibold">₹{Number(it.rate).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      {gstMode === 'gst' && (
+                        <td className="py-3 px-3.5 text-right font-bold text-slate-600">
+                          ₹{lineTaxAmount.toFixed(2)}
+                          <span className="text-[9px] text-slate-400 font-bold block">({lineGstRate}%)</span>
+                        </td>
+                      )}
+                      <td className="py-3 px-3.5 text-right font-black text-slate-900">
+                        ₹{lineTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
-                    )}
-                    <td className="py-2.5 px-2 text-right font-black text-slate-900">
-                      ₹{lineTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                    </td>
-                  </tr>
-                );
-              })}
-              {/* Table Subtotal Row */}
-              <tr className="bg-slate-50 font-black text-slate-900 border-t-2 border-slate-300 border-b-2">
-                <td colSpan={gstMode === 'gst' ? 3 : 2} className="py-2.5 px-2 text-xs uppercase tracking-wider">SUBTOTAL</td>
-                <td className="py-2.5 px-2 text-right">
-                  {items.reduce((sum, it) => sum + (parseFloat(it.qty) || 0), 0)}
-                </td>
-                <td className="py-2.5 px-2"></td>
-                {gstMode === 'gst' && (
-                  <td className="py-2.5 px-2 text-right">
-                    ₹{(totals.cgst + totals.sgst).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="bg-slate-100/70 font-black text-slate-900 border-t-2 border-slate-300">
+                  <td colSpan={gstMode === 'gst' ? 3 : 2} className="py-3 px-3.5 text-xs uppercase tracking-wider">TOTAL PCS</td>
+                  <td className="py-3 px-3.5 text-right font-black">
+                    {items.reduce((sum, it) => sum + (parseFloat(it.qty) || 0), 0)} PCS
                   </td>
-                )}
-                <td className="py-2.5 px-2 text-right">
-                  ₹{totals.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                  <td className="py-3 px-3.5"></td>
+                  {gstMode === 'gst' && (
+                    <td className="py-3 px-3.5 text-right text-xs">
+                      ₹{(totals.cgst + totals.sgst).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                  )}
+                  <td className="py-3 px-3.5 text-right font-black text-sm text-sky-900">
+                    ₹{totals.total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
 
-          {/* Subtotals & Bank details block */}
-          <div className="grid grid-cols-2 gap-6 pt-3">
-            {/* Terms & Bank details */}
+          {/* Subtotals & Bank Details Footer Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+            {/* Terms & Bank Details */}
             <div className="space-y-4">
-              <div className="text-[10px] text-slate-500 font-semibold space-y-1">
-                <span className="text-[9px] font-black text-slate-700 uppercase tracking-wide block">Terms & Conditions</span>
-                <p>1. Goods once sold will not be taken back or exchanged</p>
-                <p>2. Empty cylinder returnable; loss/damage chargeable; subject to jurisdiction</p>
-                <p>3. All disputes are subject to RAJNANDGAON jurisdiction only</p>
+              <div className="text-[10.5px] text-slate-500 font-semibold space-y-1 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest block mb-1">Terms & Conditions</span>
+                <p>1. Goods once sold will not be taken back or exchanged.</p>
+                <p>2. Empty cylinders returnable; loss/damage chargeable.</p>
+                <p>3. All disputes are subject to RAJNANDGAON jurisdiction only.</p>
               </div>
 
-              <div className="text-[10px] text-slate-500 font-semibold space-y-1">
-                <span className="text-[9px] font-black text-slate-700 uppercase tracking-wide block">Bank Details</span>
-                <div className="grid grid-cols-3 gap-y-0.5">
-                  <span className="text-slate-400">Name</span>
-                  <span className="col-span-2 text-slate-800 font-bold">MS SHREE BALAJI AGENCIES</span>
-                  <span className="text-slate-400">IFSC</span>
-                  <span className="col-span-2 text-slate-800 font-bold">SBIN0000464</span>
-                  <span className="text-slate-400">Account No</span>
-                  <span className="col-span-2 text-slate-800 font-bold">43204193003</span>
-                  <span className="text-slate-400">Bank Name</span>
-                  <span className="col-span-2 text-slate-800 font-bold">State Bank of India, RAJNANDGAON</span>
+              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-[11px] space-y-1.5">
+                <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest block mb-1">Bank Payment Details</span>
+                <div className="grid grid-cols-3 gap-y-1 text-slate-600">
+                  <span className="font-semibold text-slate-400">Account:</span>
+                  <span className="col-span-2 font-black text-slate-900">MS SHREE BALAJI AGENCIES</span>
+                  <span className="font-semibold text-slate-400">A/C No:</span>
+                  <span className="col-span-2 font-black text-slate-900">43204193003</span>
+                  <span className="font-semibold text-slate-400">IFSC:</span>
+                  <span className="col-span-2 font-black text-slate-900">SBIN0000464</span>
+                  <span className="font-semibold text-slate-400">Branch:</span>
+                  <span className="col-span-2 font-bold text-slate-800">State Bank of India, Rajnandgaon</span>
                 </div>
               </div>
 
-              {/* Payment QR Block */}
-              <div className="flex items-start gap-2.5 p-2 bg-slate-50 border border-slate-200 rounded-xl max-w-[240px]">
-                <img src="/payment-qr.png" alt="Payment QR" className="w-16 h-16 border border-slate-200 rounded-lg shrink-0 bg-white" />
+              <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-2xl">
+                <img src="/payment-qr.png" alt="Payment QR" className="w-14 h-14 border border-slate-200 rounded-xl shrink-0 bg-white p-1" />
                 <div className="space-y-0.5">
-                  <span className="text-[9px] font-bold text-slate-700 block">Payment QR Code</span>
-                  <span className="text-[8px] text-slate-400 block mt-0.5">UPI ID: 9407922288-3@ybl</span>
-                  <span className="text-[7.5px] text-slate-400 font-semibold block">Scan with any UPI App</span>
+                  <span className="text-[11px] font-black text-slate-900 block">UPI Quick Payment</span>
+                  <span className="text-[10px] font-bold text-sky-800 block">9407922288-3@ybl</span>
+                  <span className="text-[9px] text-slate-400 font-semibold block">Scan with GPay, PhonePe, Paytm</span>
                 </div>
               </div>
             </div>
 
-            {/* Tax calculations & Net outstanding */}
-            <div className="space-y-2 text-xs text-right">
-              <div className="space-y-1.5 text-slate-500 font-semibold text-[11px] pb-2 border-b">
-                <div className="flex justify-between">
+            {/* Calculations & Net Balance Due */}
+            <div className="space-y-3 bg-slate-50 p-5 rounded-2xl border border-slate-200">
+              <div className="space-y-2 text-xs border-b border-slate-200 pb-3">
+                <div className="flex justify-between items-center text-slate-600 font-bold">
                   <span>Taxable Amount</span>
-                  <span className="text-slate-900">₹{totals.taxable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  <span className="text-slate-900 font-black">₹{totals.taxable.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 {gstMode === 'gst' && (
                   <>
-                    <div className="flex justify-between">
-                      <span>CGST @9%</span>
-                      <span className="text-slate-900">₹{totals.cgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    <div className="flex justify-between items-center text-slate-500 font-semibold">
+                      <span>CGST @ 9%</span>
+                      <span className="text-slate-900 font-bold">₹{totals.cgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>SGST @9%</span>
-                      <span className="text-slate-900">₹{totals.sgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    <div className="flex justify-between items-center text-slate-500 font-semibold">
+                      <span>SGST @ 9%</span>
+                      <span className="text-slate-900 font-bold">₹{totals.sgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                   </>
                 )}
               </div>
 
-              <div className="flex justify-between font-black text-sm text-slate-900 pb-2 border-b">
-                <span>Total Amount</span>
-                <span>₹{totals.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+              <div className="flex justify-between items-center py-1">
+                <span className="text-xs font-black uppercase text-slate-700 tracking-wider">Total Invoice Amount</span>
+                <span className="text-base font-black text-slate-900">
+                  ₹{totals.total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
               </div>
 
-              <div className="space-y-1.5 font-bold text-[11px] text-slate-500 pb-2 border-b">
-                <div className="flex justify-between">
-                  <span>Received Amount</span>
-                  <span className="text-slate-700 font-bold">₹{(savedBill?.amount_paid || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+              <div className="space-y-1.5 text-xs border-t border-b border-slate-200 py-2.5">
+                <div className="flex justify-between items-center text-slate-500 font-semibold">
+                  <span>Received / Paid</span>
+                  <span className="text-slate-700 font-bold">₹{savedAmountPaid.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Balance Due</span>
-                  <span className="text-rose-700 font-black">₹{((totals.total || 0) - (savedBill?.amount_paid || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                <div className="flex justify-between items-center">
+                  <span className="font-black text-rose-700">Balance Due</span>
+                  <span className="font-black text-rose-700 text-sm">₹{savedBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               </div>
 
-              <div className="pt-1.5">
-                <span className="text-[9px] text-slate-400 font-bold block uppercase">Total Amount (in words)</span>
+              <div className="pt-1">
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Total Amount (in words)</span>
                 <span className="text-xs font-black text-slate-800 capitalize mt-0.5 block">
                   {numberToWords(Math.round(totals.total))} Rupees Only
                 </span>
@@ -584,8 +588,7 @@ export default function GenerateBill({
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
   }
 
   return (
