@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { formatIsoDate, normType } from '../utils/dataUtils';
+import { formatIsoDate, normType, norm } from '../utils/dataUtils';
 import RestaurantStatementModal from './RestaurantStatementModal';
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
