@@ -178,6 +178,7 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
     const targetRestName = billData.restaurant_name;
     const targetTotal = Number(billData.total_amount);
     const targetDate = billData.bill_date || new Date().toISOString().slice(0, 10);
+    const targetBatchNum = parseInt(billData.batch_num, 10) || 133;
 
     const duplicateRecentBill = (bills || []).find(b =>
       norm(b.restaurant_name) === norm(targetRestName) &&
@@ -190,11 +191,27 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
       throw new Error(`⚠️ Duplicate click detected! "${targetRestName}" ka ₹${targetTotal} ka bill abhi save ho raha hai.`);
     }
 
-    // 2. Sequential Invoice Number: Instant local max + 1
-    const localMaxNo = Math.max(3510, ...(bills || []).map(b => parseInt(b.invoice_no, 10) || 0));
-    const invNo = billData.invoice_no ? parseInt(billData.invoice_no, 10) : (localMaxNo + 1);
+    // 2. Sequential Invoice Number: Concurrency-safe highest DB number check
+    let invNo = billData.invoice_no ? parseInt(billData.invoice_no, 10) : null;
 
-    const { restaurant_id, ...cleanBillData } = billData;
+    // If no invoice number or if requested invoice number already exists in local bills list
+    if (!invNo || (bills || []).some(b => parseInt(b.invoice_no, 10) === invNo)) {
+      try {
+        const { data: maxRows } = await supabase
+          .from('bills')
+          .select('invoice_no')
+          .order('invoice_no', { ascending: false })
+          .limit(1);
+        const maxDbInv = maxRows && maxRows[0] ? parseInt(maxRows[0].invoice_no, 10) : 3514;
+        const maxLocalInv = Math.max(3510, ...(bills || []).map(b => parseInt(b.invoice_no, 10) || 0));
+        invNo = Math.max(maxDbInv, maxLocalInv) + 1;
+      } catch (err) {
+        const localMaxNo = Math.max(3510, ...(bills || []).map(b => parseInt(b.invoice_no, 10) || 0));
+        invNo = localMaxNo + 1;
+      }
+    }
+
+    const { restaurant_id, batch_num, ...cleanBillData } = billData;
     const tempId = Date.now();
     const savedBill = { 
       ...cleanBillData, 
@@ -204,14 +221,60 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
       created_at: new Date().toISOString()
     };
 
-    // 3. Stock Deduction
+    // 3. Stock Deduction (Category-wise in DB and local state)
     if (typeof deductStock === 'function') {
       deductStock(billData.items);
     }
 
-    // 4. Save directly to Database with full confirmation
-    const payload = { ...cleanBillData, invoice_no: invNo, created_by: currentUser || 'Suraj' };
-    const { data: dbData, error: dbError } = await supabase.from('bills').insert([payload]).select().single();
+    // 4. Automatic Cylinder Delivery Entry Sync into Active Batch
+    if (Array.isArray(billData.items) && typeof onAddDeliveryEntry === 'function') {
+      for (const it of billData.items) {
+        const q = parseInt(it.qty, 10) || 0;
+        if (q > 0) {
+          const desc = (it.description || it.item_name || it.name || '').toLowerCase();
+          let cylType = '19.2kg-delivery';
+          if (desc.includes('21')) cylType = '21kg-delivery';
+          else if (desc.includes('15')) cylType = '15kg-delivery';
+          else if (desc.includes('empty') || desc.includes('khali')) continue;
+
+          onAddDeliveryEntry(
+            targetRestName,
+            q,
+            cylType,
+            targetDate,
+            targetBatchNum,
+            false
+          );
+        }
+      }
+    }
+
+    // 5. Save directly to Database with retry on unique constraint collision
+    let payload = { ...cleanBillData, invoice_no: invNo, created_by: currentUser || 'Suraj' };
+    let dbData = null;
+    let dbError = null;
+
+    const insertRes = await supabase.from('bills').insert([payload]).select().single();
+    dbData = insertRes.data;
+    dbError = insertRes.error;
+
+    // Auto-resolve duplicate key collision if another partner/session created the same invoice_no
+    if (dbError && (dbError.code === '23505' || dbError.message?.includes('unique'))) {
+      console.warn('⚡ Duplicate invoice number detected, auto-incrementing to next available number...');
+      const { data: latestMaxRows } = await supabase
+        .from('bills')
+        .select('invoice_no')
+        .order('invoice_no', { ascending: false })
+        .limit(1);
+      const nextSafeInv = (latestMaxRows && latestMaxRows[0] ? parseInt(latestMaxRows[0].invoice_no, 10) : invNo) + 1;
+      invNo = nextSafeInv;
+      payload.invoice_no = nextSafeInv;
+      savedBill.invoice_no = nextSafeInv;
+
+      const retryRes = await supabase.from('bills').insert([payload]).select().single();
+      dbData = retryRes.data;
+      dbError = retryRes.error;
+    }
 
     if (dbError) {
       console.error('Error saving bill to Supabase:', dbError);
@@ -229,7 +292,7 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
       const invLabel = `INV-${String(invNo).padStart(4, '0')}`;
       const payMode = (billData.payment_type || 'cash').toLowerCase().includes('upi') ? 'UPI' : 'Cash';
       await supabase.from('payments').insert([{
-        batch_num: 132,
+        batch_num: targetBatchNum,
         restaurant_name: targetRestName,
         amount: paidAmt,
         payment_mode: payMode,
@@ -250,7 +313,7 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
       billData = data;
     }
 
-    // 2. Remove from bills state
+    // 2. Remove from bills state immediately
     setBills(prev => prev.filter(b => b.id !== id));
 
     // 3. Live Stock Restoration (Adds back deducted cylinders immediately)
@@ -258,15 +321,16 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
       restoreStock(billData.items);
     }
 
-    // 4. Remove calendar delivery from memory
+    // 4. Remove calendar delivery entry from memory and Supabase entries table
     const removeCallback = onDeliveryRemoved || onRemoveDeliveryEntry;
     if (billData && typeof removeCallback === 'function') {
-      removeCallback(billData.restaurant_name, billData.bill_date);
+      await removeCallback(billData.restaurant_name, billData.bill_date);
     }
 
-    // 5. Delete from DB
+    // 5. Delete from DB bills table
     await supabase.from('bills').delete().eq('id', id);
 
+    // 6. If bill had an auto-recorded payment, remove it
     if (billData && billData.invoice_no) {
       const invNote = `Payment Received (INV-${String(billData.invoice_no).padStart(4, '0')})`;
       await supabase.from('payments').delete().ilike('note', `%${invNote}%`);

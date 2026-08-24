@@ -467,15 +467,15 @@ export function getInvoiceLabel(bill) {
 export function isNewBill(b) {
   if (!b) return false;
   const invNo = parseInt(b.invoice_no, 10);
-  // Bills created in active app sessions (INV-3509+ or newly generated bills)
-  return (invNo >= 3509) || (!b.legacy_invoice_no && b.created_at >= '2026-08-21T12:00:00Z');
+  // Bills created in active app sessions (INV-3508+ or bills without legacy_invoice_no)
+  return (invNo >= 3508) || (!b.legacy_invoice_no && b.created_at >= '2026-08-21T00:00:00Z');
 }
 
 export function isNewPayment(p) {
   if (!p) return false;
   const note = (p.note || p.notes || '');
   // Active payments recorded in the app (ID >= 8632 or explicitly received in app)
-  return note.includes('Payment Received (ID') || (p.date >= '2026-08-21' && p.id >= 8632 && !note.includes('Legacy') && !note.includes('Official'));
+  return note.includes('Payment Received') || (p.date >= '2026-08-21' && p.id >= 8632 && !note.includes('Legacy') && !note.includes('Official'));
 }
 
 export function getAllPartiesCurrentBalances(restaurantProfiles = {}, bills = [], payments = []) {

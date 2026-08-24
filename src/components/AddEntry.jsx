@@ -1,18 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useUser } from '../context/UserContext';
 
-export default function AddEntry({ newEntry, setNewEntry, handleAdd, restMap }) {
+export default function AddEntry({ newEntry, setNewEntry, handleAdd, restMap, batches = [] }) {
   const { currentUser } = useUser();
   const [activeForm, setActiveForm] = useState('return'); // Default to Khali Tanki Return (Lena)
   const [weight, setWeight] = useState('19.2kg'); // '19.2kg' | '21kg'
 
+  const latestActiveBatch = useMemo(() => {
+    let maxB = 132;
+    (batches || []).forEach(b => {
+      const num = parseInt(b.batch || b.batch_num, 10);
+      if (!isNaN(num) && num > maxB) maxB = num;
+    });
+    return maxB >= 132 ? 133 : (maxB + 1);
+  }, [batches]);
+
   useEffect(() => {
     setNewEntry(p => ({
       ...p,
+      batchNum: p.batchNum || String(latestActiveBatch),
       type: `${weight}-${activeForm}`,
       date: p.date || new Date().toISOString().split('T')[0]
     }));
-  }, [activeForm, weight, setNewEntry]);
+  }, [activeForm, weight, setNewEntry, latestActiveBatch]);
 
   return (
     <div className="space-y-6 fade">

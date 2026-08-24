@@ -784,7 +784,7 @@ export function useCylinderData(currentUser) {
   }, [payments]);
   const netBookingWallet = totalCollectionsAll - totalBatchCosts;
 
-  const removeDeliveryEntries = useCallback((restaurantName, billDate) => {
+  const removeDeliveryEntries = useCallback(async (restaurantName, billDate) => {
     const normTarget = norm(restaurantName);
     setBatches(prev => prev.map(b => ({
       ...b,
@@ -793,7 +793,19 @@ export function useCylinderData(currentUser) {
         return !isMatch;
       })
     })));
-  }, []);
+
+    if (isSupabaseConfigured && restaurantName) {
+      try {
+        let q = supabase.from('entries').delete().ilike('name', restaurantName.trim()).eq('is_return', false);
+        if (billDate) {
+          q = q.eq('date', billDate);
+        }
+        await q;
+      } catch (err) {
+        console.warn('Error deleting delivery entries from DB:', err);
+      }
+    }
+  }, [isSupabaseConfigured]);
 
   return {
     batches,

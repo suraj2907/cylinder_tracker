@@ -1,12 +1,69 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { supabase } from '../utils/supabaseClient';
 
 export default function BatchesList({ 
   filteredBatches = [], 
   batchSearch = "", 
   setBatchSearch,
-  handleDeleteBatch
+  handleDeleteBatch,
+  handleUpdateBatchCost,
+  handleAdd,
+  batches = []
 }) {
   const [expandedEntriesBatch, setExpandedEntriesBatch] = useState(null);
+  const [showNewBatchModal, setShowNewBatchModal] = useState(false);
+
+  const nextSuggestedBatch = useMemo(() => {
+    let maxB = 132;
+    (batches || []).forEach(b => {
+      const num = parseInt(b.batch || b.batch_num, 10);
+      if (!isNaN(num) && num > maxB) maxB = num;
+    });
+    return maxB >= 132 ? 133 : (maxB + 1);
+  }, [batches]);
+
+  const [newBatchNum, setNewBatchNum] = useState('');
+  const [newBatchKhaliDate, setNewBatchKhaliDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [newBatchCost, setNewBatchCost] = useState('');
+  const [newBatchNote, setNewBatchNote] = useState('');
+  const [savingBatch, setSavingBatch] = useState(false);
+
+  const handleOpenNewBatchModal = () => {
+    setNewBatchNum(String(nextSuggestedBatch));
+    setNewBatchKhaliDate(new Date().toISOString().slice(0, 10));
+    setNewBatchCost('');
+    setNewBatchNote('');
+    setShowNewBatchModal(true);
+  };
+
+  const handleSaveNewBatch = async (e) => {
+    e.preventDefault();
+    const bNum = parseInt(newBatchNum, 10);
+    if (!bNum) {
+      alert('Batch number daalo');
+      return;
+    }
+    setSavingBatch(true);
+    try {
+      const costVal = parseFloat(newBatchCost) || 0;
+      await supabase.from('batches').upsert({
+        batch_num: bNum,
+        khali_date: newBatchKhaliDate || new Date().toISOString().slice(0, 10),
+        booking_cost: costVal,
+        note: newBatchNote ? newBatchNote.trim() : null
+      });
+
+      if (costVal > 0 && typeof handleUpdateBatchCost === 'function') {
+        handleUpdateBatchCost(bNum, costVal);
+      }
+
+      setShowNewBatchModal(false);
+    } catch (err) {
+      alert('Batch save nahi hua: ' + err.message);
+    } finally {
+      setSavingBatch(false);
+    }
+  };
 
   return (
     <div className="space-y-6 fade">
@@ -21,12 +78,21 @@ export default function BatchesList({
           </p>
         </div>
 
-        <input 
-          className="bg-slate-50 border border-customBorder rounded-xl px-4 py-2 text-textSlate placeholder-slate-400 focus:outline-none focus:border-accentCyan text-xs w-full sm:w-60 shadow-sm transition-all font-semibold"
-          placeholder="Search batch # or date..." 
-          value={batchSearch} 
-          onChange={e => setBatchSearch(e.target.value)} 
-        />
+        <div className="flex items-center gap-2.5 flex-wrap w-full sm:w-auto">
+          <button
+            onClick={handleOpenNewBatchModal}
+            className="px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 active:scale-95 text-white text-xs font-black transition-all shadow-soft flex items-center gap-1.5 cursor-pointer shrink-0"
+          >
+            <span>➕ Start Batch #{nextSuggestedBatch}</span>
+          </button>
+
+          <input 
+            className="bg-slate-50 border border-customBorder rounded-xl px-4 py-2 text-textSlate placeholder-slate-400 focus:outline-none focus:border-accentCyan text-xs w-full sm:w-48 shadow-sm transition-all font-semibold"
+            placeholder="Search batch # or date..." 
+            value={batchSearch} 
+            onChange={e => setBatchSearch(e.target.value)} 
+          />
+        </div>
       </div>
 
       {/* Batches Delivery Cards */}
@@ -169,6 +235,89 @@ export default function BatchesList({
           );
         })}
       </div>
+
+      {/* Start New Batch Modal */}
+      {showNewBatchModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 max-w-md w-full shadow-2xl space-y-4 animate-scaleUp">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-base font-black text-slate-900">
+                ➕ Start New Batch #{newBatchNum}
+              </h3>
+              <button
+                onClick={() => setShowNewBatchModal(false)}
+                className="w-7 h-7 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center text-xs font-black cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveNewBatch} className="space-y-4 text-xs font-bold">
+              <div>
+                <label className="block text-[11px] font-black text-slate-700 uppercase mb-1">Batch Number</label>
+                <input
+                  type="number"
+                  required
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-black focus:outline-none focus:border-sky-500 focus:bg-white"
+                  value={newBatchNum}
+                  onChange={e => setNewBatchNum(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-black text-slate-700 uppercase mb-1">Khali / Start Date</label>
+                <input
+                  type="date"
+                  required
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold focus:outline-none focus:border-sky-500 focus:bg-white"
+                  value={newBatchKhaliDate}
+                  onChange={e => setNewBatchKhaliDate(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-black text-slate-700 uppercase mb-1">Booking Cost (₹) (Optional)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="e.g. 95000"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-black focus:outline-none focus:border-sky-500 focus:bg-white"
+                  value={newBatchCost}
+                  onChange={e => setNewBatchCost(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-black text-slate-700 uppercase mb-1">Note (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Driver name, vehicle #, supply notes"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-semibold focus:outline-none focus:border-sky-500 focus:bg-white"
+                  value={newBatchNote}
+                  onChange={e => setNewBatchNote(e.target.value)}
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowNewBatchModal(false)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingBatch}
+                  className="px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 active:scale-95 text-white font-black shadow-soft cursor-pointer disabled:opacity-50"
+                >
+                  {savingBatch ? 'Saving...' : `Start Batch #${newBatchNum}`}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

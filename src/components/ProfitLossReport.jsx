@@ -171,7 +171,7 @@ export default function ProfitLossReport({
       closingStockValue = 266612.55;
     } else {
       // Fully dynamic rollforward for any custom range or past dates
-      const todayStr = '2026-08-22';
+      const todayStr = new Date().toISOString().slice(0, 10);
       let futureCOGS = 0;
       (bills || [])
         .filter(b => b.bill_date > endDate && b.bill_date <= todayStr)

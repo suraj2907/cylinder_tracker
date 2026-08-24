@@ -76,13 +76,26 @@ export default function GenerateBill({
   partyItemPrices = [],
   bills = [],
   payments = [],
-  nextSuggestedInvoiceNo = 3499
+  nextSuggestedInvoiceNo = 3499,
+  batches = []
 }) {
   const [selectedRestaurant, setSelectedRestaurant] = useState('');
   const [search, setSearch] = useState('');
   const [gstMode, setGstMode] = useState('gst'); // 'gst' | 'none'
   const [billDate, setBillDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [customInvoiceNo, setCustomInvoiceNo] = useState('');
+
+  // Compute active batch (e.g. Batch #133 if 132 is latest)
+  const latestActiveBatch = useMemo(() => {
+    let maxB = 132;
+    (batches || []).forEach(b => {
+      const num = parseInt(b.batch || b.batch_num, 10);
+      if (!isNaN(num) && num > maxB) maxB = num;
+    });
+    return maxB >= 132 ? 133 : (maxB + 1);
+  }, [batches]);
+
+  const [batchNum, setBatchNum] = useState(() => String(latestActiveBatch));
   const [items, setItems] = useState([emptyItem()]);
   const [savedBill, setSavedBill] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -92,6 +105,12 @@ export default function GenerateBill({
       setCustomInvoiceNo(String(nextSuggestedInvoiceNo));
     }
   }, [nextSuggestedInvoiceNo]);
+
+  useEffect(() => {
+    if (latestActiveBatch) {
+      setBatchNum(String(latestActiveBatch));
+    }
+  }, [latestActiveBatch]);
 
   // Comprehensive party list combining Supabase restaurant profiles, valid list, and cylinder list with canonical deduplication
   const allAvailableParties = useMemo(() => {
@@ -271,10 +290,12 @@ export default function GenerateBill({
       const dueDate = d.toISOString().slice(0, 10);
 
       const restObj = restaurantProfiles[selectedRestaurant] || {};
+      const chosenBatch = parseInt(batchNum, 10) || latestActiveBatch;
       const bill = await createBill({
         restaurant_name: selectedRestaurant,
         restaurant_id: restObj.id || undefined,
         bill_date: billDate,
+        batch_num: chosenBatch,
         invoice_no: customInvoiceNo ? parseInt(customInvoiceNo, 10) : undefined,
         gst_mode: gstMode,
         items,
@@ -350,6 +371,8 @@ export default function GenerateBill({
         <div className="flex justify-between items-center mb-4 no-print flex-wrap gap-2">
           <button
             onClick={() => {
+              const nextNo = (savedBill?.invoice_no ? parseInt(savedBill.invoice_no, 10) + 1 : nextSuggestedInvoiceNo);
+              setCustomInvoiceNo(String(nextNo));
               setSavedBill(null);
               setItems([emptyItem()]);
               setSelectedRestaurant('');
@@ -620,7 +643,7 @@ export default function GenerateBill({
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div>
           <label className="text-xs font-black text-slate-700 tracking-wide block mb-1">Invoice No.</label>
           <div className="relative mt-1">
@@ -644,6 +667,21 @@ export default function GenerateBill({
           />
         </div>
         <div>
+          <label className="text-xs font-black text-slate-700 tracking-wide block mb-1">
+            Batch # <span className="text-[10px] text-sky-700 font-bold">(Active)</span>
+          </label>
+          <div className="relative mt-1">
+            <span className="absolute left-3 top-2 text-xs font-black text-slate-400">#</span>
+            <input
+              type="number"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-7 pr-3 py-2 text-xs font-black focus:outline-none focus:border-sky-500 focus:bg-white shadow-xs"
+              value={batchNum}
+              onChange={e => setBatchNum(e.target.value)}
+              placeholder={String(latestActiveBatch)}
+            />
+          </div>
+        </div>
+        <div>
           <label className="text-xs font-black text-slate-700 tracking-wide block mb-1">Bill Type</label>
           <div className="mt-1 flex bg-slate-100 rounded-xl p-1 shadow-inner">
             <button
@@ -652,7 +690,7 @@ export default function GenerateBill({
                 gstMode === 'none' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-500 hover:text-slate-800'
               }`}
             >
-              Plain Bill
+              Plain
             </button>
             <button
               onClick={() => setGstMode('gst')}
@@ -660,7 +698,7 @@ export default function GenerateBill({
                 gstMode === 'gst' ? 'bg-sky-600 shadow-xs text-white' : 'text-slate-500 hover:text-slate-800'
               }`}
             >
-              GST Bill
+              GST
             </button>
           </div>
         </div>
