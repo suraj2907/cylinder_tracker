@@ -837,286 +837,51 @@ function RestaurantStatementModal({
                         <th className="px-4 py-3 text-right no-print">Actions</th>
                       </tr>
                     </thead>
-  const handleShareBillOnWhatsApp = (bill) => {
-    if (!bill) return;
-    const phone = profile.mobile || restaurantProfiles?.[bill.restaurant_name]?.mobile || '';
-    const cleanPhone = phone.replace(/[^0-9]/g, '');
-    const recipient = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
-    const invLabel = getInvoiceLabel(bill);
-
-    const itemsArr = Array.isArray(bill.items) ? bill.items : [];
-    const itemsSummary = itemsArr.map((it, idx) => 
-      `${idx + 1}. *${it.description || it.item_name || 'Cylinder'}* - ${it.qty} PCS @ ₹${Number(it.rate).toLocaleString('en-IN')}`
-    ).join('\n');
-
-    const totalAmt = Number(bill.total_amount || 0);
-    const paidAmt = Number(bill.amount_paid || (bill.payment_status === 'paid' ? bill.total_amount : 0));
-    const balanceDue = Math.max(0, totalAmt - paidAmt);
-
-    const message = `🧾 *INVOICE FROM SHREE BALAJI AGENCIES*\n` +
-      `━━━━━━━━━━━━━━━━━━━━━\n` +
-      `🏢 *Party:* ${bill.restaurant_name || restaurantName}\n` +
-      `📄 *Invoice No:* ${invLabel}\n` +
-      `📅 *Date:* ${bill.bill_date}\n` +
-      `━━━━━━━━━━━━━━━━━━━━━\n` +
-      `📦 *Items:*\n${itemsSummary || '1. LPG Cylinder Delivery'}\n` +
-      `━━━━━━━━━━━━━━━━━━━━━\n` +
-      `💰 *Total Amount:* ₹${totalAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` +
-      (balanceDue > 0 ? `⚠️ *Balance Due:* ₹${balanceDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` : `✅ *Status:* PAID\n`) +
-      `💳 *Payment UPI:* 9407922288-3@ybl\n` +
-      `━━━━━━━━━━━━━━━━━━━━━\n` +
-      `Thank you for your business! 🙏`;
-
-    const encoded = encodeURIComponent(message);
-    const url = recipient ? `https://wa.me/${recipient}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
-    window.open(url, '_blank');
-  };
-
-  const getBillProfile = (rName) => {
-    return profile?.name === rName ? profile : (restaurantProfiles?.[rName] || profile || {});
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-white border border-customBorder rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-4xl p-4 sm:p-6 space-y-4 max-h-[92vh] flex flex-col animate-fadeIn">
-        
-        {/* Passbook Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-customBorder pb-3.5 shrink-0">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Party Statement</span>
-            </div>
-            <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight mt-0.5">
-              {restaurantName}
-            </h2>
-            <div className="flex items-center gap-3 text-xs text-slate-500 font-semibold mt-1">
-              <span>Current Pending: <strong className={currentNetPending > 0 ? 'text-rose-600' : 'text-emerald-600'}>₹{currentNetPending.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong></span>
-              {profile.mobile && <span>📞 {profile.mobile}</span>}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => setActiveSection('passbook')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeSection === 'passbook' ? 'bg-slate-900 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              📖 Passbook Ledger
-            </button>
-            <button
-              onClick={() => setActiveSection('invoices')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeSection === 'invoices' ? 'bg-slate-900 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              🧾 Invoices ({restaurantBills.length})
-            </button>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold flex items-center justify-center cursor-pointer transition-colors ml-auto sm:ml-2"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-
-        {/* Modal Main Content Container */}
-        <div className="flex-1 overflow-y-auto space-y-4 pr-1">
-          {activeSection === 'invoices' ? (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-black uppercase text-slate-700 tracking-wider">
-                  Generated Sales Invoices for {restaurantName}
-                </h3>
-                <span className="text-[11px] font-bold text-slate-400">Total: {restaurantBills.length} Invoices</span>
-              </div>
-
-              <div className="overflow-x-auto border border-customBorder rounded-2xl">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-customBorder text-slate-500 font-bold uppercase text-[10px]">
-                      <th className="px-3.5 py-2.5">Invoice #</th>
-                      <th className="px-3.5 py-2.5">Date</th>
-                      <th className="px-3.5 py-2.5">Type</th>
-                      <th className="px-3.5 py-2.5 text-right">Amount (₹)</th>
-                      <th className="px-3.5 py-2.5 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {restaurantBills.map(b => (
-                      <tr key={b.id} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="px-3.5 py-3 font-black text-sky-900">
-                          {getInvoiceLabel(b)}
-                        </td>
-                        <td className="px-3.5 py-3 font-bold text-slate-600">{b.bill_date}</td>
-                        <td className="px-3.5 py-3 font-bold">
-                          <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-black border ${
-                            b.gst_mode === 'gst' ? 'bg-sky-50 text-sky-700 border-sky-200' : 'bg-slate-100 text-slate-600 border-slate-200'
-                          }`}>
-                            {b.gst_mode === 'gst' ? 'GST Invoice' : 'Plain Bill'}
-                          </span>
-                        </td>
-                        <td className="px-3.5 py-3 text-right font-black text-slate-900">
-                          ₹{Number(b.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="px-3.5 py-3 text-right no-print">
-                          <div className="flex justify-end items-center gap-1.5">
-                            <button
-                              onClick={() => handleShareBillOnWhatsApp(b)}
-                              className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black transition-all shadow-xs cursor-pointer flex items-center gap-1 active:scale-95"
-                              title="Send Invoice on WhatsApp"
-                            >
-                              <span>📤</span> WhatsApp
-                            </button>
-                            <button
-                              onClick={() => setSelectedBillForPrint(b)}
-                              className="px-2.5 py-1 rounded-xl bg-sky-50 border border-sky-200 text-sky-800 hover:bg-sky-100 text-[11px] font-black transition-all shadow-xs cursor-pointer flex items-center gap-1"
-                            >
-                              <span>🖨️</span> View
-                            </button>
-                            <button
-                              onClick={() => performDeleteBill({ rawBillObj: b, invoiceLabel: getInvoiceLabel(b) })}
-                              className="px-2 py-1 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 text-[11px] font-bold transition-all cursor-pointer"
-                              title="Delete Invoice"
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                    {restaurantBills.length === 0 && (
-                      <tr>
-                        <td colSpan={5} className="text-center py-10 text-xs font-semibold text-slate-400">
-                          Abhi tak is party ka koi invoice record nahi hua hai.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Passbook Filter Controls & Summary Cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 bg-slate-50 p-3 sm:p-4 rounded-2xl border border-slate-200 shrink-0">
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Total Delivered</span>
-                  <span className="text-base font-black text-slate-900">{periodStats.delivered} Cyl</span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Total Empty Return</span>
-                  <span className="text-base font-black text-slate-900">{periodStats.returned} Cyl</span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Total Payments</span>
-                  <span className="text-base font-black text-emerald-700">₹{periodStats.paymentsTotal.toLocaleString('en-IN')}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Total Invoices</span>
-                  <span className="text-base font-black text-sky-800">₹{periodStats.billsTotal.toLocaleString('en-IN')}</span>
-                </div>
-              </div>
-
-              {/* Filter Tabs & Export Buttons */}
-              <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1">
-                <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
-                  {['all', 'cylinder', 'payment', 'bill'].map(tabKey => (
-                    <button
-                      key={tabKey}
-                      onClick={() => setActiveTab(tabKey)}
-                      className={`px-3 py-1 rounded-lg text-xs font-bold capitalize transition-all cursor-pointer ${
-                        activeTab === tabKey ? 'bg-white shadow-xs text-slate-900' : 'text-slate-500 hover:text-slate-800'
-                      }`}
-                    >
-                      {tabKey === 'all' ? 'All Activities' : tabKey === 'cylinder' ? 'Cylinders' : tabKey === 'payment' ? 'Payments' : 'Invoices'}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-2 ml-auto">
-                  <button
-                    onClick={() => exportPartyLedgerPDF(restaurantName, filteredActivities, profile, currentNetPending)}
-                    className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
-                  >
-                    📄 PDF
-                  </button>
-                  <button
-                    onClick={() => exportPartyLedgerExcel(restaurantName, filteredActivities, profile, currentNetPending)}
-                    className="px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1"
-                  >
-                    📊 Excel
-                  </button>
-                </div>
-              </div>
-
-              {/* Activity Timeline List */}
-              <div className="border border-customBorder rounded-2xl overflow-hidden">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 border-b border-customBorder text-slate-500 font-bold uppercase text-[10px]">
-                      <th className="px-3.5 py-2.5">Date</th>
-                      <th className="px-3.5 py-2.5">Activity</th>
-                      <th className="px-3.5 py-2.5">Particulars</th>
-                      <th className="px-3.5 py-2.5 text-right">Debit (+)</th>
-                      <th className="px-3.5 py-2.5 text-right">Credit (-)</th>
-                      <th className="px-3.5 py-2.5 text-right">Balance</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {displayedActivities.map((act, idx) => (
-                      <tr key={act.id || idx} className="hover:bg-slate-50/70 transition-colors">
-                        <td className="px-3.5 py-2.5 font-semibold text-slate-600 whitespace-nowrap">{act.date}</td>
-                        <td className="px-3.5 py-2.5">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase border ${
-                            act.kind === 'payment' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                            act.kind === 'bill' ? 'bg-sky-50 text-sky-800 border-sky-200' :
-                            'bg-slate-100 text-slate-700 border-slate-200'
-                          }`}>
-                            {act.kind === 'cylinder' ? (act.isReturn ? 'Khali Return' : 'Delivery') : act.voucher || act.kind}
-                          </span>
-                        </td>
-                        <td className="px-3.5 py-2.5 text-slate-800 font-bold">
-                          {act.kind === 'cylinder' ? (
-                            <span>{act.qty} PCS ({act.type}) {act.batchNum ? `• Batch #${act.batchNum}` : ''}</span>
-                          ) : act.kind === 'payment' ? (
-                            <span>Payment Received {act.paymentMode ? `(${act.paymentMode})` : ''}</span>
-                          ) : (
-                            <span>Invoice {act.invoiceLabel || ''}</span>
-                          )}
-                        </td>
-                        <td className="px-3.5 py-2.5 text-right font-black text-rose-600">
-                          {act.debit > 0 ? `₹${act.debit.toLocaleString('en-IN')}` : '-'}
-                        </td>
-                        <td className="px-3.5 py-2.5 text-right font-black text-emerald-700">
-                          {act.credit > 0 ? `₹${act.credit.toLocaleString('en-IN')}` : '-'}
-                        </td>
-                        <td className="px-3.5 py-2.5 text-right font-black text-slate-900">
-                          {act.runningBalance !== undefined ? `₹${Math.round(act.runningBalance).toLocaleString('en-IN')}` : '-'}
-                        </td>
-                      </tr>
-                    ))}
-                    {displayedActivities.length === 0 && (
-                      <tr>
-                        <td colSpan={6} className="text-center py-10 text-xs font-semibold text-slate-400">
-                          No transactions found for the selected period.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {filteredActivities.length > displayCount && (
-                <div className="text-center pt-2">
-                  <button
-                    onClick={() => setDisplayCount(prev => prev + 25)}
-                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
-                  >
-                    Show More ({filteredActivities.length - displayCount} remaining)
-                  </button>
+                    <tbody className="divide-y divide-slate-100">
+                      {restaurantBills.map(b => (
+                        <tr key={b.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-4 py-3 font-extrabold text-slate-900">
+                            {getInvoiceLabel(b)}
+                          </td>
+                          <td className="px-4 py-3 font-semibold text-slate-600">{b.bill_date}</td>
+                          <td className="px-4 py-3 font-bold">
+                            <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-black border ${
+                              b.gst_mode === 'gst' ? 'bg-sky-50 text-sky-700 border-sky-200' : 'bg-slate-100 text-slate-600 border-slate-200'
+                            }`}>
+                              {b.gst_mode === 'gst' ? 'GST Tax Invoice' : 'Plain Bill'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right font-black text-slate-900">
+                            ₹{Number(b.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="px-4 py-3 text-right no-print">
+                            <div className="flex justify-end items-center gap-1.5">
+                              <button
+                                onClick={() => handleShareBillOnWhatsApp(b)}
+                                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black transition-all shadow-xs cursor-pointer flex items-center gap-1 active:scale-95"
+                                title="Send on WhatsApp"
+                              >
+                                <span>📤</span> WhatsApp
+                              </button>
+                              <button
+                                onClick={() => setSelectedBillForPrint(b)}
+                                className="px-2.5 py-1 rounded-lg bg-sky-50 border border-sky-200 text-sky-800 hover:bg-sky-100 text-[11px] font-extrabold transition-all shadow-xs cursor-pointer flex items-center gap-1"
+                              >
+                                🖨️ View
+                              </button>
+                              <button
+                                onClick={() => performDeleteBill({ rawBillObj: b, invoiceLabel: getInvoiceLabel(b) })}
+                                className="px-2 py-1 rounded-lg bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 text-[11px] font-bold transition-all cursor-pointer"
+                                title="Delete Invoice"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </>
@@ -1126,7 +891,7 @@ function RestaurantStatementModal({
         {/* Modal Footer */}
         <div className="pt-3 border-t border-customBorder flex items-center justify-between no-print shrink-0">
           <span className="text-xs font-semibold text-slate-500 truncate">
-            {restaurantName} • Shree Balaji Agencies
+            Statement for {restaurantName}
           </span>
           <button
             onClick={onClose}
