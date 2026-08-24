@@ -10,8 +10,20 @@ if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker
         .register('/sw.js')
-        .then(reg => console.log('✅ Service Worker registered:', reg.scope))
+        .then(reg => {
+          console.log('✅ Service Worker registered:', reg.scope);
+          // Check for update on launch
+          reg.update();
+        })
         .catch(err => console.error('❌ Service Worker registration failed:', err));
+    });
+
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        refreshing = true;
+        window.location.reload();
+      }
     });
   } else {
     // Unregister stale service workers on localhost dev

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cylinder-tracker-v9';
+const CACHE_NAME = 'cylinder-tracker-v10';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -28,7 +28,7 @@ self.addEventListener('activate', event => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
-            console.log('Deleting old PWA cache:', cacheName);
+            console.log('Purging old PWA cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -45,42 +45,18 @@ self.addEventListener('fetch', event => {
   // Bypass external APIs (e.g., Supabase)
   if (url.origin !== self.location.origin) return;
 
-  // Network-First strategy for HTML / Navigations
-  if (event.request.mode === 'navigate' || url.pathname === '/' || url.pathname.endsWith('.html')) {
-    event.respondWith(
-      fetch(event.request)
-        .then(response => {
-          if (response && response.status === 200) {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
-          }
-          return response;
-        })
-        .catch(() => {
-          return caches.match(event.request).then(cached => cached || caches.match('/index.html'));
-        })
-      );
-    return;
-  }
-
-  // Cache-First strategy for static local assets
+  // Network-First for HTML, Scripts & Styles so installed PWA always has latest code
   event.respondWith(
-    caches.match(event.request).then(cachedResponse => {
-      if (cachedResponse) return cachedResponse;
-
-      return fetch(event.request).then(networkResponse => {
+    fetch(event.request)
+      .then(networkResponse => {
         if (networkResponse && networkResponse.status === 200) {
           const copy = networkResponse.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
         }
         return networkResponse;
-      }).catch(err => {
-        console.warn('Network request failed for:', event.request.url, err);
-        return new Response('Network error occurred', {
-          status: 488,
-          headers: { 'Content-Type': 'text/plain' }
-        });
-      });
-    })
+      })
+      .catch(() => {
+        return caches.match(event.request).then(cached => cached || (event.request.mode === 'navigate' ? caches.match('/index.html') : null));
+      })
   );
 });
