@@ -72,16 +72,6 @@ export default function App() {
   } = useCylinderData(currentUser);
 
   const {
-    restaurantProfiles,
-    bills,
-    nextSuggestedInvoiceNo,
-    saveRestaurantProfile,
-    createBill,
-    deleteBill,
-    recordBillPayment
-  } = useBilling(currentUser, handleAdd, removeDeliveryEntries);
-
-  const {
     items: itemsCatalog,
     purchaseBills,
     stockAdjustments,
@@ -91,8 +81,20 @@ export default function App() {
     savePurchaseBill,
     deletePurchaseBill,
     savePartyPrice,
-    deletePartyPrice
+    deletePartyPrice,
+    deductStock,
+    restoreStock
   } = useInventory(currentUser);
+
+  const {
+    restaurantProfiles,
+    bills,
+    nextSuggestedInvoiceNo,
+    saveRestaurantProfile,
+    createBill,
+    deleteBill,
+    recordBillPayment
+  } = useBilling(currentUser, handleAdd, removeDeliveryEntries, deductStock, restoreStock);
 
   const {
     categories: expenseCategories,
@@ -358,7 +360,7 @@ export default function App() {
             {tab === "profitLoss" && <ProfitLossReport items={itemsCatalog} purchaseBills={purchaseBills} stockAdjustments={stockAdjustments} bills={bills} expenses={expenses} />}
             {tab === "gstReport" && <Gstr3bReport items={itemsCatalog} purchaseBills={purchaseBills} bills={bills} />}
             {tab === "payments" && <PaymentLedger payments={payments} onAddPayment={handleAddPayment} onDeletePayment={handleDeletePayment} batches={batches} onUpdateBatchCost={handleUpdateBatchCost} restMap={restMap} />}
-            {tab === "calendar" && <CalendarView dateMap={dateMap} selectedDate={selectedDate} setSelectedDate={setSelectedDate} handleDeleteEntry={handleDeleteEntry} payments={payments} batches={batches} onDeletePayment={handleDeletePayment} />}
+            {tab === "calendar" && <CalendarView dateMap={dateMap} selectedDate={selectedDate} setSelectedDate={setSelectedDate} handleDeleteEntry={handleDeleteEntry} payments={payments} batches={batches} bills={bills} deleteBill={deleteBill} removeDeliveryEntries={removeDeliveryEntries} restaurantProfiles={restaurantProfiles} onDeletePayment={handleDeletePayment} />}
             {tab === "batches" && <BatchesList filteredBatches={filteredBatches} batchSearch={batchSearch} setBatchSearch={setBatchSearch} handleDeleteBatch={handleDeleteBatch} />}
             {tab === "add" && <AddEntry newEntry={newEntry} setNewEntry={setNewEntry} handleAdd={handleAdd} restMap={restMap} />}
           </div>

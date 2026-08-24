@@ -156,6 +156,21 @@ function RestaurantStatementModal({
         if (pName === normTarget) {
           const rawDate = b.bill_date || today;
           const bDate = formatIsoDate(rawDate);
+
+          let deliveredQty = 0;
+          const itemSummaryList = [];
+          if (Array.isArray(b.items)) {
+            b.items.forEach(it => {
+              const q = parseFloat(it.qty) || 0;
+              deliveredQty += q;
+              const desc = (it.description || it.item_name || it.name || '').toLowerCase();
+              if (desc.includes('21')) itemSummaryList.push(`${q}x 21kg`);
+              else if (desc.includes('19.2') || desc.includes('commercial') || desc.includes('lpg')) itemSummaryList.push(`${q}x 19.2kg`);
+              else if (q > 0) itemSummaryList.push(`${q} units`);
+            });
+          }
+          const itemsSummary = itemSummaryList.join(', ');
+
           list.push({
             id: b.id || `bill_${bDate}_${b.total_amount}_${Math.random()}`,
             kind: 'bill',
@@ -167,6 +182,8 @@ function RestaurantStatementModal({
             credit: 0,
             voucher: 'Sales Invoice',
             invoiceLabel: getInvoiceLabel(b),
+            deliveredQty: deliveredQty > 0 ? deliveredQty : undefined,
+            itemsSummary: itemsSummary || undefined,
             userName: b.created_by || 'Suraj',
             note: b.note || '',
             rawBillObj: b
@@ -261,6 +278,13 @@ function RestaurantStatementModal({
           if (is21) del21 += item.qty;
           else del192 += item.qty;
         }
+      } else if (item.kind === 'bill' && Array.isArray(item.rawBillObj?.items)) {
+        item.rawBillObj.items.forEach(it => {
+          const q = parseFloat(it.qty) || 0;
+          const desc = (it.description || it.item_name || it.name || '').toLowerCase();
+          if (desc.includes('21')) del21 += q;
+          else if (desc.includes('19.2') || desc.includes('commercial') || desc.includes('lpg') || (!desc.includes('pipe') && !desc.includes('regulator') && !desc.includes('convertor') && !desc.includes('empty'))) del192 += q;
+        });
       } else if (item.kind === 'payment') {
         if (item.paymentMode === 'UPI') paidUPI += item.amount;
         else paidCash += item.amount;
@@ -292,6 +316,13 @@ function RestaurantStatementModal({
           if (is21) del21 += item.qty;
           else del192 += item.qty;
         }
+      } else if (item.kind === 'bill' && Array.isArray(item.rawBillObj?.items)) {
+        item.rawBillObj.items.forEach(it => {
+          const q = parseFloat(it.qty) || 0;
+          const desc = (it.description || it.item_name || it.name || '').toLowerCase();
+          if (desc.includes('21')) del21 += q;
+          else if (desc.includes('19.2') || desc.includes('commercial') || desc.includes('lpg') || (!desc.includes('pipe') && !desc.includes('regulator') && !desc.includes('convertor') && !desc.includes('empty'))) del192 += q;
+        });
       }
     });
 
@@ -600,8 +631,15 @@ function RestaurantStatementModal({
                               </div>
                             ) : item.kind === 'bill' ? (
                               <div>
-                                <span className="text-sm font-black text-indigo-950">{item.invoiceLabel}</span>
-                                <span className="ml-2 text-sm text-rose-600 font-black">₹{item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-black text-indigo-950">{item.invoiceLabel}</span>
+                                  <span className="text-sm text-rose-600 font-black">₹{item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                                {item.itemsSummary && (
+                                  <span className="text-[11px] font-extrabold text-sky-800 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200 mt-1 inline-block">
+                                    📦 {item.itemsSummary} Supplied
+                                  </span>
+                                )}
                               </div>
                             ) : (
                               <div className="text-sm font-black text-emerald-700">
@@ -645,28 +683,28 @@ function RestaurantStatementModal({
                     ))}
                   </div>
 
-                  {/* DESKTOP TABLE VIEW */}
-                  <table className="hidden lg:table w-full min-w-[760px] text-left text-xs border-collapse">
+                  {/* DESKTOP TABLE VIEW (100% Fit & No Overflow) */}
+                  <table className="hidden lg:table w-full table-fixed text-left text-xs border-collapse">
                     <thead>
-                      <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-mutedSlate">
-                        <th className="px-3 py-2.5 whitespace-nowrap">Date</th>
-                        <th className="px-3 py-2.5 whitespace-nowrap">Type</th>
-                        <th className="px-3 py-2.5 whitespace-nowrap">Details / Invoice</th>
-                        <th className="px-3 py-2.5 text-right whitespace-nowrap">Batch</th>
-                        <th className="px-3 py-2.5 text-right whitespace-nowrap">Delivered</th>
-                        <th className="px-3 py-2.5 text-right whitespace-nowrap">Khali Ret</th>
-                        <th className="px-3 py-2.5 text-right text-rose-650 whitespace-nowrap">Bill Amt (₹)</th>
-                        <th className="px-3 py-2.5 text-right text-emerald-700 whitespace-nowrap">Paid (₹)</th>
-                        <th className="px-3 py-2.5 text-right text-slate-800 whitespace-nowrap">Closing Bal (₹)</th>
-                        <th className="px-3 py-2.5 whitespace-nowrap">By</th>
-                        <th className="px-3 py-2.5 text-right whitespace-nowrap">Action</th>
+                      <tr className="border-b border-slate-200 bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-mutedSlate">
+                        <th className="w-[10%] px-2 py-2.5">Date</th>
+                        <th className="w-[8%] px-2 py-2.5">Type</th>
+                        <th className="w-[16%] px-2 py-2.5">Details / Invoice</th>
+                        <th className="w-[5%] px-1.5 py-2.5 text-center">Batch</th>
+                        <th className="w-[9%] px-2 py-2.5 text-right">Delivered</th>
+                        <th className="w-[8%] px-2 py-2.5 text-right">Khali Ret</th>
+                        <th className="w-[10%] px-2 py-2.5 text-right text-rose-650">Bill Amt (₹)</th>
+                        <th className="w-[9%] px-2 py-2.5 text-right text-emerald-700">Paid (₹)</th>
+                        <th className="w-[11%] px-2 py-2.5 text-right text-slate-800">Closing Bal</th>
+                        <th className="w-[9%] px-2 py-2.5">By</th>
+                        <th className="w-[5%] px-1.5 py-2.5 text-center">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {visibleActivities.map((item, idx) => (
                         <tr key={item.id || idx} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-3 py-2.5 font-semibold text-slate-700 whitespace-nowrap">{item.date}</td>
-                          <td className="px-3 py-2.5 font-bold whitespace-nowrap">
+                          <td className="px-2 py-2 font-semibold text-slate-700 truncate">{item.date}</td>
+                          <td className="px-2 py-2 font-bold">
                             {item.kind === 'cylinder' ? (
                               <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-black border ${
                                 item.isReturn ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-sky-50 text-sky-700 border-sky-200'
@@ -685,44 +723,55 @@ function RestaurantStatementModal({
                               </span>
                             )}
                           </td>
-                          <td className="px-3 py-2.5 font-bold text-slate-800">
+                          <td className="px-2 py-2 font-bold text-slate-800">
                             {item.kind === 'cylinder' ? (
-                              <span className="font-semibold text-slate-600">{item.type} Cylinder</span>
+                              <span className="font-semibold text-slate-600 truncate block">{item.type} Cylinder</span>
                             ) : item.kind === 'bill' ? (
-                              <button
-                                onClick={() => setSelectedBillForPrint(item.rawBillObj)}
-                                className="text-indigo-650 hover:underline font-bold"
-                              >
-                                {item.invoiceLabel}
-                              </button>
+                              <div>
+                                <button
+                                  onClick={() => setSelectedBillForPrint(item.rawBillObj)}
+                                  className="text-indigo-650 hover:underline font-black cursor-pointer truncate block"
+                                >
+                                  {item.invoiceLabel}
+                                </button>
+                                {item.itemsSummary && (
+                                  <span className="text-[10px] text-sky-800 font-bold block truncate">
+                                    {item.itemsSummary}
+                                  </span>
+                                )}
+                              </div>
                             ) : (
-                              <span className="font-semibold text-slate-600">Collection</span>
+                              <span className="font-semibold text-slate-600 truncate block">Collection</span>
                             )}
                           </td>
-                          <td className="px-3 py-2.5 text-right font-bold text-slate-500 whitespace-nowrap">
+                          <td className="px-1.5 py-2 text-center font-bold text-slate-500">
                             {item.batchNum ? `#${item.batchNum}` : '-'}
                           </td>
-                          <td className="px-3 py-2.5 text-right font-bold text-slate-800 whitespace-nowrap">
-                            {item.kind === 'cylinder' && !item.isReturn ? `${item.qty} units` : '-'}
+                          <td className="px-2 py-2 text-right font-black text-slate-800">
+                            {item.kind === 'cylinder' && !item.isReturn ? (
+                              `${item.qty} units`
+                            ) : item.kind === 'bill' && item.deliveredQty ? (
+                              <span className="text-sky-800 font-black">{item.itemsSummary || `${item.deliveredQty} units`}</span>
+                            ) : '-'}
                           </td>
-                          <td className="px-3 py-2.5 text-right font-bold text-slate-800 whitespace-nowrap">
+                          <td className="px-2 py-2 text-right font-bold text-slate-800">
                             {item.kind === 'cylinder' && item.isReturn ? `${item.qty} units` : '-'}
                           </td>
-                          <td className="px-3 py-2.5 text-right font-black text-rose-600 whitespace-nowrap">
+                          <td className="px-2 py-2 text-right font-black text-rose-600">
                             {item.kind === 'bill' ? `₹${item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '-'}
                           </td>
-                          <td className="px-3 py-2.5 text-right font-black text-emerald-700 whitespace-nowrap">
+                          <td className="px-2 py-2 text-right font-black text-emerald-700">
                             {item.kind === 'payment' ? `₹${item.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}` : '-'}
                           </td>
-                          <td className="px-3 py-2.5 text-right font-black text-slate-900 bg-slate-50/50 whitespace-nowrap">
+                          <td className="px-2 py-2 text-right font-black text-slate-900 bg-slate-50/50">
                             ₹{(item.runningBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </td>
-                          <td className="px-3 py-2.5 text-slate-500 font-bold whitespace-nowrap">{item.userName}</td>
-                          <td className="px-3 py-2.5 text-right no-print whitespace-nowrap">
+                          <td className="px-2 py-2 text-slate-600 font-bold whitespace-normal">{item.userName}</td>
+                          <td className="px-1.5 py-2 text-center no-print">
                             {item.kind === 'cylinder' && handleDeleteEntry && (
                               <button
                                 onClick={() => handleDeleteEntry(item.batchNum, item.originalEntry || item.rawEntryObj)}
-                                className="text-red-500 hover:text-red-700 font-bold p-1 text-xs cursor-pointer active:scale-95"
+                                className="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold cursor-pointer active:scale-95 transition-all shadow-2xs inline-flex items-center justify-center"
                                 title="Delete entry"
                               >
                                 🗑️
@@ -731,7 +780,7 @@ function RestaurantStatementModal({
                             {item.kind === 'payment' && onDeletePayment && (
                               <button
                                 onClick={() => onDeletePayment(item.rawPaymentObj)}
-                                className="text-red-500 hover:text-red-700 font-bold p-1 text-xs cursor-pointer active:scale-95"
+                                className="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold cursor-pointer active:scale-95 transition-all shadow-2xs inline-flex items-center justify-center"
                                 title="Delete payment"
                               >
                                 🗑️
@@ -740,7 +789,7 @@ function RestaurantStatementModal({
                             {item.kind === 'bill' && deleteBill && (
                               <button
                                 onClick={() => performDeleteBill(item)}
-                                className="text-red-500 hover:text-red-700 font-bold p-1 text-xs cursor-pointer active:scale-95"
+                                className="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold cursor-pointer active:scale-95 transition-all shadow-2xs inline-flex items-center justify-center"
                                 title="Delete Invoice"
                               >
                                 🗑️

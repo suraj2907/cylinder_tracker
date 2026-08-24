@@ -13,6 +13,10 @@ export default function CalendarView({
   handleDeleteEntry,
   payments = [],
   batches = [],
+  bills = [],
+  deleteBill,
+  removeDeliveryEntries,
+  restaurantProfiles = {},
   onDeletePayment
 }) {
   const today = new Date().toISOString().slice(0, 10);
@@ -38,14 +42,15 @@ export default function CalendarView({
     const s = new Set();
     Object.keys(dateMap).forEach(d => { if (d) s.add(formatIsoDate(d).slice(0, 7)); });
     payments.forEach(p => { if (p.date) s.add(formatIsoDate(p.date).slice(0, 7)); });
+    bills.forEach(b => { if (b.bill_date) s.add(formatIsoDate(b.bill_date).slice(0, 7)); });
     return s;
-  }, [dateMap, payments]);
+  }, [dateMap, payments, bills]);
 
   // Combine Cylinder Deliveries & Payment Collections into a Master Date-Wise Timeline
   const combinedEntries = useMemo(() => {
     const list = [];
 
-    // 1. Add Cylinder Deliveries & Returns
+    // 1. Add Cylinder Deliveries & Returns from Batches
     Object.entries(dateMap).forEach(([dateStr, dObj]) => {
       const normDate = formatIsoDate(dateStr);
       if (dObj && dObj.details) {
@@ -67,7 +72,36 @@ export default function CalendarView({
       }
     });
 
-    // 2. Add Payment Collection Entries
+    // 2. Add Cylinder Deliveries from Sales Invoices (Bills)
+    (bills || []).forEach(b => {
+      if (b.bill_date && Array.isArray(b.items)) {
+        const bDate = formatIsoDate(b.bill_date);
+        b.items.forEach(it => {
+          const q = parseInt(it.qty, 10) || 0;
+          if (q > 0) {
+            const desc = (it.description || it.item_name || it.name || '').toLowerCase();
+            let cylType = '19.2kg';
+            if (desc.includes('21')) cylType = '21kg';
+            else if (desc.includes('15')) cylType = '15kg';
+            
+            list.push({
+              id: `bill_cyl_${b.id}_${it.item_id || it.description}_${Math.random()}`,
+              kind: 'cylinder',
+              date: bDate,
+              batchNum: b.invoice_no ? `INV-${b.invoice_no}` : 'Bill',
+              restaurantName: b.restaurant_name,
+              qty: q,
+              type: cylType,
+              isReturn: false,
+              userName: b.created_by || 'Suraj',
+              rawBillObj: b
+            });
+          }
+        });
+      }
+    });
+
+    // 3. Add Payment Collection Entries
     payments.forEach(p => {
       const rawDate = p.date || (p.created_at ? p.created_at.slice(0, 10) : today);
       const pDate = formatIsoDate(rawDate);
@@ -86,7 +120,7 @@ export default function CalendarView({
     });
 
     return list;
-  }, [dateMap, payments, today]);
+  }, [dateMap, payments, bills, today]);
 
   // Filtered timeline based on Single Date / Date Range, Search Query, and Activity Type
   const filteredTimeline = useMemo(() => {
@@ -311,8 +345,24 @@ export default function CalendarView({
                 const d = i + 1, key = fmt(d), data = dateMap[key];
                 const dayPayments = payments.filter(p => formatIsoDate(p.date) === key);
                 const isTod = key === today, isSel = key === selectedDate;
-                const total21 = (data?.["21kg"] || 0), total192 = (data?.["19.2kg"] || 0);
-                const hasActivity = data || dayPayments.length > 0;
+                
+                // Aggregate bill deliveries on this date
+                const dayBills = (bills || []).filter(b => b.bill_date && formatIsoDate(b.bill_date) === key);
+                let bill21 = 0, bill192 = 0;
+                dayBills.forEach(b => {
+                  if (Array.isArray(b.items)) {
+                    b.items.forEach(it => {
+                      const q = parseInt(it.qty, 10) || 0;
+                      const desc = (it.description || it.item_name || it.name || '').toLowerCase();
+                      if (desc.includes('21')) bill21 += q;
+                      else if (desc.includes('19.2') || desc.includes('commercial') || desc.includes('lpg')) bill192 += q;
+                    });
+                  }
+                });
+
+                const total21 = (data?.["21kg"] || 0) + bill21;
+                const total192 = (data?.["19.2kg"] || 0) + bill192;
+                const hasActivity = total21 > 0 || total192 > 0 || dayPayments.length > 0 || data;
                 
                 let borderClass = 'border-slate-200 bg-white';
                 if (isSel) {
@@ -511,19 +561,34 @@ export default function CalendarView({
                       </span>
                     </td>
                     <td className="py-3 px-4 text-xs text-right">
-                      {item.kind === 'cylinder' && handleDeleteEntry && (
-                        <button
-                          onClick={() => handleDeleteEntry(item.batchNum, item.originalEntry)}
-                          className="text-red-500 hover:text-red-700 font-bold p-1 text-xs"
-                          title="Delete entry"
-                        >
-                          🗑️
-                        </button>
+                      {item.kind === 'cylinder' && (
+                        item.rawBillObj && deleteBill ? (
+                          <button
+                            onClick={async () => {
+                              const invName = item.batchNum || 'Invoice';
+                              if (window.confirm(`Delete ${invName} and restore stock?`)) {
+                                await deleteBill(item.rawBillObj.id, removeDeliveryEntries);
+                              }
+                            }}
+                            className="text-red-500 hover:text-red-700 font-bold p-1 text-xs cursor-pointer active:scale-95"
+                            title="Delete Bill & Restore Stock"
+                          >
+                            🗑️
+                          </button>
+                        ) : handleDeleteEntry ? (
+                          <button
+                            onClick={() => handleDeleteEntry(item.batchNum, item.originalEntry)}
+                            className="text-red-500 hover:text-red-700 font-bold p-1 text-xs cursor-pointer active:scale-95"
+                            title="Delete entry"
+                          >
+                            🗑️
+                          </button>
+                        ) : null
                       )}
                       {item.kind === 'payment' && onDeletePayment && (
                         <button
                           onClick={() => onDeletePayment(item.rawPaymentObj)}
-                          className="text-red-500 hover:text-red-700 font-bold p-1 text-xs"
+                          className="text-red-500 hover:text-red-700 font-bold p-1 text-xs cursor-pointer active:scale-95"
                           title="Delete payment"
                         >
                           🗑️
@@ -547,6 +612,10 @@ export default function CalendarView({
           payments={payments}
           handleDeleteEntry={handleDeleteEntry}
           onDeletePayment={onDeletePayment}
+          bills={bills}
+          deleteBill={deleteBill}
+          removeDeliveryEntries={removeDeliveryEntries}
+          restaurantProfiles={restaurantProfiles}
         />
       )}
     </div>

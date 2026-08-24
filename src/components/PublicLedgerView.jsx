@@ -41,7 +41,7 @@ export default function PublicLedgerView({ token }) {
   const [notFound, setNotFound] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   
-  // Date filter state: '6months' (default), '3months', '1month', 'all', 'custom'
+  // Default to Last 6 Months (Covers entire financial year from March 2026 to present)
   const [filterPreset, setFilterPreset] = useState('6months');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
@@ -329,6 +329,16 @@ export default function PublicLedgerView({ token }) {
     };
   }, [fullTimeline, filterPreset, customStartDate, customEndDate, restaurantProfile]);
 
+  // Passbook sorting: Latest transaction on TOP (newest first)
+  const displayTimeline = useMemo(() => {
+    return [...filteredTimeline].sort((a, b) => {
+      const dateCmp = (b.date || '').localeCompare(a.date || '');
+      if (dateCmp !== 0) return dateCmp;
+      const rank = { 'Payment-in': 1, 'Payment': 1, 'Sales Invoice': 2, 'Invoice': 2 };
+      return (rank[a.voucher] || 2) - (rank[b.voucher] || 2);
+    });
+  }, [filteredTimeline]);
+
   // High-Quality Multi-Page Vector PDF Generator matching BillBook exact format
   const handleDownloadPdf = () => {
     setDownloadingPdf(true);
@@ -556,229 +566,226 @@ export default function PublicLedgerView({ token }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 p-2 sm:p-6 font-sans text-slate-800">
-      {/* Top Filter & Action Bar (Hidden during print) */}
-      <div className="max-w-5xl mx-auto mb-4 bg-white p-3 sm:p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap justify-between items-center gap-3 no-print">
-        {/* Preset Period Buttons */}
-        <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold">
-          <span className="text-slate-400 mr-1 text-[11px]">Period:</span>
-          {[
-            { id: '6months', label: 'Last 6 Months' },
-            { id: '3months', label: 'Last 3 Months' },
-            { id: '1month', label: 'This Month' },
-            { id: 'all', label: 'All Time' }
-          ].map(btn => (
-            <button
-              key={btn.id}
-              onClick={() => setFilterPreset(btn.id)}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                filterPreset === btn.id
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              {btn.label}
-            </button>
-          ))}
+    <div className="min-h-screen bg-slate-50 p-2.5 sm:p-6 font-sans text-slate-800 flex flex-col items-center">
+      {/* Top Compact Navigation Bar */}
+      <div className="w-full max-w-2xl bg-white p-3 sm:p-4 rounded-2xl shadow-xs border border-slate-200 flex justify-between items-center gap-2 mb-3 no-print">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-xl">🔥</span>
+          <div className="min-w-0">
+            <h1 className="text-xs sm:text-sm font-black text-slate-900 truncate">Shree Balaji Agencies</h1>
+            <p className="text-[10px] text-slate-400 font-bold truncate">📞 +91-9407922288 • Rajnandgaon</p>
+          </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleDownloadPdf}
-            disabled={downloadingPdf}
-            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-          >
-            <span>{downloadingPdf ? 'Generating PDF...' : 'Download PDF'}</span> 📥
-          </button>
-        </div>
+        {/* Small Compact Download PDF Button */}
+        <button
+          onClick={handleDownloadPdf}
+          disabled={downloadingPdf}
+          className="shrink-0 px-3 py-1.5 bg-slate-900 hover:bg-black active:scale-95 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+          title="Download Statement PDF"
+        >
+          <span>{downloadingPdf ? 'Saving...' : 'Download PDF'}</span>
+          <span className="text-[11px]">📥</span>
+        </button>
       </div>
 
-      {/* Main Printable Ledger Document Container */}
+      {/* Main Container */}
       <div
         ref={reportRef}
         id="party-ledger-report"
-        className="bg-white max-w-5xl mx-auto p-6 sm:p-10 rounded-2xl shadow-sm border border-slate-200 text-xs print:p-0 print:border-none print:shadow-none"
+        className="w-full max-w-2xl bg-white p-4 sm:p-7 rounded-2xl shadow-xs border border-slate-200 text-xs space-y-4"
       >
-        {/* Document Header Section */}
-        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-5 border-b border-slate-200">
-          {/* Company Branding */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">🔥</span>
-              <div>
-                <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight uppercase">M/S Shree Balaji Agencies</h1>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Commercial LPG Cylinder Partner</p>
+        {/* Customer Header & Pending Card */}
+        <div className="space-y-3">
+          {/* Party Name & Location */}
+          <div className="flex justify-between items-start gap-2">
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Customer Statement</span>
+              <h2 className="text-base sm:text-lg font-black text-slate-900 mt-0.5">{restaurantProfile.name}</h2>
+              <p className="text-slate-500 text-[11px] font-medium">{restaurantProfile.address || 'Chhattisgarh, 491441'}</p>
+            </div>
+            <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-lg shrink-0 border border-slate-200">
+              Party Ledger
+            </span>
+          </div>
+
+          {/* Clean Pending Due Card (No Opening/Closing Clutter) */}
+          <div className={`p-4 rounded-2xl border flex items-center justify-between ${
+            totalsSummary.finalBalance > 0
+              ? 'bg-rose-50/80 border-rose-200 text-rose-950'
+              : 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
+          }`}>
+            <div>
+              <span className={`text-[10px] font-bold uppercase tracking-wider block ${
+                totalsSummary.finalBalance > 0 ? 'text-rose-700' : 'text-emerald-700'
+              }`}>
+                {totalsSummary.finalBalance > 0 ? '🔴 Pending Amount' : '✅ Current Balance'}
+              </span>
+              <div className="text-2xl sm:text-3xl font-black tracking-tight mt-0.5">
+                ₹{totalsSummary.finalBalance.toLocaleString('en-IN', { minimumFractionDigits: 1 })}
               </div>
             </div>
-            <p className="text-[11px] text-slate-600 font-medium pt-1">Kamthi Line Beside SBI ATM , Chhattisgarh, 491441</p>
-            <p className="text-[11px] text-slate-600 font-medium">Phone No: +91- 9407922288 &nbsp;|&nbsp; GSTIN: 22SNZPS3600E1ZH</p>
-          </div>
 
-          {/* Title */}
-          <div className="text-left sm:text-right">
-            <h2 className="text-base font-black text-slate-900 uppercase tracking-wider">Party Ledger Report</h2>
-          </div>
-        </div>
-
-        {/* Customer Details & Summary Cards */}
-        <div className="py-4 border-b border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
-          {/* Customer Address Details */}
-          <div className="space-y-0.5">
-            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">To,</span>
-            <h3 className="text-sm font-black text-slate-900">{restaurantProfile.name}</h3>
-            <p className="text-slate-600 font-medium text-[11px]">{restaurantProfile.address || 'Chhattisgarh, 491441'}</p>
-            {restaurantProfile.mobile ? (
-              <p className="text-slate-600 font-semibold text-[11px]">Phone No: +91- {restaurantProfile.mobile}</p>
-            ) : null}
-            {restaurantProfile.gst_num ? (
-              <p className="text-slate-600 font-semibold text-[11px]">GSTIN: {restaurantProfile.gst_num}</p>
-            ) : null}
-          </div>
-
-          {/* Right Summary Box matching BillBook */}
-          <div className="sm:ml-auto w-full sm:w-72 border border-slate-300 rounded-xl p-3 bg-slate-50/70 text-[11px] space-y-1">
-            <div className="text-[10px] text-slate-600 font-bold border-b border-slate-200 pb-1">
-              Date: {dateRangeLabel}
-            </div>
-            <div className="flex justify-between font-black text-slate-900 text-xs pt-0.5">
-              <span>Total Receivable Amount:</span>
-              <span className="text-rose-700">₹{totalsSummary.finalBalance.toFixed(1)}</span>
-            </div>
-            <div className="flex justify-between text-slate-600 font-medium text-[10px]">
-              <span>Overdue Amount:</span>
-              <span>₹{totalsSummary.overdueAmount.toFixed(1)}</span>
-            </div>
-            <div className="flex justify-between text-slate-600 font-medium text-[10px]">
-              <span>Total Sales Amount:</span>
-              <span>₹{totalsSummary.totalDebit.toFixed(1)}</span>
-            </div>
-            <div className="flex justify-between text-slate-600 font-medium text-[10px]">
-              <span>Total Received Amount:</span>
-              <span>₹{totalsSummary.totalCredit.toFixed(1)}</span>
+            <div className="text-right">
+              <span className={`inline-block px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border ${
+                totalsSummary.finalBalance > 0
+                  ? 'bg-rose-100/80 text-rose-800 border-rose-300'
+                  : 'bg-emerald-100/80 text-emerald-800 border-emerald-300'
+              }`}>
+                {totalsSummary.finalBalance > 0 ? 'Payment Due' : 'All Clear'}
+              </span>
+              <p className="text-[10px] text-slate-400 font-semibold mt-1">
+                {dateRangeLabel}
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Ledger Transactions Table */}
-        <div className="overflow-x-auto mt-4">
-          <table className="w-full text-left border-collapse text-[11px]">
-            <thead>
-              <tr className="bg-slate-100 text-slate-700 font-extrabold uppercase border-y border-slate-300">
-                <th className="py-2 px-2">Date</th>
-                <th className="py-2 px-2">Voucher</th>
-                <th className="py-2 px-2">Sr No</th>
-                <th className="py-2 px-2">Payment Mode</th>
-                <th className="py-2 px-2 text-right">Credit</th>
-                <th className="py-2 px-2 text-right">Debit</th>
-                <th className="py-2 px-2 text-right">Balance</th>
-                <th className="py-2 px-2 text-left">Due Date (overdue by)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {/* Opening Balance Row */}
-              <tr className="bg-slate-50/80 font-bold text-slate-800">
-                <td className="py-2 px-2 text-slate-400">—</td>
-                <td className="py-2 px-2">Opening Balance</td>
-                <td className="py-2 px-2 text-slate-400">—</td>
-                <td className="py-2 px-2 text-slate-400">—</td>
-                <td className="py-2 px-2 text-right text-slate-400">—</td>
-                <td className="py-2 px-2 text-right">{openingBalance > 0 ? openingBalance.toFixed(1) : '—'}</td>
-                <td className="py-2 px-2 text-right font-black">{openingBalance.toFixed(1)}</td>
-                <td className="py-2 px-2 text-slate-400">—</td>
-              </tr>
+        {/* Transactions Section Title */}
+        <div className="pt-2">
+          <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+            <span className="text-[11px] font-black text-slate-800 uppercase tracking-wider">
+              📋 Transactions ({filteredTimeline.length})
+            </span>
+            <span className="text-[10px] font-bold text-slate-400">
+              {filteredTimeline.length > 0 ? `${formatDateShort(filteredTimeline[0].date)} to ${formatDateShort(filteredTimeline[filteredTimeline.length - 1].date)}` : ''}
+            </span>
+          </div>
 
-              {/* Transactions List */}
-              {filteredTimeline.map((row, idx) => {
-                const isPaid = (row.status || '').toLowerCase() === 'paid';
-                const isUnpaid = (row.status || '').toLowerCase() === 'unpaid';
-                const isPartially = (row.status || '').toLowerCase().includes('partially');
+          {filteredTimeline.length === 0 ? (
+            <div className="text-center py-8 text-slate-400 text-xs font-semibold">
+              No transactions recorded in the last 3 months.
+            </div>
+          ) : (
+            <>
+              {/* MOBILE VERTICAL CARD VIEW (Zero Horizontal Scrolling!) */}
+              <div className="block sm:hidden divide-y divide-slate-100">
+                {displayTimeline.map((row, idx) => {
+                  const isPayment = row.voucher === 'Payment-in' || row.voucher === 'Payment';
+                  const isPaid = (row.status || '').toLowerCase() === 'paid';
+                  const isUnpaid = (row.status || '').toLowerCase() === 'unpaid';
 
-                return (
-                  <tr key={row.id || idx} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-2 px-2 whitespace-nowrap text-slate-600 font-medium">
-                      {formatDateDisplay(row.date)}
-                    </td>
-                    <td className="py-2 px-2 font-bold text-slate-800 whitespace-nowrap">
-                      {row.voucher}
-                    </td>
-                    <td className="py-2 px-2 text-slate-600 font-semibold">
-                      {row.srNo}
-                    </td>
-                    <td className="py-2 px-2 text-slate-600 whitespace-nowrap">
-                      {row.paymentMode}
-                    </td>
-                    <td className="py-2 px-2 text-right font-bold text-emerald-700">
-                      {row.credit > 0 ? row.credit.toFixed(1) : '—'}
-                    </td>
-                    <td className="py-2 px-2 text-right font-bold text-slate-900">
-                      {row.debit > 0 ? row.debit.toFixed(1) : (row.voucher === 'Payment-in' ? '0.0' : '—')}
-                    </td>
-                    <td className="py-2 px-2 text-right font-black text-slate-900">
-                      {row.runningBalance.toFixed(1)}
-                    </td>
-                    <td className="py-2 px-2 text-left whitespace-nowrap">
-                      {row.voucher === 'Sales Invoice' ? (
-                        <div>
-                          {row.dueDate && !isPaid ? (
-                            <div className="text-[10px] text-slate-500">{formatDateDisplay(row.dueDate)}</div>
-                          ) : null}
-                          <span className={`inline-block font-extrabold text-[10px] ${
-                            isPaid ? 'text-emerald-700' : isUnpaid ? 'text-rose-700' : isPartially ? 'text-amber-700' : 'text-slate-600'
-                          }`}>
-                            {row.status}
+                  return (
+                    <div key={row.id || idx} className="py-3 space-y-1.5">
+                      {/* Row 1: Date & Voucher Type Badge */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-black text-slate-900">{formatDateDisplay(row.date)}</span>
+                          {row.srNo && row.srNo !== '—' && (
+                            <span className="text-[10px] font-bold text-slate-400">#{row.srNo}</span>
+                          )}
+                        </div>
+
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider border ${
+                          isPayment
+                            ? 'bg-teal-50 text-teal-800 border-teal-200'
+                            : 'bg-indigo-50 text-indigo-900 border-indigo-200'
+                        }`}>
+                          {isPayment ? `💳 ${row.paymentMode || 'Payment'}` : `🧾 Invoice`}
+                        </span>
+                      </div>
+
+                      {/* Row 2: Amount & Status Badge */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {isPayment ? (
+                            <span className="text-sm font-black text-emerald-700">
+                              -₹{row.credit.toLocaleString('en-IN', { minimumFractionDigits: 1 })}
+                            </span>
+                          ) : (
+                            <span className="text-sm font-black text-rose-700">
+                              +₹{row.debit.toLocaleString('en-IN', { minimumFractionDigits: 1 })}
+                            </span>
+                          )}
+
+                          {!isPayment && (
+                            <span className={`text-[10px] font-black px-1.5 py-0.2 rounded border ${
+                              isPaid
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : isUnpaid
+                                  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                            }`}>
+                              {row.status || 'Unpaid'}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Running Balance */}
+                        <div className="text-right">
+                          <span className="text-[11px] font-bold text-slate-600">
+                            Bal: <span className="font-black text-slate-900">₹{row.runningBalance.toLocaleString('en-IN', { minimumFractionDigits: 1 })}</span>
                           </span>
                         </div>
-                      ) : (
-                        <span className="text-slate-400">—</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
 
-              {/* Closing Balance Row */}
-              <tr className="bg-slate-50 font-black text-slate-900 border-t-2 border-slate-300">
-                <td className="py-2 px-2 text-slate-400">—</td>
-                <td className="py-2 px-2">Closing Balance</td>
-                <td colSpan={3}></td>
-                <td className="py-2 px-2 text-right text-rose-700 font-black">
-                  {totalsSummary.finalBalance.toFixed(1)}
-                </td>
-                <td className="py-2 px-2 text-right text-rose-700 font-black">
-                  {totalsSummary.finalBalance.toFixed(1)}
-                </td>
-                <td></td>
-              </tr>
-            </tbody>
-            <tfoot>
-              {/* Total Summary Row */}
-              <tr className="bg-slate-100 font-black text-slate-900 border-t border-b-2 border-slate-400">
-                <td className="py-2.5 px-2 uppercase tracking-wide">Total</td>
-                <td colSpan={3}></td>
-                <td className="py-2.5 px-2 text-right text-emerald-800">
-                  {totalsSummary.totalCredit.toFixed(1)}
-                </td>
-                <td className="py-2.5 px-2 text-right">
-                  {(totalsSummary.totalDebit + (openingBalance || 0)).toFixed(1)}
-                </td>
-                <td colSpan={2}></td>
-              </tr>
-            </tfoot>
-          </table>
+              {/* DESKTOP TABLE VIEW (Visible on tablet & desktop screens) */}
+              <div className="hidden sm:block overflow-x-auto mt-2">
+                <table className="w-full text-left border-collapse text-[11px]">
+                  <thead>
+                    <tr className="bg-slate-50 text-slate-700 font-extrabold uppercase border-y border-slate-200">
+                      <th className="py-2 px-2">Date</th>
+                      <th className="py-2 px-2">Type</th>
+                      <th className="py-2 px-2">Ref / Sr</th>
+                      <th className="py-2 px-2">Mode</th>
+                      <th className="py-2 px-2 text-right text-emerald-700">Credit (Paid)</th>
+                      <th className="py-2 px-2 text-right text-rose-700">Debit (Bill)</th>
+                      <th className="py-2 px-2 text-right">Balance</th>
+                      <th className="py-2 px-2 text-left">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {displayTimeline.map((row, idx) => {
+                      const isPaid = (row.status || '').toLowerCase() === 'paid';
+                      const isUnpaid = (row.status || '').toLowerCase() === 'unpaid';
+
+                      return (
+                        <tr key={row.id || idx} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-2 px-2 whitespace-nowrap text-slate-700 font-medium">{formatDateDisplay(row.date)}</td>
+                          <td className="py-2 px-2 font-bold text-slate-900 whitespace-nowrap">{row.voucher}</td>
+                          <td className="py-2 px-2 text-slate-500 font-semibold">{row.srNo}</td>
+                          <td className="py-2 px-2 text-slate-500 whitespace-nowrap">{row.paymentMode}</td>
+                          <td className="py-2 px-2 text-right font-bold text-emerald-700">
+                            {row.credit > 0 ? `₹${row.credit.toFixed(1)}` : '—'}
+                          </td>
+                          <td className="py-2 px-2 text-right font-bold text-rose-700">
+                            {row.debit > 0 ? `₹${row.debit.toFixed(1)}` : '—'}
+                          </td>
+                          <td className="py-2 px-2 text-right font-black text-slate-900">
+                            ₹{row.runningBalance.toFixed(1)}
+                          </td>
+                          <td className="py-2 px-2 text-left whitespace-nowrap">
+                            {row.voucher === 'Sales Invoice' ? (
+                              <span className={`inline-block font-black text-[10px] ${
+                                isPaid ? 'text-emerald-700' : isUnpaid ? 'text-rose-700' : 'text-amber-700'
+                              }`}>
+                                {row.status}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Bank & Signature Footer */}
-        <div className="mt-8 pt-6 border-t border-slate-200 grid grid-cols-2 gap-6 text-[10px] text-slate-500">
-          <div className="space-y-1">
-            <span className="font-bold text-slate-700 uppercase">Bank Transfer Details:</span>
-            <p>Account Name: <span className="font-bold text-slate-800">Shree Balaji Agencies</span></p>
-            <p>Bank: <span className="font-bold text-slate-800">State Bank of India (SBI)</span></p>
-            <p>UPI / Contact: <span className="font-bold text-slate-800">9407922288</span></p>
+        {/* Compact Footer */}
+        <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-2 text-[10px] text-slate-400">
+          <div>
+            <span>M/S Shree Balaji Agencies • GSTIN: 22SNZPS3600E1ZH</span>
           </div>
-          <div className="text-right flex flex-col justify-end">
-            <p className="font-bold text-slate-800 text-xs uppercase">For M/S Shree Balaji Agencies</p>
-            <p className="text-[10px] text-slate-400 pt-6">Authorized Signatory</p>
+          <div>
+            <span>UPI / Phone: +91-9407922288</span>
           </div>
         </div>
       </div>

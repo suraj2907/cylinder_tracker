@@ -2,7 +2,7 @@ import React, { useState, useMemo, memo } from 'react';
 import { Search, MessageCircle } from 'lucide-react';
 import RestaurantStatementModal from './RestaurantStatementModal';
 import RestaurantProfileModal from './RestaurantProfileModal';
-import { norm, getAllPartiesCurrentBalances } from '../utils/dataUtils';
+import { norm, isNewBill, getAllPartiesCurrentBalances } from '../utils/dataUtils';
 
 function RestaurantsList({ 
   restaurants, 
@@ -44,7 +44,7 @@ function RestaurantsList({
   // Combine delivered restaurants + profile-only restaurants so new restaurants show immediately
   const displayedRestaurants = useMemo(() => {
     const map = new Map();
-    (restaurants || []).forEach(r => map.set(norm(r.name), r));
+    (restaurants || []).forEach(r => map.set(norm(r.name), { ...r }));
 
     Object.values(restaurantProfiles || {}).forEach(p => {
       if (p && p.name && !map.has(norm(p.name))) {
@@ -61,6 +61,27 @@ function RestaurantsList({
           total: 0,
           outstanding: 0
         });
+      }
+    });
+
+    // Add live cylinders delivered via newly generated bills
+    (bills || []).forEach(b => {
+      if (isNewBill(b) && Array.isArray(b.items)) {
+        const normName = norm(b.restaurant_name);
+        const existing = map.get(normName);
+        if (existing) {
+          let add21 = 0, add192 = 0;
+          b.items.forEach(it => {
+            const q = parseFloat(it.qty) || 0;
+            const desc = (it.description || it.item_name || it.name || '').toLowerCase();
+            if (desc.includes('21')) add21 += q;
+            else if (desc.includes('19.2') || desc.includes('commercial') || desc.includes('lpg') || (!desc.includes('pipe') && !desc.includes('regulator') && !desc.includes('convertor') && !desc.includes('empty'))) add192 += q;
+          });
+          existing.kg21 += add21;
+          existing.kg192 += add192;
+          existing.total += (add21 + add192);
+          existing.outstanding += (add21 + add192);
+        }
       }
     });
 
@@ -217,6 +238,9 @@ function RestaurantsList({
         ) : (
           displayedRestaurants.map((party) => {
             const rupeeBal = partyFinancialMap[norm(party.name)] || 0;
+            const out192 = (party.kg192 || 0) - (party.empty192 || 0);
+            const out21 = (party.kg21 || 0) - (party.empty21 || 0);
+            const totOut = party.outstanding !== undefined ? party.outstanding : (out192 + out21);
 
             return (
               <div
@@ -227,17 +251,25 @@ function RestaurantsList({
               >
                 {/* Details */}
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-xs font-semibold text-[#1A1A1A] truncate">
-                    {party.name}
-                  </h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    {/* Quantity Badge */}
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[#F5F5F5] text-[#737373] text-[10px] font-medium border border-[#EEEEEE]">
-                      {party.outstanding || 0} Cylinders
-                    </span>
-                    {/* Pending Amount */}
-                    <span className={`text-xs font-bold ${rupeeBal > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
+                  <div className="flex items-center justify-between gap-1">
+                    <h3 className="text-xs font-bold text-[#1A1A1A] truncate">
+                      {party.name}
+                    </h3>
+                    <span className={`text-xs font-black shrink-0 ${rupeeBal > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
                       ₹{rupeeBal.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center flex-wrap gap-1.5 mt-1.5">
+                    {/* Category Wise Cylinder Badges */}
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-teal-50 text-teal-800 text-[10px] font-bold border border-teal-200">
+                      🟢 19.2k: {out192}
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-sky-50 text-sky-800 text-[10px] font-bold border border-sky-200">
+                      🔵 21k: {out21}
+                    </span>
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-semibold border border-slate-200">
+                      Total: {totOut}
                     </span>
                   </div>
                 </div>

@@ -102,11 +102,17 @@ export default function InventoryManager({
             {stockStats.stock192} <span className="text-xs font-semibold text-slate-400">cylinders</span>
           </div>
           <div className="w-full bg-slate-100 h-2 rounded-full mt-3 overflow-hidden">
-            <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${Math.min(100, Math.max(15, (stockStats.stock192 / 200) * 100))}%` }} />
+            <div className={`h-full rounded-full ${stockStats.stock192 < 0 ? 'bg-rose-500' : 'bg-emerald-500'}`} style={{ width: `${Math.min(100, Math.max(10, (Math.max(0, stockStats.stock192) / 200) * 100))}%` }} />
           </div>
           <div className="flex justify-between items-center mt-2 text-[10px] font-bold">
-            <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-              {stockStats.stock192 > 20 ? 'Stock OK' : 'Low Stock'}
+            <span className={`px-2 py-0.5 rounded-md border ${
+              stockStats.stock192 < 0
+                ? 'text-rose-800 bg-rose-100 border-rose-300 font-black'
+                : stockStats.stock192 > 20
+                  ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                  : 'text-amber-800 bg-amber-50 border-amber-200'
+            }`}>
+              {stockStats.stock192 < 0 ? `⚠️ Billed Without Stock (${stockStats.stock192})` : stockStats.stock192 > 20 ? 'Stock OK' : 'Low Stock'}
             </span>
             <span className="text-slate-400">Target: 200</span>
           </div>
@@ -115,15 +121,21 @@ export default function InventoryManager({
         {/* 21kg Filled */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-soft">
           <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">21kg Filled</p>
-          <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">
+          <div className={`text-2xl sm:text-3xl font-black mt-1 ${stockStats.stock21 < 0 ? 'text-rose-600' : 'text-slate-900'}`}>
             {stockStats.stock21} <span className="text-xs font-semibold text-slate-400">cylinders</span>
           </div>
           <div className="w-full bg-slate-100 h-2 rounded-full mt-3 overflow-hidden">
-            <div className="bg-amber-500 h-full rounded-full" style={{ width: `${Math.min(100, Math.max(15, (stockStats.stock21 / 100) * 100))}%` }} />
+            <div className={`h-full rounded-full ${stockStats.stock21 < 0 ? 'bg-rose-500' : 'bg-amber-500'}`} style={{ width: `${Math.min(100, Math.max(10, (Math.max(0, stockStats.stock21) / 100) * 100))}%` }} />
           </div>
           <div className="flex justify-between items-center mt-2 text-[10px] font-bold">
-            <span className={`px-2 py-0.5 rounded-md border ${stockStats.stock21 > 10 ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-rose-700 bg-rose-50 border-rose-200'}`}>
-              {stockStats.stock21 > 10 ? 'Stock Adequate' : 'Low Stock'}
+            <span className={`px-2 py-0.5 rounded-md border ${
+              stockStats.stock21 < 0
+                ? 'text-rose-800 bg-rose-100 border-rose-300 font-black'
+                : stockStats.stock21 > 10
+                  ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                  : 'text-amber-800 bg-amber-50 border-amber-200'
+            }`}>
+              {stockStats.stock21 < 0 ? `⚠️ Billed Without Stock (${stockStats.stock21})` : stockStats.stock21 > 10 ? 'Stock Adequate' : 'Low Stock'}
             </span>
             <span className="text-slate-400">Target: 100</span>
           </div>
@@ -177,8 +189,60 @@ export default function InventoryManager({
             </button>
           </div>
 
-          {/* Catalog Table */}
-          <div className="overflow-x-auto">
+          {/* MOBILE CARDS VIEW FOR CATALOG (< 1024px) */}
+          <div className="block lg:hidden divide-y divide-slate-100">
+            {filteredItems.map(item => {
+              const isLow = item.current_stock <= (item.low_stock_threshold || 0);
+              return (
+                <div key={item.id} className="p-4 space-y-2.5 bg-white hover:bg-slate-50/60 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900">{item.name}</h4>
+                      <p className="text-[10px] text-slate-400 font-semibold">HSN: {item.hsn_code || '-'}</p>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-black border ${
+                      item.item_type === 'service' ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-slate-50 text-slate-600 border-slate-200'
+                    }`}>
+                      {item.item_type || 'product'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Stock</span>
+                      <span className={`text-sm font-black ${isLow ? 'text-rose-600' : 'text-emerald-700'}`}>
+                        {item.current_stock} units
+                      </span>
+                      {isLow && <span className="text-[9px] text-rose-500 font-bold block">⚠️ Low Stock</span>}
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Rates</span>
+                      <span className="text-xs font-black text-slate-900 block">Sale: ₹{Number(item.default_rate).toFixed(2)}</span>
+                      <span className="text-[10px] font-bold text-slate-500 block">Buy: ₹{Number(item.purchase_price).toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-1 text-right">
+                    <button
+                      onClick={() => setEditingItem(item)}
+                      className="px-3 py-1.5 rounded-xl bg-sky-50 border border-sky-200 text-sky-800 hover:bg-sky-100 text-xs font-black transition-all shadow-xs cursor-pointer active:scale-95"
+                    >
+                      ✏️ Edit & Details
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+            {filteredItems.length === 0 && (
+              <div className="text-center py-10 text-xs font-semibold text-slate-400">
+                No items found matching the search filters.
+              </div>
+            )}
+          </div>
+
+          {/* DESKTOP CATALOG TABLE (Screens >= 1024px) */}
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-customBorder bg-slate-50">
@@ -257,7 +321,50 @@ export default function InventoryManager({
             </button>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* MOBILE CARDS VIEW FOR PURCHASES (< 1024px) */}
+          <div className="block lg:hidden divide-y divide-slate-100">
+            {purchaseBills.map(p => (
+              <div key={p.id} className="p-4 space-y-2.5 bg-white hover:bg-slate-50/60 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-black text-slate-900">{p.purchase_date}</span>
+                    <span className="text-[11px] font-bold text-slate-500 ml-2">Inv #{p.invoice_no || p.id}</span>
+                  </div>
+                  <span className="text-sm font-black text-emerald-700">
+                    ₹{Number(p.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-600 font-semibold truncate max-w-[200px]">{p.supplier_name}</span>
+                  <span className="text-slate-400 font-bold">{Array.isArray(p.items) ? p.items.length : 0} items</span>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <button
+                    onClick={() => setViewingPurchaseBill(p)}
+                    className="px-3 py-1.5 rounded-xl bg-sky-50 border border-sky-200 text-sky-800 hover:bg-sky-100 text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                  >
+                    📄 View / Print
+                  </button>
+                  <button
+                    onClick={() => handleDeleteBill(p.id)}
+                    className="px-2.5 py-1.5 rounded-xl bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+            {purchaseBills.length === 0 && (
+              <div className="text-center py-10 text-xs font-semibold text-slate-400">
+                No stock purchase invoices logged yet.
+              </div>
+            )}
+          </div>
+
+          {/* DESKTOP PURCHASES TABLE (Screens >= 1024px) */}
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-customBorder bg-slate-50">
@@ -1051,16 +1158,18 @@ function PurchaseBillModal({ items, onClose, onSavePurchase }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-[99] p-4 overflow-y-auto">
-      <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-6 space-y-4 animate-fadeIn flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-[99] p-2 sm:p-4 overflow-y-auto">
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-2xl p-4 sm:p-6 space-y-3.5 animate-fadeIn flex flex-col max-h-[92vh]">
         {/* Header */}
-        <div className="flex justify-between items-center border-b pb-3 shrink-0">
-          <h3 className="text-base font-black text-slate-900">🚚 Record Stock Purchase Invoice</h3>
-          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-600 font-bold cursor-pointer">✕</button>
+        <div className="flex justify-between items-center border-b border-slate-100 pb-3 shrink-0">
+          <h3 className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-1.5">
+            <span>🚚</span> Record Stock Purchase Invoice
+          </h3>
+          <button type="button" onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold flex items-center justify-center cursor-pointer transition-colors">✕</button>
         </div>
 
         {/* Invoice Header details */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 bg-slate-50 p-4 rounded-2xl border border-slate-200 shrink-0">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 bg-slate-50 p-3 sm:p-4 rounded-2xl border border-slate-200 shrink-0">
           <div>
             <label className="text-[10px] font-bold text-slate-500 uppercase">Supplier Name</label>
             <input
@@ -1093,71 +1202,100 @@ function PurchaseBillModal({ items, onClose, onSavePurchase }) {
         </div>
 
         {/* Line Items Table */}
-        <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-          <div className="flex justify-between items-center">
-            <span className="text-[10px] font-bold text-slate-500 uppercase">Purchase Line Items (Rates are tax exclusive)</span>
-            <button type="button" onClick={addLineRow} className="text-xs font-black text-sky-700 hover:underline">+ Add Item Row</button>
+        <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 max-h-[38vh]">
+          <div className="flex justify-between items-center flex-wrap gap-1">
+            <span className="text-[10px] font-bold text-slate-500 uppercase">Purchase Line Items</span>
+            <button
+              type="button"
+              onClick={addLineRow}
+              className="text-xs font-black text-sky-700 hover:text-sky-800 bg-sky-50 px-2.5 py-1 rounded-lg border border-sky-200 cursor-pointer active:scale-95 transition-all"
+            >
+              + Add Item Row
+            </button>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {purchaseLines.map((ln, i) => (
-              <div key={i} className="flex gap-2.5 items-center bg-slate-50/50 p-2.5 rounded-xl border border-slate-200">
-                <select
-                  required
-                  className="flex-[2] border border-customBorder bg-white rounded-lg px-2.5 py-1.5 text-xs font-bold w-full"
-                  value={ln.item_id}
-                  onChange={e => handleLineItemChange(i, e.target.value)}
-                >
-                  <option value="">Choose item...</option>
-                  {items.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
+              <div key={i} className="bg-slate-50/70 p-3 rounded-2xl border border-slate-200 space-y-2.5">
+                {/* Row 1: Item Dropdown & Delete */}
+                <div className="flex items-center gap-2">
+                  <select
+                    required
+                    className="flex-1 border border-customBorder bg-white rounded-xl px-3 py-2 text-xs font-bold"
+                    value={ln.item_id}
+                    onChange={e => handleLineItemChange(i, e.target.value)}
+                  >
+                    <option value="">Choose item...</option>
+                    {items.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                  {purchaseLines.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeLineRow(i)}
+                      className="w-8 h-8 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 flex items-center justify-center font-black text-xs cursor-pointer shrink-0"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
 
-                <input
-                  type="number"
-                  placeholder="Qty"
-                  required
-                  className="w-16 border border-customBorder bg-white rounded-lg px-2 py-1 text-xs font-bold text-center"
-                  value={ln.qty}
-                  onChange={e => handleLineValueChange(i, 'qty', parseInt(e.target.value) || 0)}
-                />
+                {/* Row 2: Qty, Rate, GST, Line Total */}
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 items-center">
+                  <div>
+                    <label className="text-[9px] font-bold text-slate-400 uppercase block">Qty</label>
+                    <input
+                      type="number"
+                      placeholder="Qty"
+                      required
+                      className="w-full border border-customBorder bg-white rounded-xl px-2 py-1.5 text-xs font-bold text-center mt-0.5"
+                      value={ln.qty}
+                      onChange={e => handleLineValueChange(i, 'qty', parseInt(e.target.value) || 0)}
+                    />
+                  </div>
 
-                <input
-                  type="number"
-                  placeholder="Rate (Excl.)"
-                  required
-                  step="0.01"
-                  className="w-24 border border-customBorder bg-white rounded-lg px-2 py-1 text-xs font-bold text-center"
-                  value={ln.rate}
-                  onChange={e => handleLineValueChange(i, 'rate', parseFloat(e.target.value) || 0)}
-                />
+                  <div>
+                    <label className="text-[9px] font-bold text-slate-400 uppercase block">Rate (₹)</label>
+                    <input
+                      type="number"
+                      placeholder="Rate"
+                      required
+                      step="0.01"
+                      className="w-full border border-customBorder bg-white rounded-xl px-2 py-1.5 text-xs font-bold text-center mt-0.5"
+                      value={ln.rate}
+                      onChange={e => handleLineValueChange(i, 'rate', parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
 
-                <select
-                  className="w-20 border border-customBorder bg-white rounded-lg px-2 py-1 text-xs font-bold bg-white"
-                  value={ln.gst_rate}
-                  onChange={e => handleLineValueChange(i, 'gst_rate', parseFloat(e.target.value) || 18)}
-                >
-                  <option value={0}>0%</option>
-                  <option value={5}>5%</option>
-                  <option value={12}>12%</option>
-                  <option value={18}>18%</option>
-                </select>
+                  <div>
+                    <label className="text-[9px] font-bold text-slate-400 uppercase block">GST %</label>
+                    <select
+                      className="w-full border border-customBorder bg-white rounded-xl px-2 py-1.5 text-xs font-bold bg-white mt-0.5"
+                      value={ln.gst_rate}
+                      onChange={e => handleLineValueChange(i, 'gst_rate', parseFloat(e.target.value) || 18)}
+                    >
+                      <option value={0}>0%</option>
+                      <option value={5}>5%</option>
+                      <option value={12}>12%</option>
+                      <option value={18}>18%</option>
+                    </select>
+                  </div>
 
-                <span className="text-xs font-black text-slate-700 w-24 text-right">
-                  ₹{((parseFloat(ln.qty) || 0) * (parseFloat(ln.rate) || 0)).toFixed(2)}
-                </span>
-
-                {purchaseLines.length > 1 && (
-                  <button type="button" onClick={() => removeLineRow(i)} className="text-red-500 hover:text-red-750 font-bold text-xs px-1">✕</button>
-                )}
+                  <div className="col-span-3 sm:col-span-1 text-right bg-sky-50 sm:bg-transparent p-1.5 sm:p-0 rounded-xl sm:rounded-none flex sm:block justify-between items-center">
+                    <label className="text-[9px] font-bold text-sky-700 sm:text-slate-400 uppercase block">Line Total</label>
+                    <span className="text-xs font-black text-slate-800">
+                      ₹{((parseFloat(ln.qty) || 0) * (parseFloat(ln.rate) || 0)).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
         </div>
 
         {/* Notes & Totals block */}
-        <div className="grid grid-cols-2 gap-4 border-t pt-3.5 shrink-0 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-slate-100 pt-3 shrink-0 text-xs">
           <div>
             <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Purchase Note / Reference</label>
             <textarea
@@ -1169,20 +1307,20 @@ function PurchaseBillModal({ items, onClose, onSavePurchase }) {
             />
           </div>
 
-          <div className="space-y-1.5 text-right font-semibold text-slate-500">
-            <div className="flex justify-between">
+          <div className="space-y-1 text-right font-semibold text-slate-500 bg-slate-50 p-2.5 rounded-2xl border border-slate-200">
+            <div className="flex justify-between text-[11px]">
               <span>Taxable Subtotal</span>
-              <span>₹{calculations.subtotal.toFixed(2)}</span>
+              <span className="font-bold text-slate-700">₹{calculations.subtotal.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between text-[11px]">
               <span>CGST (9% approx)</span>
-              <span>₹{calculations.cgst.toFixed(2)}</span>
+              <span className="font-bold text-slate-700">₹{calculations.cgst.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between text-[11px]">
               <span>SGST (9% approx)</span>
-              <span>₹{calculations.sgst.toFixed(2)}</span>
+              <span className="font-bold text-slate-700">₹{calculations.sgst.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between font-black text-sm text-slate-900 border-t pt-1.5">
+            <div className="flex justify-between font-black text-xs sm:text-sm text-slate-900 border-t border-slate-200 pt-1">
               <span>Total Amount (Paid)</span>
               <span className="text-emerald-700">₹{calculations.total.toFixed(2)}</span>
             </div>
@@ -1192,9 +1330,9 @@ function PurchaseBillModal({ items, onClose, onSavePurchase }) {
         <button
           type="submit"
           disabled={saving}
-          className="w-full py-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-black shadow-md cursor-pointer disabled:opacity-50 shrink-0"
+          className="w-full py-3 rounded-2xl bg-sky-600 hover:bg-sky-700 active:scale-98 text-white text-xs font-black shadow-soft flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all shrink-0"
         >
-          {saving ? 'Saving Purchase Invoice...' : '🚚 Save & Add to Stock'}
+          {saving ? 'Saving...' : '🚚 Save & Add to Stock'}
         </button>
       </form>
     </div>

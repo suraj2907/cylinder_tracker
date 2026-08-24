@@ -135,11 +135,71 @@ export function useInventory(currentUser) {
     }
     const { data, error } = await query;
     if (error) throw error;
+
+    // --- AUTO ADD STOCK TO ITEMS ON PURCHASE ---
+    if (Array.isArray(billData.items)) {
+      try {
+        const { data: allItems } = await supabase.from('items').select('*');
+        for (const lineItem of billData.items) {
+          const qty = parseFloat(lineItem.qty) || 0;
+          if (qty <= 0) continue;
+
+          let targetItem = (allItems || []).find(it => it.id === lineItem.item_id);
+          if (!targetItem) {
+            const desc = (lineItem.item_name || lineItem.description || '').toLowerCase();
+            targetItem = (allItems || []).find(it => {
+              const n = it.name.toLowerCase();
+              if (desc.includes('21') && n.includes('21')) return true;
+              if (desc.includes('15') && n.includes('15')) return true;
+              if ((desc.includes('19.2') || desc.includes('commercial') || desc.includes('lpg') || desc.includes('cylinder')) && n.includes('19.2')) return true;
+              return false;
+            });
+          }
+
+          if (targetItem) {
+            const current = parseFloat(targetItem.current_stock) || 0;
+            const newStock = current + qty; // e.g. -2 + 2 = 0 or 0 + 100 = 100
+
+            // Optimistically update React state immediately
+            setItems(prev => prev.map(it => it.id === targetItem.id ? { ...it, current_stock: newStock } : it));
+
+            // Save to Supabase
+            await supabase.from('items').update({ current_stock: newStock }).eq('id', targetItem.id);
+          }
+        }
+      } catch (stockErr) {
+        console.warn('Error adding stock on savePurchaseBill:', stockErr);
+      }
+    }
+
     await fetchData();
     return data[0];
   };
 
   const deletePurchaseBill = async (id) => {
+    // Find the bill before deleting to subtract stock
+    const billToDelete = purchaseBills.find(p => p.id === id);
+    if (billToDelete && Array.isArray(billToDelete.items)) {
+      try {
+        const { data: allItems } = await supabase.from('items').select('*');
+        for (const lineItem of billToDelete.items) {
+          const qty = parseFloat(lineItem.qty) || 0;
+          if (qty <= 0) continue;
+
+          const targetItem = (allItems || []).find(it => it.id === lineItem.item_id);
+          if (targetItem) {
+            const current = parseFloat(targetItem.current_stock) || 0;
+            const newStock = current - qty;
+
+            setItems(prev => prev.map(it => it.id === targetItem.id ? { ...it, current_stock: newStock } : it));
+            await supabase.from('items').update({ current_stock: newStock }).eq('id', targetItem.id);
+          }
+        }
+      } catch (err) {
+        console.warn('Error reversing stock on deletePurchaseBill:', err);
+      }
+    }
+
     const { error } = await supabase.from('purchase_bills').delete().eq('id', id);
     if (error) throw error;
     await fetchData();
@@ -161,6 +221,78 @@ export function useInventory(currentUser) {
     await fetchData();
   };
 
+  const deductStock = async (lineItems) => {
+    if (!Array.isArray(lineItems) || lineItems.length === 0) return;
+    try {
+      const { data: allItems } = await supabase.from('items').select('*');
+      for (const lineItem of lineItems) {
+        const qtyNum = parseInt(lineItem.qty, 10) || 0;
+        if (qtyNum <= 0) continue;
+
+        let targetItem = (allItems || []).find(it => it.id === lineItem.item_id);
+        if (!targetItem) {
+          const desc = (lineItem.description || lineItem.name || '').toLowerCase();
+          targetItem = (allItems || []).find(it => {
+            const n = it.name.toLowerCase();
+            if (desc.includes('21') && n.includes('21')) return true;
+            if (desc.includes('15') && n.includes('15')) return true;
+            if ((desc.includes('19.2') || desc.includes('commercial') || desc.includes('lpg') || desc.includes('cylinder')) && n.includes('19.2')) return true;
+            return false;
+          });
+        }
+
+        if (targetItem) {
+          const current = parseFloat(targetItem.current_stock) || 0;
+          const newStock = current - qtyNum; // Allows negative stock when billed before purchase
+          
+          // Optimistically update React state immediately
+          setItems(prev => prev.map(it => it.id === targetItem.id ? { ...it, current_stock: newStock } : it));
+
+          // Save to Supabase
+          await supabase.from('items').update({ current_stock: newStock }).eq('id', targetItem.id);
+        }
+      }
+    } catch (e) {
+      console.warn('deductStock error:', e);
+    }
+  };
+
+  const restoreStock = async (lineItems) => {
+    if (!Array.isArray(lineItems) || lineItems.length === 0) return;
+    try {
+      const { data: allItems } = await supabase.from('items').select('*');
+      for (const lineItem of lineItems) {
+        const qtyNum = parseFloat(lineItem.qty) || 0;
+        if (qtyNum <= 0) continue;
+
+        let targetItem = (allItems || []).find(it => it.id === lineItem.item_id);
+        if (!targetItem) {
+          const desc = (lineItem.description || lineItem.name || '').toLowerCase();
+          targetItem = (allItems || []).find(it => {
+            const n = it.name.toLowerCase();
+            if (desc.includes('21') && n.includes('21')) return true;
+            if (desc.includes('15') && n.includes('15')) return true;
+            if ((desc.includes('19.2') || desc.includes('commercial') || desc.includes('lpg') || desc.includes('cylinder')) && n.includes('19.2')) return true;
+            return false;
+          });
+        }
+
+        if (targetItem) {
+          const current = parseFloat(targetItem.current_stock) || 0;
+          const newStock = current + qtyNum;
+          
+          // Optimistically update React state immediately
+          setItems(prev => prev.map(it => it.id === targetItem.id ? { ...it, current_stock: newStock } : it));
+
+          // Save to Supabase
+          await supabase.from('items').update({ current_stock: newStock }).eq('id', targetItem.id);
+        }
+      }
+    } catch (e) {
+      console.warn('restoreStock error:', e);
+    }
+  };
+
   return {
     items: itemsWithLiveStock,
     purchaseBills,
@@ -174,6 +306,8 @@ export function useInventory(currentUser) {
     deletePurchaseBill,
     savePartyPrice,
     deletePartyPrice,
+    deductStock,
+    restoreStock,
     refetchInventory: fetchData
   };
 }

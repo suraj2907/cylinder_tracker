@@ -375,8 +375,9 @@ export default function GenerateBill({
         </div>
 
         {/* Printable Section */}
-        <div id="bill-print-area" className="bg-white border border-slate-350 rounded-2xl p-8 max-w-2xl mx-auto shadow-sm">
-          <div className="flex justify-between items-start border-b border-slate-200 pb-4 mb-4">
+        <div className="overflow-x-auto">
+          <div id="bill-print-area" className="bg-white border border-slate-300 rounded-2xl p-4 sm:p-8 max-w-2xl mx-auto shadow-xs text-xs">
+            <div className="flex justify-between items-start border-b border-slate-200 pb-4 mb-4">
             <div>
               <h2 className="text-lg font-black text-slate-900">M/S SHREE BALAJI AGENCIES</h2>
               <p className="text-[10px] text-slate-500 mt-1">Kamthi Line Beside SBI ATM, Rajnandgaon, Chhattisgarh, 491441</p>
@@ -560,7 +561,8 @@ export default function GenerateBill({
           </div>
         </div>
       </div>
-    );
+    </div>
+  );
   }
 
   return (
@@ -680,12 +682,12 @@ export default function GenerateBill({
               const selectedItemObj = itemsCatalog.find(cat => cat.id === it.item_id);
               const isOverStock = selectedItemObj && (it.qty > selectedItemObj.current_stock);
               return (
-                <div key={i} className="space-y-1 bg-slate-50/50 p-3 rounded-xl border">
-                  <div className="flex gap-2.5 items-center flex-wrap sm:flex-nowrap">
-                    {/* Item dropdown selection */}
+                <div key={i} className="space-y-2 bg-slate-50/70 p-3 rounded-2xl border border-slate-200">
+                  {/* Item selection (full width) */}
+                  <div>
                     <select
                       required
-                      className="flex-[2] border border-customBorder rounded-lg px-2.5 py-1.5 text-xs font-bold bg-white w-full"
+                      className="w-full border border-customBorder rounded-xl px-3 py-2 text-xs font-bold bg-white"
                       value={it.item_id}
                       onChange={e => handleItemChange(i, e.target.value)}
                     >
@@ -696,33 +698,57 @@ export default function GenerateBill({
                         </option>
                       ))}
                     </select>
-
-                    <input
-                      className="w-16 border border-customBorder rounded-lg px-2.5 py-1.5 text-xs font-bold text-center"
-                      type="number"
-                      placeholder="Qty"
-                      value={it.qty}
-                      onChange={e => updateItemQtyOrRate(i, 'qty', parseInt(e.target.value) || 0)}
-                    />
-                    <input
-                      className="w-20 border border-customBorder rounded-lg px-2.5 py-1.5 text-xs font-bold text-center"
-                      type="number"
-                      placeholder="Rate"
-                      value={it.rate}
-                      onChange={e => updateItemQtyOrRate(i, 'rate', parseFloat(e.target.value) || 0)}
-                    />
-                    <span className="text-xs font-black text-slate-700 w-20 text-right">
-                      ₹{((it.qty || 0) * (it.rate || 0)).toLocaleString()}
-                    </span>
-                    {items.length > 1 && (
-                      <button onClick={() => removeItem(i)} className="text-red-400 hover:text-red-650 font-black text-xs px-1">
-                        ✕
-                      </button>
-                    )}
                   </div>
+
+                  {/* Inputs row: Qty, Rate, Total, Delete */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div>
+                        <span className="text-[9px] font-bold text-slate-400 block uppercase">Qty</span>
+                        <input
+                          className="w-16 sm:w-20 border border-customBorder rounded-xl px-2 py-1.5 text-xs font-bold text-center bg-white"
+                          type="number"
+                          placeholder="Qty"
+                          value={it.qty}
+                          onChange={e => updateItemQtyOrRate(i, 'qty', parseInt(e.target.value) || 0)}
+                        />
+                      </div>
+
+                      <div>
+                        <span className="text-[9px] font-bold text-slate-400 block uppercase">Rate (₹)</span>
+                        <input
+                          className="w-20 sm:w-24 border border-customBorder rounded-xl px-2 py-1.5 text-xs font-bold text-center bg-white"
+                          type="number"
+                          placeholder="Rate"
+                          value={it.rate}
+                          onChange={e => updateItemQtyOrRate(i, 'rate', parseFloat(e.target.value) || 0)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="text-right">
+                        <span className="text-[9px] font-bold text-slate-400 block uppercase">Line Total</span>
+                        <span className="text-xs font-black text-slate-900">
+                          ₹{((it.qty || 0) * (it.rate || 0)).toLocaleString()}
+                        </span>
+                      </div>
+
+                      {items.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeItem(i)}
+                          className="w-7 h-7 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 font-black text-xs flex items-center justify-center cursor-pointer transition-all active:scale-95 ml-1"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Stock warning */}
                   {isOverStock && (
-                    <span className="text-[10px] text-orange-600 font-bold block mt-1">
+                    <span className="text-[10px] text-orange-600 font-bold block pt-1">
                       ⚠️ Warning: Entered qty exceeds live stock ({selectedItemObj.current_stock} available).
                     </span>
                   )}
@@ -762,9 +788,23 @@ export default function GenerateBill({
       <button
         onClick={handleGenerate}
         disabled={saving}
-        className="w-full py-3.5 rounded-2xl bg-sky-600 hover:bg-sky-700 active:scale-98 text-white text-sm font-black shadow-soft disabled:opacity-50 transition-all cursor-pointer"
+        className={`w-full py-3.5 rounded-2xl text-sm font-black shadow-soft transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer ${
+          saving
+            ? 'bg-emerald-600 text-white ring-4 ring-emerald-200 scale-[0.98] cursor-not-allowed opacity-90'
+            : 'bg-sky-600 hover:bg-sky-700 hover:shadow-md text-white active:scale-95'
+        }`}
       >
-        {saving ? 'Generating...' : 'Generate & Preview'}
+        {saving ? (
+          <>
+            <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+            </svg>
+            <span>Creating Invoice...</span>
+          </>
+        ) : (
+          '⚡ Generate & Preview'
+        )}
       </button>
     </div>
   );
