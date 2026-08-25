@@ -36,8 +36,9 @@ function RestaurantStatementModal({
   const today = new Date().toISOString().slice(0, 10);
   const currentMonthStr = today.slice(0, 7);
 
-  const profile = restaurantProfiles[restaurantName] || {};
-  const openingBalance = parseFloat(profile.previous_balance || 0);
+  const isZeroHotel = ZERO_BALANCE_PARTIES.some(h => norm(h) === norm(restaurantName));
+  const profile = restaurantProfiles[restaurantName] || restaurantProfiles[norm(restaurantName)] || {};
+  const openingBalance = isZeroHotel ? 0 : parseFloat(profile.previous_balance || 0);
 
   const [filterPeriod, setFilterPeriod] = useState(currentMonthStr);
   const [rangeMode, setRangeMode] = useState(false);
@@ -341,9 +342,16 @@ function RestaurantStatementModal({
     return Array.from(s).sort().reverse();
   }, [allRestaurantActivities, currentMonthStr]);
 
-  const closingBalance = useMemo(() => {
-    return getPartyCurrentBalance(restaurantName, restaurantProfiles, bills, payments);
-  }, [restaurantName, restaurantProfiles, bills, payments]);
+
+  // Live computed net balance of this party from all activities
+  const netPartyOutstanding = useMemo(() => {
+    if (allRestaurantActivities && allRestaurantActivities.length > 0) {
+      return allRestaurantActivities[0]?.runningBalance ?? openingBalance;
+    }
+    return openingBalance;
+  }, [allRestaurantActivities, openingBalance]);
+
+  const closingBalance = netPartyOutstanding;
 
   const performDeleteBill = async (item) => {
     const invLabel = item.invoiceLabel || (item.rawBillObj ? `INV-${item.rawBillObj.invoice_no}` : 'Invoice');
@@ -368,14 +376,6 @@ function RestaurantStatementModal({
     const bProf = getBillProfile(bill.restaurant_name);
     await shareInvoicePDFOnWhatsApp(bill, bProf);
   };
-
-  // Live computed net balance of this party from all activities
-  const netPartyOutstanding = useMemo(() => {
-    if (allRestaurantActivities && allRestaurantActivities.length > 0) {
-      return allRestaurantActivities[0]?.runningBalance ?? parseFloat(profile?.previous_balance || 0);
-    }
-    return parseFloat(profile?.previous_balance || 0);
-  }, [allRestaurantActivities, profile?.previous_balance]);
 
   const getBillProfile = (rName) => {
     const rawProf = (restaurantProfiles && (restaurantProfiles[rName] || restaurantProfiles[norm(rName)])) || profile || {};
@@ -573,32 +573,6 @@ function RestaurantStatementModal({
               Opening: ₹{openingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </div>
-        </div>
-
-        {/* Section Tabs Switcher: Ledger History vs Invoices View */}
-        <div className="flex items-center gap-1.5 border-b border-customBorder pb-1.5 no-print">
-          <button
-            onClick={() => setActiveSection('ledger')}
-            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-              activeSection === 'ledger'
-                ? 'bg-slate-900 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <span>📜</span>
-            <span>Ledger History</span>
-          </button>
-          <button
-            onClick={() => setActiveSection('invoices')}
-            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-              activeSection === 'invoices'
-                ? 'bg-slate-900 text-white shadow-xs'
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <span>🧾</span>
-            <span>Invoices ({restaurantBills.length})</span>
-          </button>
         </div>
 
         {/* Date-Wise Complete Passbook Table / Invoices List */}
