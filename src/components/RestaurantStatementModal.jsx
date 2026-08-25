@@ -934,36 +934,42 @@ function RestaurantStatementModal({
 
       {/* Invoice Print & WhatsApp Preview Modal */}
       {selectedBillForPrint && (
-        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center z-[100] p-2 sm:p-4 overflow-y-auto no-print">
-          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl max-w-2xl w-full p-4 sm:p-6 space-y-4 max-h-[94vh] overflow-y-auto relative animate-fadeIn flex flex-col">
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center z-[100] p-1.5 sm:p-4 overflow-y-auto no-print">
+          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl max-w-2xl w-full p-3 sm:p-5 space-y-3 max-h-[92vh] overflow-y-auto relative animate-fadeIn flex flex-col my-auto border border-slate-100">
             
             {/* Top controls */}
-            <div className="flex justify-between items-center border-b border-slate-100 pb-3 shrink-0 flex-wrap gap-2">
-              <h3 className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                <span>🧾</span> Invoice Preview ({getInvoiceLabel(selectedBillForPrint)})
-              </h3>
-              <div className="flex items-center gap-2">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-2.5 shrink-0 gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-sm shrink-0">🧾</span>
+                <h3 className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-wider truncate">
+                  Invoice Preview ({getInvoiceLabel(selectedBillForPrint)})
+                </h3>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   onClick={() => handleShareBillOnWhatsApp(selectedBillForPrint)}
-                  className="px-3 sm:px-4 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-black hover:bg-emerald-700 transition-all shadow-sm cursor-pointer flex items-center gap-1.5 active:scale-95"
+                  className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-[11px] font-black hover:bg-emerald-700 transition-all shadow-sm cursor-pointer flex items-center gap-1 active:scale-95"
+                  title="Share on WhatsApp"
                 >
-                  📤 Send WhatsApp PDF
+                  <span>💬</span> <span className="hidden sm:inline">WhatsApp</span>
                 </button>
                 <button
                   onClick={() => exportBillPDF(selectedBillForPrint, getBillProfile(selectedBillForPrint.restaurant_name))}
-                  className="px-3 sm:px-4 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-black hover:bg-slate-800 transition-all shadow-sm cursor-pointer flex items-center gap-1.5 active:scale-95"
+                  className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-900 text-white text-[11px] font-black hover:bg-slate-800 transition-all shadow-sm cursor-pointer flex items-center gap-1 active:scale-95"
+                  title="Download PDF"
                 >
-                  📄 Download PDF
+                  <span>📄</span> <span className="hidden sm:inline">PDF</span>
                 </button>
                 <button
                   onClick={() => window.print()}
-                  className="px-3 sm:px-4 py-1.5 rounded-xl bg-sky-600 text-white text-xs font-black hover:bg-sky-700 transition-all shadow-sm cursor-pointer flex items-center gap-1.5 active:scale-95"
+                  className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-sky-600 text-white text-[11px] font-black hover:bg-sky-700 transition-all shadow-sm cursor-pointer flex items-center gap-1 active:scale-95"
+                  title="Print Invoice"
                 >
-                  🖨️ Print
+                  <span>🖨️</span> <span className="hidden sm:inline">Print</span>
                 </button>
                 <button
                   onClick={() => setSelectedBillForPrint(null)}
-                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold flex items-center justify-center cursor-pointer transition-colors"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold flex items-center justify-center cursor-pointer transition-colors text-xs ml-1"
                 >
                   ✕
                 </button>
@@ -971,7 +977,7 @@ function RestaurantStatementModal({
             </div>
 
             {/* Print Area content */}
-            <div id="bill-print-area" className="border border-slate-200 rounded-3xl p-4 sm:p-6 bg-white shadow-soft text-xs overflow-hidden space-y-4">
+            <div id="bill-print-area" className="border border-slate-200 rounded-2xl p-3 sm:p-5 bg-white shadow-soft text-xs space-y-3">
               {/* Header */}
               <div className="flex justify-between items-start border-b border-slate-200 pb-4 gap-3">
                 <div>
