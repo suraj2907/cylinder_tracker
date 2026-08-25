@@ -1150,10 +1150,12 @@ function RestaurantStatementModal({
 
               {/* Subtotals & Bank details Footer Grid */}
               {(() => {
-                const totAmt = Number(selectedBillForPrint.total_amount || 0);
+                const totAmt = Number(selectedBillForPrint.total_amount || selectedBillForPrint.amount || selectedBillForPrint.debit || 0);
                 const paidAmt = Number(selectedBillForPrint.amount_paid || (selectedBillForPrint.payment_status === 'paid' ? totAmt : 0));
-                const bName = selectedBillForPrint.restaurant_name;
-                const otherBills = (bills || []).filter(b => b.id !== selectedBillForPrint.id && (b.bill_date < selectedBillForPrint.bill_date || (b.bill_date === selectedBillForPrint.bill_date && (parseInt(b.invoice_no, 10) || 0) < (parseInt(selectedBillForPrint.invoice_no, 10) || 0))));
+                const bName = selectedBillForPrint.restaurant_name || selectedBillForPrint.restaurantName || restaurantName || '';
+                const selDate = selectedBillForPrint.bill_date || selectedBillForPrint.entry_date || selectedBillForPrint.date || '';
+                const selNo = parseInt(selectedBillForPrint.invoice_no || selectedBillForPrint.sr_no || selectedBillForPrint.srNo, 10) || 0;
+                const otherBills = (bills || []).filter(b => b && b.id !== selectedBillForPrint.id && (b.bill_date < selDate || (b.bill_date === selDate && (parseInt(b.invoice_no, 10) || 0) < selNo)));
                 const prevBal = getPartyCurrentBalance(bName, restaurantProfiles, otherBills, payments);
                 const currentBal = prevBal + totAmt - paidAmt;
 
