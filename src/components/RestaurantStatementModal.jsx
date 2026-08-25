@@ -1153,7 +1153,17 @@ function RestaurantStatementModal({
                 const totAmt = Number(selectedBillForPrint.total_amount || 0);
                 const paidAmt = Number(selectedBillForPrint.amount_paid || (selectedBillForPrint.payment_status === 'paid' ? totAmt : 0));
                 const bProf = getBillProfile(selectedBillForPrint.restaurant_name);
-                const currentBal = bProf.current_balance !== undefined ? parseFloat(bProf.current_balance) : Math.max(0, totAmt - paidAmt);
+                
+                // Find this bill's exact snapshot running balance in the timeline
+                const itemInTimeline = allRestaurantActivities.find(a => 
+                  (selectedBillForPrint.id && (a.id === selectedBillForPrint.id || a.id === `bill_${selectedBillForPrint.id}`)) ||
+                  (selectedBillForPrint.invoice_no && (a.rawBillObj?.invoice_no === selectedBillForPrint.invoice_no || (a.invoiceLabel && a.invoiceLabel.includes(String(selectedBillForPrint.invoice_no)))))
+                );
+
+                const currentBal = itemInTimeline?.runningBalance !== undefined 
+                  ? itemInTimeline.runningBalance 
+                  : (bProf.current_balance !== undefined ? parseFloat(bProf.current_balance) : Math.max(0, totAmt - paidAmt));
+                
                 const prevBal = Math.max(0, currentBal - (totAmt - paidAmt));
 
                 return (
