@@ -114,24 +114,24 @@ function RestaurantsList({
   };
 
   return (
-    <div className="flex flex-col flex-1 pb-20 max-w-7xl mx-auto w-full animate-fadeIn">
+    <div className="flex flex-col flex-1 pb-20 max-w-7xl mx-auto w-full animate-fadeIn overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-3 pb-3 gap-2">
-        <div>
-          <h1 className="text-base font-bold tracking-tight text-[#1A1A1A]">
+      <div className="flex flex-wrap items-center justify-between px-3 sm:px-4 pt-3 pb-3 gap-2">
+        <div className="min-w-0">
+          <h1 className="text-sm sm:text-base font-bold tracking-tight text-[#1A1A1A] truncate">
             Customer Directory & Ledger
           </h1>
-          <p className="text-xs text-[#737373]">Live balances & cylinder tracking</p>
+          <p className="text-[11px] sm:text-xs text-[#737373] truncate">Live balances & cylinder tracking</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => setShowAddModal(true)}
-            className="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 active:scale-95 text-white text-xs font-black transition-all shadow-soft flex items-center gap-1 cursor-pointer shrink-0"
+            className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 active:scale-95 text-white text-xs font-black transition-all shadow-soft flex items-center gap-1 cursor-pointer shrink-0"
             title="Add New Customer / Restaurant"
           >
             <span>➕ Add Party</span>
           </button>
-          <span className="text-[11px] font-semibold text-[#737373] bg-[#F5F5F5] px-2.5 py-1 rounded-md border border-[#EEEEEE] shrink-0">
+          <span className="text-[10px] sm:text-[11px] font-semibold text-[#737373] bg-[#F5F5F5] px-2 py-1 rounded-md border border-[#EEEEEE] shrink-0">
             {displayedRestaurants.length} Parties
           </span>
         </div>

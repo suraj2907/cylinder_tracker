@@ -231,10 +231,10 @@ export default function App() {
               <span className="inline sm:hidden">Entry</span>
             </button>
 
-            {/* Activity Stream Drawer Button */}
+            {/* Activity Stream Drawer Button (Visible on Tablet/Desktop) */}
             <button
               onClick={() => setShowActivityFeed(!showActivityFeed)}
-              className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 text-xs font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer"
+              className="hidden sm:flex p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 text-xs font-bold transition-all shadow-xs items-center gap-1 cursor-pointer"
               title="Recent Operations Log"
             >
               <span>🔔</span>
