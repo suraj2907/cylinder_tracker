@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, memo } from 'react';
-import { formatIsoDate, normType, getInvoiceLabel, getPartyCurrentBalance, norm, isNewPayment, isNewBill, ZERO_OUTSTANDING_HOTELS } from '../utils/dataUtils';
+import { formatIsoDate, normType, getInvoiceLabel, getPartyCurrentBalance, norm, isNewPayment, isNewBill, ZERO_BALANCE_PARTIES } from '../utils/dataUtils';
 import { exportPartyLedgerPDF, exportPartyLedgerExcel, shareInvoicePDFOnWhatsApp, exportBillPDF } from '../utils/exportUtils';
 import { supabase } from '../utils/supabaseClient';
 
@@ -207,8 +207,8 @@ function RestaurantStatementModal({
       }
     });
 
-    // Base balance from official synced profiles (Zero for settled zero-outstanding hotels)
-    const isZeroHotel = ZERO_OUTSTANDING_HOTELS.some(h => norm(h) === normTarget);
+    // Base balance from official synced profiles (Zero ONLY for Rasoi Restaurant and Route 66)
+    const isZeroHotel = ZERO_BALANCE_PARTIES.some(h => norm(h) === normTarget);
     const baseBalance = isZeroHotel ? 0 : parseFloat(profile.previous_balance || 0);
 
     // Precise chronological ascending sort:

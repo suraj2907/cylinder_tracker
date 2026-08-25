@@ -356,17 +356,9 @@ export function normType(t) {
   return "19.2kg";
 }
 
-export const ZERO_OUTSTANDING_HOTELS = [
-  "Punchmukhi Paratha",
-  "Hotel Swagatam",
-  "Yummy Tummy",
+export const ZERO_BALANCE_PARTIES = [
   "Rasoi Restaurant",
-  "The Juice Bar And Cafe",
-  "Chandu Chai",
-  "Route 66",
-  "Ashwini Amritulaya",
-  "Mitra Da Dhaba",
-  "Moti Sweets Market"
+  "Route 66"
 ];
 
 // --- COMPUTE STATS ---
@@ -481,10 +473,10 @@ export function isNewPayment(p) {
 export function getAllPartiesCurrentBalances(restaurantProfiles = {}, bills = [], payments = []) {
   const map = {};
 
-  // 1. Base closing balances from profiles (synced up to 20th August, zero-outstanding hotels start at 0)
+  // 1. Base closing balances from profiles (synced up to 20th August, ONLY Rasoi Restaurant and Route 66 start at 0)
   Object.keys(restaurantProfiles || {}).forEach(k => {
     const normP = norm(k);
-    if (ZERO_OUTSTANDING_HOTELS.some(h => norm(h) === normP)) {
+    if (ZERO_BALANCE_PARTIES.some(h => norm(h) === normP)) {
       map[normP] = 0;
     } else {
       const bal = parseFloat(restaurantProfiles[k].previous_balance || 0);
@@ -519,9 +511,9 @@ export function getPartyCurrentBalance(partyName, restaurantProfiles = {}, bills
   if (!partyName) return 0;
   const normP = norm(partyName);
   
-  // 1. Base closing balance from profiles
+  // 1. Base closing balance from profiles (ONLY Rasoi Restaurant and Route 66 start at 0)
   let baseBalance = 0;
-  if (!ZERO_OUTSTANDING_HOTELS.some(h => norm(h) === normP)) {
+  if (!ZERO_BALANCE_PARTIES.some(h => norm(h) === normP)) {
     Object.keys(restaurantProfiles || {}).forEach(k => {
       if (norm(k) === normP) {
         baseBalance = parseFloat(restaurantProfiles[k].previous_balance || 0);
