@@ -225,17 +225,11 @@ function RestaurantStatementModal({
       return (a.srNo || 0) - (b.srNo || 0);
     });
     
-    let currentBalance = baseBalance;
+    let currentBalance = (ledgerRows && ledgerRows.length > 0) ? 0 : baseBalance;
     const listWithBalance = sortedAsc.map(item => {
-      if (item.isOfficialLedger && item.officialBalance !== null && !isNaN(item.officialBalance)) {
-        currentBalance = item.officialBalance;
-      } else {
-        if (item.kind === 'bill') {
-          currentBalance += item.amount;
-        } else if (item.kind === 'payment') {
-          currentBalance -= item.amount;
-        }
-      }
+      const debit = parseFloat(item.debit) || 0;
+      const credit = parseFloat(item.credit) || 0;
+      currentBalance = currentBalance + debit - credit;
       return {
         ...item,
         runningBalance: Math.max(0, currentBalance)
