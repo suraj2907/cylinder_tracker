@@ -825,7 +825,7 @@ function RestaurantStatementModal({
                     </tbody>
                   </table>
                 </div>
-
+                          
                 {visibleActivities.length < filteredActivities.length && (
                   <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 no-print">
                     <span>
@@ -864,8 +864,63 @@ function RestaurantStatementModal({
                   No invoices generated for {restaurantName} yet.
                 </div>
               ) : (
-                <div className="overflow-y-auto border border-slate-200 rounded-2xl max-h-[380px] bg-white">
-                  <table className="w-full text-left text-xs border-collapse">
+                <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white max-h-[420px] overflow-y-auto">
+                  {/* MOBILE VIEW (< 640px): Clean Cards */}
+                  <div className="block sm:hidden divide-y divide-slate-100 p-2 space-y-2">
+                    {restaurantBills.map(b => (
+                      <div key={b.id} className="p-3 bg-slate-50/70 border border-slate-200/80 rounded-xl space-y-2">
+                        <div className="flex items-center justify-between gap-1">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="font-black text-xs text-slate-900 bg-white px-2 py-0.5 rounded-md border border-slate-200 truncate">
+                              {getInvoiceLabel(b)}
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-bold">
+                              {b.bill_date}
+                            </span>
+                          </div>
+                          <span className={`px-1.5 py-0.5 rounded text-[9px] uppercase font-black border shrink-0 ${
+                            b.gst_mode === 'gst' ? 'bg-sky-50 text-sky-700 border-sky-200' : 'bg-slate-100 text-slate-600 border-slate-200'
+                          }`}>
+                            {b.gst_mode === 'gst' ? 'GST' : 'Plain'}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-0.5">
+                          <div>
+                            <span className="text-[10px] text-slate-400 font-bold block uppercase">Invoice Total</span>
+                            <span className="text-sm font-black text-slate-900">
+                              ₹{Number(b.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              onClick={() => handleShareBillOnWhatsApp(b)}
+                              className="px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white text-[11px] font-black hover:bg-emerald-700 shadow-xs flex items-center gap-1 cursor-pointer"
+                            >
+                              <span>📤</span> WhatsApp
+                            </button>
+                            <button
+                              onClick={() => setSelectedBillForPrint(b)}
+                              className="px-2.5 py-1.5 rounded-lg bg-sky-600 text-white text-[11px] font-black hover:bg-sky-700 shadow-xs flex items-center gap-1 cursor-pointer"
+                            >
+                              <span>👁️</span> View
+                            </button>
+                            <button
+                              onClick={() => performDeleteBill({ rawBillObj: b, invoiceLabel: getInvoiceLabel(b) })}
+                              className="w-7 h-7 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center justify-center cursor-pointer"
+                              title="Delete Invoice"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* DESKTOP VIEW (>= 640px): Full Table */}
+                  <table className="hidden sm:table w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-mutedSlate">
                         <th className="px-4 py-3">Invoice No</th>
