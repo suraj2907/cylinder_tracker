@@ -19,6 +19,11 @@ export default function OutstandingBills({
       const matchesSearch = !search || b.restaurant_name.toLowerCase().includes(search.toLowerCase()) ||
                             String(b.id).includes(search) || String(b.invoice_no || '').includes(search);
       return isPending && matchesSearch;
+    }).sort((a, b) => {
+      const numA = parseInt(a.invoice_no, 10) || 0;
+      const numB = parseInt(b.invoice_no, 10) || 0;
+      if (numA !== numB) return numB - numA;
+      return (b.bill_date || '').localeCompare(a.bill_date || '');
     });
   }, [bills, search]);
 

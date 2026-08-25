@@ -34,13 +34,22 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
     setRestaurantProfiles(map);
   }, []);
 
+  const sortBillsDescending = useCallback((list) => {
+    return [...list].sort((a, b) => {
+      const numA = parseInt(a.invoice_no, 10) || 0;
+      const numB = parseInt(b.invoice_no, 10) || 0;
+      if (numA !== numB) return numB - numA;
+      return (b.bill_date || '').localeCompare(a.bill_date || '');
+    });
+  }, []);
+
   const fetchBills = useCallback(async () => {
     try {
-      const res = await fetch('/api/db?table=bills&order=id&asc=false');
+      const res = await fetch('/api/db?table=bills&order=invoice_no&asc=false');
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
-          setBills(data);
+          setBills(sortBillsDescending(data));
           return;
         }
       }
@@ -54,7 +63,7 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
         const { data, error } = await supabase
           .from('bills')
           .select('*')
-          .order('id', { ascending: false })
+          .order('invoice_no', { ascending: false })
           .range(from, from + PAGE_SIZE - 1);
         if (error) throw error;
         if (!data || data.length === 0) break;
@@ -62,11 +71,11 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
         if (data.length < PAGE_SIZE) break;
         from += PAGE_SIZE;
       }
-      setBills(all);
+      setBills(sortBillsDescending(all));
     } catch (err) {
       console.error('Error fetching bills:', err);
     }
-  }, []);
+  }, [sortBillsDescending]);
 
   useEffect(() => {
     Promise.all([fetchProfiles(), fetchBills()]).finally(() => setLoadingBilling(false));
@@ -81,10 +90,10 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
           console.log('⚡ Realtime Bills Event:', payload);
           if (payload.eventType === 'INSERT') {
             const newBill = payload.new;
-            setBills(prev => [newBill, ...prev.filter(b => b.id !== newBill.id && parseInt(b.invoice_no, 10) !== parseInt(newBill.invoice_no, 10))]);
+            setBills(prev => sortBillsDescending([newBill, ...prev.filter(b => b.id !== newBill.id && parseInt(b.invoice_no, 10) !== parseInt(newBill.invoice_no, 10))]));
           } else if (payload.eventType === 'UPDATE') {
             const updated = payload.new;
-            setBills(prev => prev.map(b => b.id === updated.id ? updated : b));
+            setBills(prev => sortBillsDescending(prev.map(b => b.id === updated.id ? updated : b)));
           } else if (payload.eventType === 'DELETE') {
             const oldId = payload.old.id;
             setBills(prev => prev.filter(b => b.id !== oldId));
