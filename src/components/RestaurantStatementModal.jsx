@@ -231,10 +231,17 @@ function RestaurantStatementModal({
     const listWithBalance = sortedAsc.map(item => {
       const debit = parseFloat(item.debit) || 0;
       const credit = parseFloat(item.credit) || 0;
-      currentBalance = currentBalance + debit - credit;
+      
+      if (debit > 0) {
+        currentBalance += debit;
+      }
+      if (credit > 0) {
+        currentBalance = Math.max(0, currentBalance - credit);
+      }
+      
       return {
         ...item,
-        runningBalance: Math.max(0, currentBalance)
+        runningBalance: currentBalance
       };
     });
 
