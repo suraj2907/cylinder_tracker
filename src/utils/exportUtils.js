@@ -522,37 +522,18 @@ export const shareInvoicePDFOnWhatsApp = async (bill, profile = {}) => {
   const cleanPhone = phone.replace(/[^0-9]/g, '');
   const recipient = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
 
-  const itemsArr = Array.isArray(bill.items) ? bill.items : [];
-  const itemsSummary = itemsArr.map((it, idx) => 
-    `${idx + 1}. *${it.description || it.item_name || 'Cylinder'}* - ${it.qty} PCS @ ₹${Number(it.rate).toLocaleString('en-IN')}`
-  ).join('\n');
+  const onlineLink = bill.invoice_link || `https://cylinder-tracker.vercel.app/`;
 
-  const totAmt = Number(bill.total_amount || 0);
-  const paidAmt = Number(bill.amount_paid || (bill.payment_status === 'paid' ? totAmt : 0));
-  const prevBal = parseFloat(profile.previous_balance || bill.previous_balance || 0);
-  const currentBal = prevBal + totAmt - paidAmt;
-
-  const message = `🧾 *TAX INVOICE - SHREE BALAJI AGENCIES*\n` +
-    `━━━━━━━━━━━━━━━━━━━━━\n` +
-    `🏢 *Customer:* ${bill.restaurant_name || profile.name || 'Customer'}\n` +
-    `📄 *Invoice No:* ${invLabel}\n` +
-    `📅 *Date:* ${bill.bill_date || new Date().toISOString().slice(0, 10)}\n` +
-    `━━━━━━━━━━━━━━━━━━━━━\n` +
-    `📦 *Items:*\n${itemsSummary || '1. LPG Commercial Cylinder'}\n` +
-    `━━━━━━━━━━━━━━━━━━━━━\n` +
-    `💰 *This Bill Amount:* ₹${totAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` +
-    `💵 *Received on Bill:* ₹${paidAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` +
+  const message = `🧾 *TAX INVOICE*\n` +
+    `Dear *${bill.restaurant_name || profile.name || 'Customer'}*,\n\n` +
+    `Your invoice *${invLabel}* of amount *₹${totAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}* dated *${bill.bill_date || new Date().toISOString().slice(0, 10)}* is generated.\n\n` +
+    `📄 *View Invoice:* ${onlineLink}\n\n` +
     (prevBal > 0 ? `⏮️ *Previous Balance:* ₹${prevBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` : '') +
-    `🔴 *Total Net Outstanding:* ₹${currentBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` +
-    `━━━━━━━━━━━━━━━━━━━━━\n` +
-    `🏦 *Bank Details for Payment:*\n` +
-    `• Bank: State Bank of India, Rajnandgaon\n` +
-    `• Account: MS SHREE BALAJI AGENCIES\n` +
-    `• A/C No: 43204193003\n` +
-    `• IFSC: SBIN0000464\n` +
-    `• UPI ID: 9407922288-1@okbizaxis\n` +
-    `━━━━━━━━━━━━━━━━━━━━━\n` +
-    `Kripya balance clear karein. Thank you! 🙏`;
+    `🔴 *Total Balance Due:* ₹${currentBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n\n` +
+    `💳 *UPI ID for Payment:* 9407922288-1@okbizaxis\n` +
+    `🏦 *Bank:* MS SHREE BALAJI AGENCIES | A/C: 43204193003 | IFSC: SBIN0000464 | SBI Rajnandgaon\n\n` +
+    `*M/S SHREE BALAJI AGENCIES*\n` +
+    `📞 9407922288 | msspagency@gmail.com`;
 
   const encoded = encodeURIComponent(message);
   const url = recipient ? `https://wa.me/${recipient}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
