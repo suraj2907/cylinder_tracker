@@ -360,7 +360,11 @@ function RestaurantStatementModal({
   };
 
   const getBillProfile = (rName) => {
-    return profile?.name === rName ? profile : (restaurantProfiles?.[rName] || profile || {});
+    const rawProf = profile?.name === rName ? profile : (restaurantProfiles?.[rName] || profile || {});
+    return {
+      ...rawProf,
+      previous_balance: rawProf.previous_balance !== undefined ? rawProf.previous_balance : openingBalance
+    };
   };
 
   return (

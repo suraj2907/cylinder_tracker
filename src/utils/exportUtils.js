@@ -377,86 +377,124 @@ export const generateInvoicePDFDoc = (bill, profile = {}) => {
   const finalY = doc.lastAutoTable.finalY + 6;
 
   // Summary box on right
+  // Summary calculations
   const totAmt = Number(bill.total_amount || 0);
   const taxable = Number(bill.taxable_amount || 0);
   const cgst = Number(bill.cgst || 0);
   const sgst = Number(bill.sgst || 0);
   const paidAmt = Number(bill.amount_paid || (bill.payment_status === 'paid' ? totAmt : 0));
-  const balDue = Math.max(0, totAmt - paidAmt);
+  const prevBal = parseFloat(profile.previous_balance || bill.previous_balance || 0);
+  const currentBal = prevBal + totAmt - paidAmt;
 
   // Bank details Box (Left)
   doc.setFillColor(248, 250, 252);
-  doc.roundedRect(14, finalY, 100, 36, 2, 2, 'F');
+  doc.roundedRect(14, finalY, 96, 42, 2, 2, 'F');
   doc.setDrawColor(226, 232, 240);
-  doc.roundedRect(14, finalY, 100, 36, 2, 2, 'S');
+  doc.roundedRect(14, finalY, 96, 42, 2, 2, 'S');
 
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(71, 85, 105);
-  doc.text('BANK DETAILS FOR PAYMENT', 18, finalY + 6);
+  doc.text('BANK & PAYMENT DETAILS', 18, finalY + 6);
 
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(30, 41, 59);
-  doc.text('Bank: State Bank of India', 18, finalY + 12);
+  doc.text('Bank: State Bank of India, RAJNANDGAON', 18, finalY + 12);
   doc.text('Account Name: MS SHREE BALAJI AGENCIES', 18, finalY + 17);
   doc.text('A/C No: 43204193003  |  IFSC: SBIN0000464', 18, finalY + 22);
-  doc.text('Branch: SBI, Rajnandgaon', 18, finalY + 27);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(14, 116, 144);
-  doc.text('UPI ID: 9407922288-3@ybl (GPay / PhonePe / Paytm)', 18, finalY + 32);
+  doc.text('UPI ID: 9407922288-1@okbizaxis', 18, finalY + 28);
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 116, 139);
+  doc.text('Accepted: GPay / PhonePe / Paytm / BHIM UPI', 18, finalY + 34);
 
   // Totals Breakdown Box (Right)
   doc.setFillColor(248, 250, 252);
-  doc.roundedRect(118, finalY, 78, 36, 2, 2, 'F');
+  doc.roundedRect(114, finalY, 82, 42, 2, 2, 'F');
   doc.setDrawColor(226, 232, 240);
-  doc.roundedRect(118, finalY, 78, 36, 2, 2, 'S');
+  doc.roundedRect(114, finalY, 82, 42, 2, 2, 'S');
 
-  let rY = finalY + 6;
+  let rY = finalY + 5;
   if (isGst) {
-    doc.setFontSize(8);
+    doc.setFontSize(7.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100, 116, 139);
-    doc.text('Taxable Amount:', 122, rY);
+    doc.text('Taxable Amount:', 118, rY);
     doc.text(`Rs. ${taxable.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
-    rY += 5;
-    doc.text('CGST @ 9%:', 122, rY);
+    rY += 4.5;
+    doc.text('CGST @ 9%:', 118, rY);
     doc.text(`Rs. ${cgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
-    rY += 5;
-    doc.text('SGST @ 9%:', 122, rY);
+    rY += 4.5;
+    doc.text('SGST @ 9%:', 118, rY);
     doc.text(`Rs. ${sgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
-    rY += 6;
+    rY += 5;
   }
 
-  doc.setFontSize(9.5);
+  doc.setFontSize(8.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(15, 23, 42);
-  doc.text('Total Invoice Amount:', 122, rY);
+  doc.text('Total Amount:', 118, rY);
   doc.text(`Rs. ${totAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
-  rY += 6;
-
-  doc.setFontSize(8.5);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(5, 150, 105);
-  doc.text('Received Amount:', 122, rY);
-  doc.text(`Rs. ${paidAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
   rY += 5;
 
-  doc.setFontSize(9.5);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(71, 85, 105);
+  doc.text('Received Amount:', 118, rY);
+  doc.text(`Rs. ${paidAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
+  rY += 4.5;
+
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(71, 85, 105);
+  doc.text('Previous Balance:', 118, rY);
+  doc.text(`Rs. ${prevBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
+  rY += 5;
+
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(225, 29, 72);
-  doc.text('Balance Due:', 122, rY);
-  doc.text(`Rs. ${balDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
+  doc.text('Current Balance:', 118, rY);
+  doc.text(`Rs. ${currentBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
+
+  // Total in Words Box Below
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(71, 85, 105);
+  doc.text('Total Amount (in words):', 14, finalY + 48);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(15, 23, 42);
+  doc.text(numberToWords(Math.round(totAmt)), 50, finalY + 48);
 
   // Footer note
-  doc.setFontSize(7.5);
+  doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(148, 163, 184);
-  doc.text('Terms: Goods once sold will not be taken back. Empty cylinders returnable; loss/damage chargeable.', 14, finalY + 46);
-  doc.text('Authorized Signatory • M/S SHREE BALAJI AGENCIES', 196, finalY + 46, { align: 'right' });
+  doc.text('Terms: Goods once sold will not be taken back. Empty cylinders returnable; loss/damage chargeable.', 14, finalY + 54);
+  doc.text('Authorized Signatory • M/S SHREE BALAJI AGENCIES', 196, finalY + 54, { align: 'right' });
 
   return doc;
 };
+
+// Convert number to Indian words
+function numberToWords(num) {
+  if (!num || isNaN(num) || num <= 0) return 'Zero Rupees Only';
+  const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+  const n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+  if (!n) return `${num} Rupees Only`;
+  let str = '';
+  str += (Number(n[1]) !== 0) ? (a[Number(n[1])] || b[Number(n[1][0])] + ' ' + a[Number(n[1][1])]) + 'Crore ' : '';
+  str += (Number(n[2]) !== 0) ? (a[Number(n[2])] || b[Number(n[2][0])] + ' ' + a[Number(n[2][1])]) + 'Lakh ' : '';
+  str += (Number(n[3]) !== 0) ? (a[Number(n[3])] || b[Number(n[3][0])] + ' ' + a[Number(n[3][1])]) + 'Thousand ' : '';
+  str += (Number(n[4]) !== 0) ? (a[Number(n[4])] || b[Number(n[4][0])] + ' ' + a[Number(n[4][1])]) + 'Hundred ' : '';
+  str += (Number(n[5]) !== 0) ? ((str !== '') ? 'and ' : '') + (a[Number(n[5])] || b[Number(n[5][0])] + ' ' + a[Number(n[5][1])]) + 'Rupees Only' : 'Rupees Only';
+  return str.trim();
+}
 
 // Export individual invoice as PDF download
 export const exportBillPDF = (bill, profile = {}) => {
@@ -466,12 +504,19 @@ export const exportBillPDF = (bill, profile = {}) => {
   doc.save(`Invoice_${invLabel}_${safeName}.pdf`);
 };
 
-// Share invoice PDF directly into WhatsApp on mobile, or download & open WhatsApp
+// Share invoice directly into party WhatsApp chat (with PDF auto-download)
 export const shareInvoicePDFOnWhatsApp = async (bill, profile = {}) => {
   const doc = generateInvoicePDFDoc(bill, profile);
   const invLabel = bill.invoiceLabel || (bill.invoice_no ? `INV-${String(bill.invoice_no).padStart(4, '0')}` : 'INVOICE');
   const safeName = (bill.restaurant_name || profile.name || 'Customer').replace(/[^a-zA-Z0-9]/g, '_');
   const fileName = `Invoice_${invLabel}_${safeName}.pdf`;
+
+  // Auto-download PDF for instant record/attachment
+  try {
+    doc.save(fileName);
+  } catch (err) {
+    console.warn('PDF save error:', err);
+  }
 
   const phone = profile.mobile || bill.mobile || '';
   const cleanPhone = phone.replace(/[^0-9]/g, '');
@@ -484,43 +529,31 @@ export const shareInvoicePDFOnWhatsApp = async (bill, profile = {}) => {
 
   const totAmt = Number(bill.total_amount || 0);
   const paidAmt = Number(bill.amount_paid || (bill.payment_status === 'paid' ? totAmt : 0));
-  const balDue = Math.max(0, totAmt - paidAmt);
+  const prevBal = parseFloat(profile.previous_balance || bill.previous_balance || 0);
+  const currentBal = prevBal + totAmt - paidAmt;
 
-  const message = `🧾 *INVOICE FROM SHREE BALAJI AGENCIES*\n` +
+  const message = `🧾 *TAX INVOICE - SHREE BALAJI AGENCIES*\n` +
     `━━━━━━━━━━━━━━━━━━━━━\n` +
-    `🏢 *Party:* ${bill.restaurant_name || profile.name || 'Customer'}\n` +
+    `🏢 *Customer:* ${bill.restaurant_name || profile.name || 'Customer'}\n` +
     `📄 *Invoice No:* ${invLabel}\n` +
     `📅 *Date:* ${bill.bill_date || new Date().toISOString().slice(0, 10)}\n` +
     `━━━━━━━━━━━━━━━━━━━━━\n` +
     `📦 *Items:*\n${itemsSummary || '1. LPG Commercial Cylinder'}\n` +
     `━━━━━━━━━━━━━━━━━━━━━\n` +
-    `💰 *Total Amount:* ₹${totAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` +
-    (balDue > 0 ? `⚠️ *Balance Due:* ₹${balDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` : `✅ *Status:* PAID\n`) +
-    `💳 *Payment UPI:* 9407922288-3@ybl\n` +
+    `💰 *This Bill Amount:* ₹${totAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` +
+    `💵 *Received on Bill:* ₹${paidAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` +
+    (prevBal > 0 ? `⏮️ *Previous Balance:* ₹${prevBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` : '') +
+    `🔴 *Total Net Outstanding:* ₹${currentBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` +
     `━━━━━━━━━━━━━━━━━━━━━\n` +
-    `Thank you for your business! 🙏`;
+    `🏦 *Bank Details for Payment:*\n` +
+    `• Bank: State Bank of India, Rajnandgaon\n` +
+    `• Account: MS SHREE BALAJI AGENCIES\n` +
+    `• A/C No: 43204193003\n` +
+    `• IFSC: SBIN0000464\n` +
+    `• UPI ID: 9407922288-1@okbizaxis\n` +
+    `━━━━━━━━━━━━━━━━━━━━━\n` +
+    `Kripya balance clear karein. Thank you! 🙏`;
 
-  const pdfBlob = doc.output('blob');
-  const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
-
-  // 1. Mobile Web Share API: Directly attaches and sends PDF file in WhatsApp!
-  if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-    try {
-      await navigator.share({
-        files: [pdfFile],
-        title: `Invoice ${invLabel}`,
-        text: message
-      });
-      return;
-    } catch (err) {
-      if (err.name !== 'AbortError') {
-        console.warn('Native share error, falling back:', err);
-      }
-    }
-  }
-
-  // 2. Fallback: Download PDF file & open WhatsApp
-  doc.save(fileName);
   const encoded = encodeURIComponent(message);
   const url = recipient ? `https://wa.me/${recipient}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
   window.open(url, '_blank');

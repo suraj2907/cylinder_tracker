@@ -573,7 +573,7 @@ export default function GenerateBill({
               </div>
 
               <div className="flex justify-between items-center py-1">
-                <span className="text-xs font-black uppercase text-slate-700 tracking-wider">Total Invoice Amount</span>
+                <span className="text-xs font-black uppercase text-slate-700 tracking-wider">Total Amount</span>
                 <span className="text-base font-black text-slate-900">
                   ₹{totals.total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
@@ -581,12 +581,16 @@ export default function GenerateBill({
 
               <div className="space-y-1.5 text-xs border-t border-b border-slate-200 py-2.5">
                 <div className="flex justify-between items-center text-slate-500 font-semibold">
-                  <span>Received / Paid</span>
+                  <span>Received Amount</span>
                   <span className="text-slate-700 font-bold">₹{savedAmountPaid.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-black text-rose-700">Balance Due</span>
-                  <span className="font-black text-rose-700 text-sm">₹{savedBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                <div className="flex justify-between items-center text-slate-500 font-semibold">
+                  <span>Previous Balance</span>
+                  <span className="text-slate-700 font-bold">₹{previousBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between items-center pt-1 border-t border-slate-200/60">
+                  <span className="font-black text-rose-700 text-xs uppercase">Current Balance</span>
+                  <span className="font-black text-rose-700 text-sm">₹{(previousBalance + totals.total - savedAmountPaid).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               </div>
 
