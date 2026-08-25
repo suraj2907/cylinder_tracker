@@ -194,40 +194,47 @@ export default function PublicLedgerView({ token }) {
       }
     });
 
-    // 3. Real-time payments recorded on or after 18-Aug-2026
+    // 3. Real-time payments recorded
     (payments || []).forEach(p => {
-      if (isNewPayment(p)) {
-        const pDate = p.date || (p.created_at ? p.created_at.slice(0, 10) : '');
-        const credit = parseFloat(p.amount) || 0;
+      const pDate = p.date || (p.created_at ? p.created_at.slice(0, 10) : '');
+      const credit = parseFloat(p.amount) || 0;
+      if (credit <= 0) return;
+
+      const isAlreadyInLegacy = (ledgerRows || []).some(l => 
+        l.entry_date === pDate && Math.abs((parseFloat(l.credit) || 0) - credit) < 1
+      );
+
+      if (!isAlreadyInLegacy) {
         list.push({
           id: `pay_${p.id || pDate}_${credit}`,
           date: pDate,
           voucher: 'Payment-in',
           srNo: p.id ? String(p.id).slice(-4) : '—',
-          paymentMode: p.payment_mode || p.mode || 'Upi',
+          paymentMode: p.payment_mode || p.mode || 'UPI',
           credit,
           debit: 0,
           balance: null,
           dueDate: '',
-          status: '—',
+          status: 'Paid',
           isOfficial: false
         });
       }
     });
 
-    // Sort chronologically ascending
-    list.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    // Sort chronologically ascending (Date asc, Bills before Payments on same date, srNo asc)
+    list.sort((a, b) => {
+      const dCmp = (a.date || '').localeCompare(b.date || '');
+      if (dCmp !== 0) return dCmp;
+      if (a.debit > 0 && b.credit > 0) return -1;
+      if (a.credit > 0 && b.debit > 0) return 1;
+      return (Number(a.srNo) || 0) - (Number(b.srNo) || 0);
+    });
 
-    // Compute running balance accurately across all time
-    const baseBal = parseFloat(restaurantProfile?.previous_balance || 0);
-    let runningBal = baseBal;
+    // Compute dynamic continuous running balance
+    let runningBal = 0;
 
     return list.map((item) => {
-      if (item.isOfficial && item.balance !== null) {
-        runningBal = item.balance;
-      } else {
-        runningBal = runningBal + item.debit - item.credit;
-      }
+      runningBal = runningBal + item.debit - item.credit;
       return {
         ...item,
         runningBalance: runningBal
