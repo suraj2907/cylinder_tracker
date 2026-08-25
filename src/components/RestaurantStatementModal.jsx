@@ -6,6 +6,21 @@ import { supabase } from '../utils/supabaseClient';
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const MFULL = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
+function numberToWords(num) {
+  if (!num || isNaN(num) || num <= 0) return 'Zero Rupees Only';
+  const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+  if (!n) return `${num} Rupees Only`;
+  let str = '';
+  str += (Number(n[1]) !== 0) ? (a[Number(n[1])] || b[Number(n[1][0])] + ' ' + a[Number(n[1][1])]) + 'Crore ' : '';
+  str += (Number(n[2]) !== 0) ? (a[Number(n[2])] || b[Number(n[2][0])] + ' ' + a[Number(n[2][1])]) + 'Lakh ' : '';
+  str += (Number(n[3]) !== 0) ? (a[Number(n[3])] || b[Number(n[3][0])] + ' ' + a[Number(n[3][1])]) + 'Thousand ' : '';
+  str += (Number(n[4]) !== 0) ? (a[Number(n[4])] || b[Number(n[4][0])] + ' ' + a[Number(n[4][1])]) + 'Hundred ' : '';
+  str += (Number(n[5]) !== 0) ? ((str !== '') ? 'and ' : '') + (a[Number(n[5])] || b[Number(n[5][0])] + ' ' + a[Number(n[5][1])]) + 'Rupees Only' : 'Rupees Only';
+  return str.trim();
+}
+
 function RestaurantStatementModal({
   restaurantName,
   onClose,
@@ -1045,75 +1060,100 @@ function RestaurantStatementModal({
               </div>
 
               {/* Subtotals & Bank details Footer Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-                {/* Bank Details & QR */}
-                <div className="space-y-3">
-                  <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-[10.5px] space-y-1">
-                    <span className="text-[9px] font-black text-slate-700 uppercase tracking-widest block mb-0.5">Bank Details</span>
-                    <div className="grid grid-cols-3 gap-y-0.5 text-slate-600">
-                      <span className="font-semibold text-slate-400">Account:</span>
-                      <span className="col-span-2 font-black text-slate-900">MS SHREE BALAJI AGENCIES</span>
-                      <span className="font-semibold text-slate-400">A/C No:</span>
-                      <span className="col-span-2 font-black text-slate-900">43204193003</span>
-                      <span className="font-semibold text-slate-400">IFSC:</span>
-                      <span className="col-span-2 font-black text-slate-900">SBIN0000464</span>
-                      <span className="font-semibold text-slate-400">Branch:</span>
-                      <span className="col-span-2 font-bold text-slate-800">SBI, Rajnandgaon</span>
-                    </div>
-                  </div>
+              {(() => {
+                const totAmt = Number(selectedBillForPrint.total_amount || 0);
+                const paidAmt = Number(selectedBillForPrint.amount_paid || (selectedBillForPrint.payment_status === 'paid' ? totAmt : 0));
+                const bProf = getBillProfile(selectedBillForPrint.restaurant_name);
+                const currentBal = bProf.current_balance !== undefined ? parseFloat(bProf.current_balance) : Math.max(0, totAmt - paidAmt);
+                const prevBal = Math.max(0, currentBal - (totAmt - paidAmt));
 
-                  <div className="flex items-center gap-2.5 p-2.5 bg-slate-50 border border-slate-200 rounded-2xl">
-                    <img src="/payment-qr.png" alt="Payment QR" className="w-12 h-12 border border-slate-200 rounded-xl shrink-0 bg-white p-0.5" />
-                    <div className="space-y-0.5">
-                      <span className="text-[10px] font-black text-slate-900 block">UPI ID: 9407922288-3@ybl</span>
-                      <span className="text-[8.5px] text-slate-400 font-semibold block">Scan with GPay, PhonePe, Paytm</span>
-                    </div>
-                  </div>
-                </div>
+                return (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                      {/* Bank Details & QR */}
+                      <div className="space-y-3">
+                        <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-[10.5px] space-y-1">
+                          <span className="text-[9px] font-black text-slate-700 uppercase tracking-widest block mb-0.5">Bank Details</span>
+                          <div className="grid grid-cols-3 gap-y-0.5 text-slate-600">
+                            <span className="font-semibold text-slate-400">Account:</span>
+                            <span className="col-span-2 font-black text-slate-900">MS SHREE BALAJI AGENCIES</span>
+                            <span className="font-semibold text-slate-400">A/C No:</span>
+                            <span className="col-span-2 font-black text-slate-900">43204193003</span>
+                            <span className="font-semibold text-slate-400">IFSC:</span>
+                            <span className="col-span-2 font-black text-slate-900">SBIN0000464</span>
+                            <span className="font-semibold text-slate-400">Branch:</span>
+                            <span className="col-span-2 font-bold text-slate-800">State Bank of India, Rajnandgaon</span>
+                          </div>
+                        </div>
 
-                {/* Tax Breakdown & Balance Due */}
-                <div className="space-y-2.5 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                  {selectedBillForPrint.gst_mode === 'gst' && (
-                    <div className="space-y-1.5 text-xs border-b border-slate-200 pb-2 text-slate-600">
-                      <div className="flex justify-between">
-                        <span>Taxable Amount</span>
-                        <span className="font-black text-slate-900">₹{Number(selectedBillForPrint.taxable_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <div className="flex items-center gap-2.5 p-2.5 bg-slate-50 border border-slate-200 rounded-2xl">
+                          <img src="/payment-qr.png" alt="Payment QR" className="w-12 h-12 border border-slate-200 rounded-xl shrink-0 bg-white p-0.5" />
+                          <div className="space-y-0.5">
+                            <span className="text-[10px] font-black text-slate-900 block">UPI ID: 9407922288-1@okbizaxis</span>
+                            <span className="text-[8.5px] text-slate-400 font-semibold block">Scan with GPay, PhonePe, Paytm</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex justify-between text-slate-500 font-semibold">
-                        <span>CGST @ 9%</span>
-                        <span className="font-bold text-slate-900">₹{Number(selectedBillForPrint.cgst || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                      </div>
-                      <div className="flex justify-between text-slate-500 font-semibold">
-                        <span>SGST @ 9%</span>
-                        <span className="font-bold text-slate-900">₹{Number(selectedBillForPrint.sgst || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+
+                      {/* Tax Breakdown & Balance Due */}
+                      <div className="space-y-2 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                        {selectedBillForPrint.gst_mode === 'gst' && (
+                          <div className="space-y-1 text-xs border-b border-slate-200 pb-1.5 text-slate-600">
+                            <div className="flex justify-between">
+                              <span>Taxable Amount</span>
+                              <span className="font-black text-slate-900">₹{Number(selectedBillForPrint.taxable_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between text-slate-500 font-semibold">
+                              <span>CGST @ 9%</span>
+                              <span className="font-bold text-slate-900">₹{Number(selectedBillForPrint.cgst || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between text-slate-500 font-semibold">
+                              <span>SGST @ 9%</span>
+                              <span className="font-bold text-slate-900">₹{Number(selectedBillForPrint.sgst || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex justify-between items-center py-0.5">
+                          <span className="text-xs font-black uppercase text-slate-700 tracking-wider">Total Amount</span>
+                          <span className="text-sm font-black text-slate-900">
+                            ₹{totAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+
+                        <div className="space-y-1 text-xs border-t border-b border-slate-200 py-1.5">
+                          <div className="flex justify-between items-center text-slate-500 font-semibold">
+                            <span>Received Amount</span>
+                            <span className="text-slate-700 font-bold">₹{paidAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-slate-500 font-semibold">
+                            <span>Previous Balance</span>
+                            <span className="text-slate-700 font-bold">₹{prevBal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
+                          <div className="flex justify-between items-center pt-0.5 border-t border-slate-200/60">
+                            <span className="font-black text-rose-700 text-xs uppercase">Current Balance</span>
+                            <span className="font-black text-rose-700 text-sm">
+                              ₹{currentBal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  )}
 
-                  <div className="flex justify-between items-center py-0.5">
-                    <span className="text-xs font-black uppercase text-slate-700 tracking-wider">Total Invoice Amount</span>
-                    <span className="text-sm font-black text-slate-900">
-                      ₹{Number(selectedBillForPrint.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                  </div>
-
-                  <div className="space-y-1 text-xs border-t border-b border-slate-200 py-2">
-                    <div className="flex justify-between items-center text-slate-500 font-semibold">
-                      <span>Received / Paid</span>
-                      <span className="text-slate-700 font-bold">₹{Number(selectedBillForPrint.amount_paid || (selectedBillForPrint.payment_status === 'paid' ? selectedBillForPrint.total_amount : 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="font-black text-rose-700">Balance Due</span>
-                      <span className="font-black text-rose-700 text-sm">
-                        ₹{Math.max(0, Number(selectedBillForPrint.total_amount || 0) - Number(selectedBillForPrint.amount_paid || (selectedBillForPrint.payment_status === 'paid' ? selectedBillForPrint.total_amount : 0))).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {/* Total in words */}
+                    <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+                      <span className="font-bold text-slate-500">Total in Words:</span>
+                      <span className="font-black text-slate-900">
+                        {numberToWords(Math.round(totAmt))}
                       </span>
                     </div>
                   </div>
-                </div>
-              </div>
+                );
+              })()}
 
-              <div className="pt-2 text-[9px] text-slate-400">
-                <p>Terms: Goods once sold will not be taken back. Empty cylinders returnable; loss/damage chargeable.</p>
+              <div className="pt-2 text-[9.5px] text-slate-400 flex items-center justify-between border-t border-slate-100">
+                <p>Terms: Goods once sold will not be taken back. Empty cylinders returnable.</p>
+                <p className="font-bold text-slate-600">Authorized Signatory • M/S SHREE BALAJI AGENCIES</p>
               </div>
             </div>
 
