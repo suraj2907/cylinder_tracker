@@ -374,11 +374,20 @@ function RestaurantStatementModal({
     await shareInvoicePDFOnWhatsApp(bill, bProf);
   };
 
+  // Live computed net balance of this party from all activities
+  const netPartyOutstanding = useMemo(() => {
+    if (allRestaurantActivities && allRestaurantActivities.length > 0) {
+      return allRestaurantActivities[0]?.runningBalance ?? parseFloat(profile?.previous_balance || 0);
+    }
+    return parseFloat(profile?.previous_balance || 0);
+  }, [allRestaurantActivities, profile?.previous_balance]);
+
   const getBillProfile = (rName) => {
-    const rawProf = profile?.name === rName ? profile : (restaurantProfiles?.[rName] || profile || {});
+    const rawProf = (restaurantProfiles && (restaurantProfiles[rName] || restaurantProfiles[norm(rName)])) || profile || {};
     return {
       ...rawProf,
-      previous_balance: rawProf.previous_balance !== undefined ? rawProf.previous_balance : openingBalance
+      current_balance: netPartyOutstanding,
+      previous_balance: parseFloat(rawProf.previous_balance !== undefined ? rawProf.previous_balance : openingBalance)
     };
   };
 
