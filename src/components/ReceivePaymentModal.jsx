@@ -206,30 +206,33 @@ export default function ReceivePaymentModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-100 overflow-hidden fade animate-scaleUp">
+    <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs z-50 overflow-y-auto p-2 sm:p-4 flex flex-col justify-start sm:justify-center items-center">
+      <div className="bg-white rounded-2xl sm:rounded-3xl max-w-lg w-full shadow-2xl border border-slate-100 my-auto flex flex-col max-h-[92vh] sm:max-h-[88vh] overflow-hidden animate-scaleUp">
         
         {/* Modal Header */}
-        <div className="bg-slate-900 text-white px-6 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-lg font-black">
+        <div className="bg-slate-900 text-white px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <span className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-base sm:text-lg font-black shrink-0">
               💳
             </span>
-            <div>
-              <h2 className="text-base font-extrabold tracking-wide">Receive Party Payment</h2>
-              <p className="text-xs text-slate-400 font-semibold">Search party with live autocomplete suggestions</p>
+            <div className="min-w-0">
+              <h2 className="text-sm sm:text-base font-extrabold tracking-wide truncate">Receive Party Payment</h2>
+              <p className="text-[10px] sm:text-xs text-slate-400 font-semibold truncate">Search party with live autocomplete</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-all font-bold cursor-pointer"
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-all font-bold cursor-pointer text-xs sm:text-sm shrink-0 ml-2"
           >
             ✕
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          
+          {/* Scrollable Form Body */}
+          <div className="p-4 sm:p-5 space-y-3.5 sm:space-y-4 overflow-y-auto flex-1">
           
           {/* Autocomplete Party Search Box */}
           <div className="space-y-1.5 relative" ref={containerRef}>
@@ -407,21 +410,23 @@ export default function ReceivePaymentModal({
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-100">
+          </div>
+
+          {/* Form Actions (Always visible at bottom of modal) */}
+          <div className="p-3.5 sm:p-4 bg-slate-50 border-t border-slate-100 shrink-0 flex items-center justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+              className="px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200 transition-all cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="px-6 py-2.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white shadow-soft transition-all flex items-center gap-2 cursor-pointer"
+              className="px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white shadow-soft transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
-              {submitting ? 'Processing...' : '💳 Receive Payment & Update Ledger'}
+              {submitting ? 'Processing...' : '💳 Receive Payment'}
             </button>
           </div>
 

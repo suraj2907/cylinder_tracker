@@ -392,8 +392,8 @@ function RestaurantStatementModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto no-print">
-      <div className="bg-white rounded-3xl border border-customBorder shadow-2xl max-w-6xl w-full p-4 sm:p-6 space-y-4 my-auto max-h-[95vh] flex flex-col justify-between overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex flex-col justify-start sm:justify-center items-center p-2 sm:p-4 overflow-y-auto no-print">
+      <div className="bg-white rounded-2xl sm:rounded-3xl border border-customBorder shadow-2xl max-w-6xl w-full p-3 sm:p-6 space-y-3 sm:space-y-4 my-auto max-h-[95vh] flex flex-col overflow-hidden">
         
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-customBorder pb-3 flex-wrap gap-2">
@@ -943,7 +943,7 @@ function RestaurantStatementModal({
 
       {/* Invoice Print & WhatsApp Preview Modal */}
       {selectedBillForPrint && (
-        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center z-[100] p-2 sm:p-4 overflow-y-auto no-print">
+        <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs flex flex-col justify-start sm:justify-center items-center z-[100] p-2 sm:p-4 overflow-y-auto no-print">
           <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl max-w-2xl w-full p-3.5 sm:p-5 space-y-3 max-h-[94vh] overflow-y-auto relative animate-fadeIn flex flex-col my-auto border border-slate-100">
             
             {/* Top Header & Close */}
