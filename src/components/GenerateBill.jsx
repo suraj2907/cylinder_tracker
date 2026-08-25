@@ -597,7 +597,7 @@ export default function GenerateBill({
               <div className="pt-1">
                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Balance (in words)</span>
                 <span className="text-xs font-black text-slate-800 capitalize mt-0.5 block">
-                  {numberToWords(Math.round(partyCurrentBalance > 0 ? partyCurrentBalance : totals.total))}
+                  {numberToWords(Math.round(currentBalance > 0 ? currentBalance : totals.total))}
                 </span>
               </div>
             </div>
