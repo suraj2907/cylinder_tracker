@@ -533,12 +533,13 @@ export const shareInvoicePDFOnWhatsApp = async (bill, profile = {}) => {
     prevBal = parseFloat(profile.previous_balance || bill.previous_balance || 0);
     currentBal = prevBal + totAmt - paidAmt;
   }
-  const onlineLink = bill.invoice_link || `https://cylinder-tracker.vercel.app/`;
+  const partyName = bill.restaurant_name || profile.name || '';
+  const onlineLink = bill.invoice_link || (typeof window !== 'undefined' ? `${window.location.origin}/?ledger=${encodeURIComponent(partyName)}` : `https://cylinder-tracker.vercel.app/?ledger=${encodeURIComponent(partyName)}`);
 
   const message = `🧾 *TAX INVOICE*\n` +
-    `Dear *${bill.restaurant_name || profile.name || 'Customer'}*,\n\n` +
+    `Dear *${partyName || 'Customer'}*,\n\n` +
     `Your invoice *${invLabel}* of amount *₹${totAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}* dated *${bill.bill_date || new Date().toISOString().slice(0, 10)}* is generated.\n\n` +
-    `📄 *View Invoice:* ${onlineLink}\n\n` +
+    `📄 *View Ledger / Passbook:* ${onlineLink}\n\n` +
     (prevBal > 0 ? `⏮️ *Previous Balance:* ₹${prevBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` : '') +
     `🔴 *Total Balance Due:* ₹${currentBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n\n` +
     `💳 *UPI ID for Payment:* 9407922288-1@okbizaxis\n` +
