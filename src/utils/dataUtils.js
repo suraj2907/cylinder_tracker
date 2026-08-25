@@ -481,11 +481,15 @@ export function isNewPayment(p) {
 export function getAllPartiesCurrentBalances(restaurantProfiles = {}, bills = [], payments = []) {
   const map = {};
 
-  // 1. Base closing balances from profiles (synced up to 20th August)
+  // 1. Base closing balances from profiles (synced up to 20th August, zero-outstanding hotels start at 0)
   Object.keys(restaurantProfiles || {}).forEach(k => {
     const normP = norm(k);
-    const bal = parseFloat(restaurantProfiles[k].previous_balance || 0);
-    map[normP] = Math.max(0, bal);
+    if (ZERO_OUTSTANDING_HOTELS.some(h => norm(h) === normP)) {
+      map[normP] = 0;
+    } else {
+      const bal = parseFloat(restaurantProfiles[k].previous_balance || 0);
+      map[normP] = Math.max(0, bal);
+    }
   });
 
   // 2. Add total amount of newly generated bills
@@ -517,11 +521,13 @@ export function getPartyCurrentBalance(partyName, restaurantProfiles = {}, bills
   
   // 1. Base closing balance from profiles
   let baseBalance = 0;
-  Object.keys(restaurantProfiles || {}).forEach(k => {
-    if (norm(k) === normP) {
-      baseBalance = parseFloat(restaurantProfiles[k].previous_balance || 0);
-    }
-  });
+  if (!ZERO_OUTSTANDING_HOTELS.some(h => norm(h) === normP)) {
+    Object.keys(restaurantProfiles || {}).forEach(k => {
+      if (norm(k) === normP) {
+        baseBalance = parseFloat(restaurantProfiles[k].previous_balance || 0);
+      }
+    });
+  }
 
   // 2. Add total amount of newly generated bills
   let newBillsSum = 0;
