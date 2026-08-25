@@ -1152,19 +1152,10 @@ function RestaurantStatementModal({
               {(() => {
                 const totAmt = Number(selectedBillForPrint.total_amount || 0);
                 const paidAmt = Number(selectedBillForPrint.amount_paid || (selectedBillForPrint.payment_status === 'paid' ? totAmt : 0));
-                const bProf = getBillProfile(selectedBillForPrint.restaurant_name);
-                
-                // Find this bill's exact snapshot running balance in the timeline
-                const itemInTimeline = allRestaurantActivities.find(a => 
-                  (selectedBillForPrint.id && (a.id === selectedBillForPrint.id || a.id === `bill_${selectedBillForPrint.id}`)) ||
-                  (selectedBillForPrint.invoice_no && (a.rawBillObj?.invoice_no === selectedBillForPrint.invoice_no || (a.invoiceLabel && a.invoiceLabel.includes(String(selectedBillForPrint.invoice_no)))))
-                );
-
-                const currentBal = itemInTimeline?.runningBalance !== undefined 
-                  ? itemInTimeline.runningBalance 
-                  : (bProf.current_balance !== undefined ? parseFloat(bProf.current_balance) : Math.max(0, totAmt - paidAmt));
-                
-                const prevBal = Math.max(0, currentBal - (totAmt - paidAmt));
+                const bName = selectedBillForPrint.restaurant_name;
+                const otherBills = (bills || []).filter(b => b.id !== selectedBillForPrint.id && (b.bill_date < selectedBillForPrint.bill_date || (b.bill_date === selectedBillForPrint.bill_date && (parseInt(b.invoice_no, 10) || 0) < (parseInt(selectedBillForPrint.invoice_no, 10) || 0))));
+                const prevBal = getPartyCurrentBalance(bName, restaurantProfiles, otherBills, payments);
+                const currentBal = prevBal + totAmt - paidAmt;
 
                 return (
                   <div className="space-y-3">
@@ -1225,10 +1216,14 @@ function RestaurantStatementModal({
                             <span>Received Amount</span>
                             <span className="text-slate-700 font-bold">₹{paidAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                           </div>
+                          <div className="flex justify-between items-center text-slate-500 font-semibold">
+                            <span>Previous Balance</span>
+                            <span className="text-slate-700 font-bold">₹{prevBal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </div>
                           <div className="flex justify-between items-center pt-0.5 border-t border-slate-200/60">
-                            <span className="font-black text-rose-700 text-xs uppercase">Balance Due</span>
+                            <span className="font-black text-rose-700 text-xs uppercase">Current Balance</span>
                             <span className="font-black text-rose-700 text-sm">
-                              ₹{Math.max(0, totAmt - paidAmt).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              ₹{currentBal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                           </div>
                         </div>
@@ -1237,9 +1232,9 @@ function RestaurantStatementModal({
 
                     {/* Total in words */}
                     <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
-                      <span className="font-bold text-slate-500">Amount in Words:</span>
+                      <span className="font-bold text-slate-500">Balance in Words:</span>
                       <span className="font-black text-slate-900">
-                        {numberToWords(Math.round(Math.max(0, totAmt - paidAmt)))}
+                        {numberToWords(Math.round(currentBal > 0 ? currentBal : totAmt))}
                       </span>
                     </div>
                   </div>
