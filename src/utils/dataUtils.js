@@ -484,24 +484,50 @@ export function getAllPartiesCurrentBalances(restaurantProfiles = {}, bills = []
     }
   });
 
-  // 2. Add total amount of newly generated bills
+  // 2. Group all new events (bills & payments) chronologically per party
+  const partyEvents = {};
+
+  (payments || []).forEach(p => {
+    if (isNewPayment(p)) {
+      const normP = norm(p.restaurant_name || p.restaurantName);
+      if (!partyEvents[normP]) partyEvents[normP] = [];
+      partyEvents[normP].push({
+        date: p.date || p.created_at || '2026-08-21',
+        debit: 0,
+        credit: parseFloat(p.amount) || 0
+      });
+    }
+  });
+
   (bills || []).forEach(b => {
     if (isNewBill(b)) {
       const normP = norm(b.restaurant_name);
       const amt = parseFloat(b.total_amount) || 0;
       if (amt > 0.05) {
-        map[normP] = (map[normP] || 0) + amt;
+        if (!partyEvents[normP]) partyEvents[normP] = [];
+        partyEvents[normP].push({
+          date: b.bill_date || b.created_at || '2026-08-25',
+          debit: amt,
+          credit: 0
+        });
       }
     }
   });
 
-  // 3. Subtract new payment collections recorded in app
-  (payments || []).forEach(p => {
-    if (isNewPayment(p)) {
-      const normP = norm(p.restaurant_name || p.restaurantName);
-      const amt = parseFloat(p.amount) || 0;
-      map[normP] = Math.max(0, (map[normP] || 0) - amt);
-    }
+  // 3. For every party with events or base balance, compute exact timeline balance
+  const allPartyNames = new Set([...Object.keys(map), ...Object.keys(partyEvents)]);
+
+  allPartyNames.forEach(normP => {
+    const isZero = ZERO_BALANCE_PARTIES.some(h => norm(h) === normP);
+    let curBal = isZero ? 0 : (map[normP] || 0);
+
+    const events = (partyEvents[normP] || []).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    events.forEach(e => {
+      if (e.debit > 0) curBal += e.debit;
+      if (e.credit > 0) curBal = Math.max(0, curBal - e.credit);
+    });
+
+    map[normP] = curBal;
   });
 
   return map;
@@ -510,34 +536,6 @@ export function getAllPartiesCurrentBalances(restaurantProfiles = {}, bills = []
 export function getPartyCurrentBalance(partyName, restaurantProfiles = {}, bills = [], payments = []) {
   if (!partyName) return 0;
   const normP = norm(partyName);
-  
-  // 1. Base closing balance from profiles (ONLY Rasoi Restaurant and Route 66 start at 0)
-  let baseBalance = 0;
-  if (!ZERO_BALANCE_PARTIES.some(h => norm(h) === normP)) {
-    Object.keys(restaurantProfiles || {}).forEach(k => {
-      if (norm(k) === normP) {
-        baseBalance = parseFloat(restaurantProfiles[k].previous_balance || 0);
-      }
-    });
-  }
-
-  // 2. Add total amount of newly generated bills
-  let newBillsSum = 0;
-  (bills || []).forEach(b => {
-    if (norm(b.restaurant_name) === normP && isNewBill(b)) {
-      const amt = parseFloat(b.total_amount) || 0;
-      if (amt > 0.05) newBillsSum += amt;
-    }
-  });
-
-  // 3. Subtract new payment collections recorded in app
-  let newPaymentsSum = 0;
-  (payments || []).forEach(p => {
-    const pName = norm(p.restaurant_name || p.restaurantName);
-    if (pName === normP && isNewPayment(p)) {
-      newPaymentsSum += (parseFloat(p.amount) || 0);
-    }
-  });
-
-  return Math.max(0, baseBalance + newBillsSum - newPaymentsSum);
+  const map = getAllPartiesCurrentBalances(restaurantProfiles, bills, payments);
+  return map[normP] || 0;
 }
