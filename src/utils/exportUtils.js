@@ -547,26 +547,14 @@ export const shareInvoicePDFOnWhatsApp = async (bill, profile = {}) => {
     `*M/S SHREE BALAJI AGENCIES*\n` +
     `📞 9407922288 | msspagency@gmail.com`;
 
-  const pdfBlob = doc.output('blob');
-  const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
-
-  // 1. Mobile Native Share: Directly attaches and shares PDF document into WhatsApp chat
-  if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-    try {
-      await navigator.share({
-        files: [pdfFile],
-        title: `Invoice ${invLabel}`,
-        text: message
-      });
-      return;
-    } catch (err) {
-      if (err.name !== 'AbortError') {
-        console.warn('Native share error, falling back:', err);
-      }
-    }
+  // Auto-save PDF locally for offline copy/records
+  try {
+    doc.save(fileName);
+  } catch (err) {
+    console.warn('PDF save error:', err);
   }
 
-  // 2. Desktop Fallback: Open WhatsApp direct chat
+  // Open Direct WhatsApp Chat for Party (Exact 1-Click Send like Reminder button)
   const encoded = encodeURIComponent(message);
   const url = recipient ? `https://wa.me/${recipient}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
   window.open(url, '_blank');
