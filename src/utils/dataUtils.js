@@ -370,7 +370,7 @@ export function computeAll(batches) {
 
   batches.forEach(b => {
     let b21 = 0, b192 = 0, bEmpty = 0, bEmpty21 = 0, bEmpty192 = 0;
-    b.entries.forEach((e) => {
+    (b.entries || []).forEach((e) => {
       let rawName = e.name;
       rawName = rawName.replace(/[:\-]+\s*$/, '');
       const name = norm(rawName);
@@ -435,7 +435,7 @@ export function computeAll(batches) {
       batch: b.batch, 
       khaliDate: b.khaliDate, 
       note: b.note, 
-      count: b.entries.length, 
+      count: (b.entries || []).length, 
       kg21: b21, 
       kg192: b192, 
       empty: bEmpty,
