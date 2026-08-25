@@ -10,9 +10,17 @@ export default function ReceivePaymentModal({
   restaurantProfiles = {},
   bills = [],
   payments = [],
+  batches = [],
   onPaymentSuccess
 }) {
   const { currentUser } = useUser();
+  const activeBatchNum = useMemo(() => {
+    if (batches && batches.length > 0) {
+      const sorted = [...batches].sort((a, b) => Number(b.batch) - Number(a.batch));
+      return Number(sorted[0]?.batch) || 132;
+    }
+    return 132;
+  }, [batches]);
   const [selectedParty, setSelectedParty] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -151,6 +159,8 @@ export default function ReceivePaymentModal({
 
       // 3. Insert row into `payments` table with all alias field names
       const payPayload = {
+        batch_num: activeBatchNum,
+        batchNum: activeBatchNum,
         restaurant_name: partyName,
         restaurantName: partyName,
         amount: payAmount,
@@ -164,10 +174,13 @@ export default function ReceivePaymentModal({
         user_name: currentUser
       };
 
-      const { error: payErr } = await supabase.from('payments').insert([payPayload]);
-
-      if (payErr) {
-        console.error('Error inserting payment record:', payErr.message);
+      if (onPaymentSuccess) {
+        onPaymentSuccess(payPayload);
+      } else {
+        const { error: payErr } = await supabase.from('payments').insert([payPayload]);
+        if (payErr) {
+          console.error('Error inserting payment record:', payErr.message);
+        }
       }
 
       alert(`✅ ₹${payAmount.toLocaleString('en-IN')} payment successfully received for ${partyName} (ID #${partyId})!\n\nNew Pending Balance: ₹${newPendingBalance.toLocaleString('en-IN')}`);
@@ -177,7 +190,6 @@ export default function ReceivePaymentModal({
       setSearchQuery('');
       setAmount('');
       setNotes('');
-      if (onPaymentSuccess) onPaymentSuccess(payPayload);
       onClose();
     } catch (err) {
       console.error('Payment processing failed:', err);

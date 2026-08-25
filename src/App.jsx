@@ -373,6 +373,7 @@ export default function App() {
           restaurantProfiles={restaurantProfiles}
           bills={bills}
           payments={payments}
+          batches={batches}
           onPaymentSuccess={(payPayload) => {
             if (payPayload && handleAddPayment) handleAddPayment(payPayload);
           }}

@@ -40,12 +40,19 @@ function PaymentLedgerComponent({
 
   // Calculate Batch Cashflow summaries
   const batchSummaries = useMemo(() => {
+    const latestBatchNum = batches[0]?.batch || 132;
     return batches.map(b => {
       const bNum = b.batch;
-      const bPayments = payments.filter(p => Number(p.batch_num || p.batchNum) === Number(bNum));
+      const isLatest = Number(bNum) === Number(latestBatchNum);
+      const bPayments = payments.filter(p => {
+        const pBatch = Number(p.batch_num || p.batchNum);
+        if (pBatch === Number(bNum)) return true;
+        if (!pBatch && isLatest) return true;
+        return false;
+      });
       
-      const totalCash = bPayments.filter(p => (p.payment_mode || p.paymentMode) === 'Cash').reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
-      const totalUPI = bPayments.filter(p => (p.payment_mode || p.paymentMode) === 'UPI').reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+      const totalCash = bPayments.filter(p => (p.payment_mode || p.paymentMode || p.mode) === 'Cash').reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+      const totalUPI = bPayments.filter(p => (p.payment_mode || p.paymentMode || p.mode) !== 'Cash').reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
       const totalCollected = totalCash + totalUPI;
 
       const bookingCost = parseFloat(b.bookingCost || b.booking_cost || 0);
@@ -66,11 +73,21 @@ function PaymentLedgerComponent({
     }).sort((a, b) => b.batchNum - a.batchNum);
   }, [batches, payments]);
 
-  // Overall totals
+  // Overall totals across all payments
   const totalCostAll = useMemo(() => batchSummaries.reduce((s, b) => s + b.bookingCost, 0), [batchSummaries]);
-  const totalCollectedAll = useMemo(() => batchSummaries.reduce((s, b) => s + b.totalCollected, 0), [batchSummaries]);
-  const totalCashAll = useMemo(() => batchSummaries.reduce((s, b) => s + b.totalCash, 0), [batchSummaries]);
-  const totalUPIAll = useMemo(() => batchSummaries.reduce((s, b) => s + b.totalUPI, 0), [batchSummaries]);
+  const totalCashAll = useMemo(() => {
+    return payments
+      .filter(p => (p.payment_mode || p.paymentMode || p.mode) === 'Cash')
+      .reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+  }, [payments]);
+
+  const totalUPIAll = useMemo(() => {
+    return payments
+      .filter(p => (p.payment_mode || p.paymentMode || p.mode) !== 'Cash')
+      .reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+  }, [payments]);
+
+  const totalCollectedAll = useMemo(() => totalCashAll + totalUPIAll, [totalCashAll, totalUPIAll]);
   const netWalletBalance = totalCollectedAll - totalCostAll;
 
   function handleSubmit(e) {

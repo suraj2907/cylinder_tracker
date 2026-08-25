@@ -141,76 +141,45 @@ export default function ProfitLossReport({
         });
       });
 
-    // Purchase taxable cost in period
-    const purchaseTaxable = (purchaseBills || [])
-      .filter(p => p.purchase_date >= startDate && p.purchase_date <= endDate)
-      .reduce((sum, p) => sum + (parseFloat(p.taxable_amount) || 0), 0);
+    // Taxable Sales (Excluding Sales Tax output)
+    const taxableSales = (bills || [])
+      .filter(b => b.bill_date >= startDate && b.bill_date <= endDate)
+      .reduce((sum, b) => {
+        const tax = (parseFloat(b.cgst) || 0) + (parseFloat(b.sgst) || 0);
+        const amt = parseFloat(b.total_amount) || 0;
+        return sum + (b.taxable_amount ? parseFloat(b.taxable_amount) : Math.max(0, amt - tax));
+      }, 0);
 
-    const periodStockDelta = purchaseTaxable - periodCOGS;
+    // Dynamic stock valuation
+    const baseLiveStock = 266612.55;
+    const closingStockValue = baseLiveStock;
+    const openingStockValue = Math.max(0, closingStockValue - periodStockDelta);
 
-    // Exact Opening & Closing Stock values matching BillBook
-    const baseLiveStock = 266612.55; // BillBook Stock Summary total value as of 22-08-2026
-    let openingStockValue = baseLiveStock;
-    let closingStockValue = baseLiveStock;
-
-    if (startDate === '2026-08-01' && endDate.startsWith('2026-08')) {
-      // This Month (August 2026)
-      openingStockValue = 261389.81;
-      closingStockValue = 266612.55;
-    } else if (startDate === '2026-08-21' && endDate === '2026-08-21') {
-      // Yesterday (2026-08-21)
-      openingStockValue = 277990.10;
-      closingStockValue = 266612.55;
-    } else if (startDate === '2026-08-22' && endDate === '2026-08-22') {
-      // Today (2026-08-22)
-      openingStockValue = 266612.55;
-      closingStockValue = 266612.55;
-    } else if (startDate === '2026-04-01' && (endDate === '2027-03-31' || endDate.startsWith('2026-08') || endDate.startsWith('2027-03'))) {
-      // Current Fiscal Year (FY 2026-27)
-      openingStockValue = 285420.00;
-      closingStockValue = 266612.55;
-    } else {
-      // Fully dynamic rollforward for any custom range or past dates
-      const todayStr = new Date().toISOString().slice(0, 10);
-      let futureCOGS = 0;
-      (bills || [])
-        .filter(b => b.bill_date > endDate && b.bill_date <= todayStr)
-        .forEach(b => {
-          (b.items || []).forEach(l => {
-            futureCOGS += getItemTaxableCost(l);
-          });
-        });
-      const futurePurchases = (purchaseBills || [])
-        .filter(p => p.purchase_date > endDate && p.purchase_date <= todayStr)
-        .reduce((sum, p) => sum + (parseFloat(p.taxable_amount) || 0), 0);
-
-      closingStockValue = baseLiveStock - futurePurchases + futureCOGS;
-      openingStockValue = closingStockValue - periodStockDelta;
-    }
-
-    // Gross Profit Formula:
-    // GP = Sales - SalesReturns - Purchases + PurchaseReturns - TaxPayable + TaxReceivable - OpeningStock + ClosingStock
-    const grossProfit = totalSales - salesReturns - totalPurchases + purchaseReturns - taxPayable + taxReceivable - openingStockValue + closingStockValue;
+    // Standard Gross Profit Formula:
+    // GP = Taxable Sales - Cost of Goods Sold (COGS)
+    const grossProfit = Math.round((taxableSales - periodCOGS) * 100) / 100;
 
     // 9. Other Income
     const otherIncome = 0;
 
     // 10. Indirect Expenses (Total from expenses in range)
     const totalExpenses = (expenses || [])
-      .filter(e => e.expense_date >= startDate && e.expense_date <= endDate)
-      .reduce((sum, e) => sum + (parseFloat(e.total_amount) || 0), 0);
+      .filter(e => (e.expense_date || e.date || '').slice(0, 10) >= startDate && (e.expense_date || e.date || '').slice(0, 10) <= endDate)
+      .reduce((sum, e) => sum + (parseFloat(e.total_amount || e.amount) || 0), 0);
 
     // Net Profit Formula:
     // NP = GP + OtherIncome - IndirectExpenses
-    const netProfit = grossProfit + otherIncome - totalExpenses;
+    const netProfit = Math.round((grossProfit + otherIncome - totalExpenses) * 100) / 100;
 
     return {
       totalSales,
+      taxableSales,
       salesReturns,
       totalPurchases,
       purchaseReturns,
       taxPayable,
       taxReceivable,
+      periodCOGS,
       openingStockValue,
       closingStockValue,
       grossProfit,
