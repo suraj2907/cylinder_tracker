@@ -17,9 +17,9 @@ export default function ReceivePaymentModal({
   const activeBatchNum = useMemo(() => {
     if (batches && batches.length > 0) {
       const sorted = [...batches].sort((a, b) => Number(b.batch) - Number(a.batch));
-      return Number(sorted[0]?.batch) || 132;
+      return Number(sorted[0]?.batch) || 133;
     }
-    return 132;
+    return 133;
   }, [batches]);
   const [selectedParty, setSelectedParty] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');

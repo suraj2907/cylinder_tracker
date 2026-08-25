@@ -11,14 +11,22 @@ function PaymentLedgerComponent({
   restMap = {}
 }) {
   const { currentUser } = useUser();
+  const latestBatchNum = useMemo(() => {
+    if (batches && batches.length > 0) {
+      const sorted = [...batches].sort((a, b) => Number(b.batch) - Number(a.batch));
+      return Number(sorted[0]?.batch) || 133;
+    }
+    return 133;
+  }, [batches]);
+
   const [showAddModal, setShowAddModal] = useState(false);
-  const [selectedBatchForPayment, setSelectedBatchForPayment] = useState(128);
+  const [selectedBatchForPayment, setSelectedBatchForPayment] = useState(latestBatchNum);
   const [editingCostBatch, setEditingCostBatch] = useState(null);
   const [tempCost, setTempCost] = useState("");
   const [search, setSearch] = useState("");
 
   const [form, setForm] = useState({
-    batchNum: "128",
+    batchNum: String(latestBatchNum),
     restaurantName: "",
     amount: "",
     paymentMode: "Cash",
@@ -137,7 +145,7 @@ function PaymentLedgerComponent({
         </div>
 
         <button
-          onClick={() => openPaymentModalForBatch(128)}
+          onClick={() => openPaymentModalForBatch(latestBatchNum)}
           className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-bold shadow-soft hover:bg-emerald-700 active:scale-95 transition-all flex items-center gap-2 justify-center"
         >
           <span>➕ Record Payment Collection</span>
