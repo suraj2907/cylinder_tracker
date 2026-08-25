@@ -504,24 +504,21 @@ export const exportBillPDF = (bill, profile = {}) => {
   doc.save(`Invoice_${invLabel}_${safeName}.pdf`);
 };
 
-// Share invoice directly into party WhatsApp chat (with PDF auto-download)
+// Share invoice directly into party WhatsApp chat with PDF attachment
 export const shareInvoicePDFOnWhatsApp = async (bill, profile = {}) => {
   const doc = generateInvoicePDFDoc(bill, profile);
   const invLabel = bill.invoiceLabel || (bill.invoice_no ? `INV-${String(bill.invoice_no).padStart(4, '0')}` : 'INVOICE');
   const safeName = (bill.restaurant_name || profile.name || 'Customer').replace(/[^a-zA-Z0-9]/g, '_');
   const fileName = `Invoice_${invLabel}_${safeName}.pdf`;
 
-  // Auto-download PDF for instant record/attachment
-  try {
-    doc.save(fileName);
-  } catch (err) {
-    console.warn('PDF save error:', err);
-  }
-
   const phone = profile.mobile || bill.mobile || '';
   const cleanPhone = phone.replace(/[^0-9]/g, '');
   const recipient = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
 
+  const totAmt = Number(bill.total_amount || 0);
+  const paidAmt = Number(bill.amount_paid || (bill.payment_status === 'paid' ? totAmt : 0));
+  const prevBal = parseFloat(profile.previous_balance || bill.previous_balance || 0);
+  const currentBal = prevBal + totAmt - paidAmt;
   const onlineLink = bill.invoice_link || `https://cylinder-tracker.vercel.app/`;
 
   const message = `🧾 *TAX INVOICE*\n` +
@@ -535,6 +532,26 @@ export const shareInvoicePDFOnWhatsApp = async (bill, profile = {}) => {
     `*M/S SHREE BALAJI AGENCIES*\n` +
     `📞 9407922288 | msspagency@gmail.com`;
 
+  const pdfBlob = doc.output('blob');
+  const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+  // 1. Mobile Native Share: Directly attaches and shares PDF document into WhatsApp chat
+  if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+    try {
+      await navigator.share({
+        files: [pdfFile],
+        title: `Invoice ${invLabel}`,
+        text: message
+      });
+      return;
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.warn('Native share error, falling back:', err);
+      }
+    }
+  }
+
+  // 2. Desktop Fallback: Open WhatsApp direct chat
   const encoded = encodeURIComponent(message);
   const url = recipient ? `https://wa.me/${recipient}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
   window.open(url, '_blank');
