@@ -1046,94 +1046,101 @@ function RestaurantStatementModal({
               </button>
             </div>
 
-            {/* Print Area content */}
-            <div id="bill-print-area" className="border border-slate-200 rounded-2xl p-3 sm:p-5 bg-white shadow-soft text-xs space-y-3">
-              {/* Header */}
-              <div className="flex justify-between items-start border-b border-slate-200 pb-4 gap-3">
-                <div>
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    <span className="text-[9px] font-black text-emerald-700 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">Authorized LPG Distributor</span>
+            {/* Print Area content (Scrollable & 100% Mobile Auto-Fit) */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden pr-0.5 space-y-3">
+              <div id="bill-print-area" className="border border-slate-200 rounded-2xl p-2.5 sm:p-5 bg-white shadow-soft text-xs space-y-3 max-w-full overflow-hidden">
+                {/* Header */}
+                <div className="flex justify-between items-start border-b border-slate-200 pb-3 gap-2">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1 mb-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                      <span className="text-[8px] sm:text-[9px] font-black text-emerald-700 uppercase tracking-wider bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 truncate">Authorized LPG Distributor</span>
+                    </div>
+                    <h2 className="text-sm sm:text-lg md:text-xl font-black text-slate-900 tracking-tight truncate">M/S SHREE BALAJI AGENCIES</h2>
+                    <p className="text-[9.5px] sm:text-[10px] text-slate-600 font-medium mt-0.5">Kamthi Line Beside SBI ATM, Rajnandgaon, CG</p>
+                    <p className="text-[9.5px] sm:text-[10px] text-slate-600 font-semibold">📞 9407922288 | ✉️ msspagency@gmail.com</p>
+                    {selectedBillForPrint.gst_mode === 'gst' && (
+                      <p className="text-[9.5px] sm:text-[10.5px] font-extrabold text-slate-800 mt-0.5">
+                        GSTIN: <span className="text-sky-800 font-black">22SNZPS3600E1ZH</span>
+                      </p>
+                    )}
                   </div>
-                  <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">M/S SHREE BALAJI AGENCIES</h2>
-                  <p className="text-[10px] text-slate-600 font-medium mt-0.5">Kamthi Line Beside SBI ATM, Rajnandgaon, CG, 491441</p>
-                  <p className="text-[10px] text-slate-600 font-semibold">📞 9407922288 | ✉️ msspagency@gmail.com</p>
-                  {selectedBillForPrint.gst_mode === 'gst' && (
-                    <p className="text-[10.5px] font-extrabold text-slate-800 mt-0.5">
-                      GSTIN: <span className="text-sky-800 font-black">22SNZPS3600E1ZH</span>
+
+                  <div className="text-right shrink-0">
+                    <span className={`inline-block px-2 sm:px-3 py-0.5 sm:py-1 text-[9px] sm:text-[10px] font-black rounded-lg sm:rounded-xl uppercase tracking-wider ${
+                      selectedBillForPrint.gst_mode === 'gst' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-800 border border-slate-300'
+                    }`}>
+                      {selectedBillForPrint.gst_mode === 'gst' ? 'TAX INVOICE' : 'PLAIN BILL'}
+                    </span>
+                    <p className="text-[11px] sm:text-xs font-black text-sky-800 mt-1">Invoice: {getInvoiceLabel(selectedBillForPrint)}</p>
+                    <p className="text-[9.5px] sm:text-[10.5px] text-slate-600 font-bold">Date: {selectedBillForPrint.bill_date}</p>
+                  </div>
+                </div>
+
+                {/* Bill To & Customer Info */}
+                <div className="bg-slate-50 p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl border border-slate-200">
+                  <span className="text-[8px] sm:text-[9px] font-black text-slate-400 uppercase tracking-widest block">BILL TO</span>
+                  <p className="font-black text-slate-900 text-xs sm:text-sm">{selectedBillForPrint.restaurant_name}</p>
+                  {getBillProfile(selectedBillForPrint.restaurant_name).address && (
+                    <p className="text-slate-600 text-[10px] sm:text-[11px] font-medium">{getBillProfile(selectedBillForPrint.restaurant_name).address}</p>
+                  )}
+                  {getBillProfile(selectedBillForPrint.restaurant_name).mobile && (
+                    <p className="text-slate-700 text-[10px] sm:text-[11px] font-bold">Phone: +91 {getBillProfile(selectedBillForPrint.restaurant_name).mobile}</p>
+                  )}
+                  {(selectedBillForPrint.gst_num || getBillProfile(selectedBillForPrint.restaurant_name).gst_num) && (
+                    <p className="text-slate-800 text-[10px] sm:text-[11px] font-black">
+                      GSTIN: {selectedBillForPrint.gst_num || getBillProfile(selectedBillForPrint.restaurant_name).gst_num}
                     </p>
                   )}
                 </div>
 
-                <div className="text-right shrink-0">
-                  <span className={`inline-block px-3 py-1 text-[10px] font-black rounded-xl uppercase tracking-wider ${
-                    selectedBillForPrint.gst_mode === 'gst' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-800 border border-slate-300'
-                  }`}>
-                    {selectedBillForPrint.gst_mode === 'gst' ? 'TAX INVOICE' : 'PLAIN BILL'}
-                  </span>
-                  <p className="text-xs font-black text-sky-800 mt-1.5">Invoice No: {getInvoiceLabel(selectedBillForPrint)}</p>
-                  <p className="text-[10.5px] text-slate-600 font-bold">Date: {selectedBillForPrint.bill_date}</p>
-                </div>
-              </div>
-
-              {/* Bill To & Customer Info */}
-              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">BILL TO</span>
-                <p className="font-black text-slate-900 text-xs sm:text-sm">{selectedBillForPrint.restaurant_name}</p>
-                {getBillProfile(selectedBillForPrint.restaurant_name).address && (
-                  <p className="text-slate-600 text-[11px] font-medium">{getBillProfile(selectedBillForPrint.restaurant_name).address}</p>
-                )}
-                {getBillProfile(selectedBillForPrint.restaurant_name).mobile && (
-                  <p className="text-slate-700 text-[11px] font-bold">Phone: +91 {getBillProfile(selectedBillForPrint.restaurant_name).mobile}</p>
-                )}
-                {(selectedBillForPrint.gst_num || getBillProfile(selectedBillForPrint.restaurant_name).gst_num) && (
-                  <p className="text-slate-800 text-[11px] font-black">
-                    GSTIN: {selectedBillForPrint.gst_num || getBillProfile(selectedBillForPrint.restaurant_name).gst_num}
-                  </p>
-                )}
-              </div>
-
-              {/* Line Items Table */}
-              <div className="overflow-x-auto border border-slate-200 rounded-2xl">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-slate-200 font-black text-slate-700 bg-slate-100/70 text-[10px] uppercase tracking-wider">
-                      <th className="py-2.5 px-3">#</th>
-                      <th className="py-2.5 px-3">Item Description</th>
-                      {selectedBillForPrint.gst_mode === 'gst' && <th className="py-2.5 px-3">HSN</th>}
-                      <th className="py-2.5 px-3 text-right">Qty</th>
-                      <th className="py-2.5 px-3 text-right">Rate (₹)</th>
-                      <th className="py-2.5 px-3 text-right">Amount (₹)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {Array.isArray(selectedBillForPrint.items) && selectedBillForPrint.items.map((it, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50/50">
-                        <td className="py-2.5 px-3 font-medium text-slate-400">{idx + 1}</td>
-                        <td className="py-2.5 px-3 font-black text-slate-900">{it.description || it.item_name || 'Cylinder'}</td>
-                        {selectedBillForPrint.gst_mode === 'gst' && <td className="py-2.5 px-3 text-slate-500 font-semibold">{it.hsn || '27111900'}</td>}
-                        <td className="py-2.5 px-3 text-right font-black text-slate-900">{it.qty} PCS</td>
-                        <td className="py-2.5 px-3 text-right font-semibold">₹{Number(it.rate).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                        <td className="py-2.5 px-3 text-right font-black text-slate-900">
-                          ₹{((parseFloat(it.qty) || 0) * (parseFloat(it.rate) || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {/* Line Items Table (100% Fluid & Mobile Optimized) */}
+                <div className="border border-slate-200 rounded-xl sm:rounded-2xl overflow-hidden bg-white">
+                  <table className="w-full text-left text-[11px] sm:text-xs border-collapse table-auto">
+                    <thead>
+                      <tr className="border-b border-slate-200 font-black text-slate-700 bg-slate-100/70 text-[9px] sm:text-[10px] uppercase tracking-wider">
+                        <th className="py-2 px-1.5 sm:px-3 w-6 text-center">#</th>
+                        <th className="py-2 px-1.5 sm:px-3">Item Description</th>
+                        {selectedBillForPrint.gst_mode === 'gst' && <th className="hidden sm:table-cell py-2 px-2">HSN</th>}
+                        <th className="py-2 px-1.5 sm:px-3 text-center sm:text-right">Qty</th>
+                        <th className="py-2 px-1.5 sm:px-3 text-right">Rate</th>
+                        <th className="py-2 px-1.5 sm:px-3 text-right">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {Array.isArray(selectedBillForPrint.items) && selectedBillForPrint.items.map((it, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50/50">
+                          <td className="py-2 px-1.5 sm:px-3 font-medium text-slate-400 text-center">{idx + 1}</td>
+                          <td className="py-2 px-1.5 sm:px-3 font-black text-slate-900">
+                            <div>{it.description || it.item_name || 'Cylinder'}</div>
+                            {selectedBillForPrint.gst_mode === 'gst' && (
+                              <span className="sm:hidden text-[9px] text-slate-400 font-normal block">HSN: {it.hsn || '27111900'}</span>
+                            )}
+                          </td>
+                          {selectedBillForPrint.gst_mode === 'gst' && <td className="hidden sm:table-cell py-2 px-2 text-slate-500 font-semibold">{it.hsn || '27111900'}</td>}
+                          <td className="py-2 px-1.5 sm:px-3 text-center sm:text-right font-black text-slate-900 whitespace-nowrap">{it.qty} PCS</td>
+                          <td className="py-2 px-1.5 sm:px-3 text-right font-semibold whitespace-nowrap">₹{Number(it.rate).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                          <td className="py-2 px-1.5 sm:px-3 text-right font-black text-slate-900 whitespace-nowrap">
+                            ₹{((parseFloat(it.qty) || 0) * (parseFloat(it.rate) || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-slate-100/70 font-black text-slate-900 border-t-2 border-slate-300">
+                        <td colSpan={2} className="py-2 px-1.5 sm:px-3 text-[10px] sm:text-[11px] uppercase tracking-wider">TOTAL PCS</td>
+                        {selectedBillForPrint.gst_mode === 'gst' && <td className="hidden sm:table-cell"></td>}
+                        <td className="py-2 px-1.5 sm:px-3 text-center sm:text-right font-black whitespace-nowrap">
+                          {(selectedBillForPrint.items || []).reduce((sum, it) => sum + (parseFloat(it.qty) || 0), 0)} PCS
+                        </td>
+                        <td className="py-2 px-1.5 sm:px-3"></td>
+                        <td className="py-2 px-1.5 sm:px-3 text-right font-black text-xs sm:text-sm text-sky-900 whitespace-nowrap">
+                          ₹{Number(selectedBillForPrint.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-slate-100/70 font-black text-slate-900 border-t-2 border-slate-300">
-                      <td colSpan={selectedBillForPrint.gst_mode === 'gst' ? 3 : 2} className="py-2.5 px-3 text-[11px] uppercase tracking-wider">TOTAL PCS</td>
-                      <td className="py-2.5 px-3 text-right font-black">
-                        {(selectedBillForPrint.items || []).reduce((sum, it) => sum + (parseFloat(it.qty) || 0), 0)} PCS
-                      </td>
-                      <td className="py-2.5 px-3"></td>
-                      <td className="py-2.5 px-3 text-right font-black text-sm text-sky-900">
-                        ₹{Number(selectedBillForPrint.total_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+                    </tfoot>
+                  </table>
+                </div>
 
               {/* Subtotals & Bank details Footer Grid */}
               {(() => {
@@ -1231,6 +1238,7 @@ function RestaurantStatementModal({
                 <p>Terms: Goods once sold will not be taken back. Empty cylinders returnable.</p>
                 <p className="font-bold text-slate-600">Authorized Signatory • M/S SHREE BALAJI AGENCIES</p>
               </div>
+            </div>
             </div>
 
           </div>
