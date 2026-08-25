@@ -21,6 +21,12 @@ export default function ReceivePaymentModal({
     }
     return 133;
   }, [batches]);
+
+  const [targetBatchNum, setTargetBatchNum] = useState(activeBatchNum);
+  useEffect(() => {
+    setTargetBatchNum(activeBatchNum);
+  }, [activeBatchNum]);
+
   const [selectedParty, setSelectedParty] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -159,8 +165,8 @@ export default function ReceivePaymentModal({
 
       // 3. Insert row into `payments` table with all alias field names
       const payPayload = {
-        batch_num: activeBatchNum,
-        batchNum: activeBatchNum,
+        batch_num: targetBatchNum || activeBatchNum,
+        batchNum: targetBatchNum || activeBatchNum,
         restaurant_name: partyName,
         restaurantName: partyName,
         amount: payAmount,
@@ -305,6 +311,38 @@ export default function ReceivePaymentModal({
               </div>
             </div>
           )}
+
+          {/* Batch Selector */}
+          <div className="space-y-1.5 bg-emerald-50/60 p-3.5 rounded-2xl border border-emerald-200">
+            <label className="block text-xs font-black text-emerald-950 uppercase tracking-wider flex items-center justify-between">
+              <span>💰 Cashflow Batch Destination</span>
+              <span className="text-[10px] font-bold text-emerald-700 bg-white px-2 py-0.5 rounded-md border border-emerald-200">
+                Batch #{targetBatchNum}
+              </span>
+            </label>
+            <select
+              value={targetBatchNum}
+              onChange={e => setTargetBatchNum(Number(e.target.value))}
+              className="w-full bg-white border border-emerald-300 focus:border-emerald-600 rounded-xl px-3.5 py-2.5 text-xs font-black text-slate-800 outline-none transition-all shadow-xs"
+            >
+              {batches && batches.length > 0 ? (
+                [...batches].sort((a, b) => Number(b.batch) - Number(a.batch)).map(b => (
+                  <option key={b.batch} value={b.batch}>
+                    Batch #{b.batch} {Number(b.batch) === Number(activeBatchNum) ? '(Active Current Batch)' : ''}
+                  </option>
+                ))
+              ) : (
+                <>
+                  <option value={133}>Batch #133 (Active Current Batch)</option>
+                  <option value={132}>Batch #132</option>
+                  <option value={131}>Batch #131</option>
+                </>
+              )}
+            </select>
+            <p className="text-[10.5px] text-emerald-700 font-medium">
+              Ye payment sidha Cashflow & Wallet me isi batch ke wallet me add hoga.
+            </p>
+          </div>
 
           {/* Amount & Mode Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
