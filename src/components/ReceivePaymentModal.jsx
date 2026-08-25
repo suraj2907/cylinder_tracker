@@ -206,8 +206,8 @@ export default function ReceivePaymentModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs z-50 overflow-y-auto p-2 sm:p-4 flex flex-col justify-start sm:justify-center items-center">
-      <div className="bg-white rounded-2xl sm:rounded-3xl max-w-lg w-full shadow-2xl border border-slate-100 my-auto flex flex-col max-h-[92vh] sm:max-h-[88vh] overflow-hidden animate-scaleUp">
+    <div className="modal-overlay-universal">
+      <div className="modal-card-universal max-w-lg border border-slate-100 animate-scaleUp">
         
         {/* Modal Header */}
         <div className="bg-slate-900 text-white px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between shrink-0">
