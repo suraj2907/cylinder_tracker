@@ -322,6 +322,7 @@ export default function GenerateBill({
 
   const handleShareBillOnWhatsApp = async () => {
     if (!savedBill) return;
+    const currentProf = restaurantProfiles[selectedRestaurant] || {};
     const billObj = {
       ...savedBill,
       restaurant_name: selectedRestaurant,
@@ -333,9 +334,9 @@ export default function GenerateBill({
       gst_mode: gstMode,
       bill_date: billDate,
       invoice_no: savedBill.invoice_no || customInvoiceNo,
-      gst_num: customGstNum || profile.gst_num
+      gst_num: currentProf.gst_num || ''
     };
-    await shareInvoicePDFOnWhatsApp(billObj, profile);
+    await shareInvoicePDFOnWhatsApp(billObj, currentProf);
   };
 
   const invoiceLabel = savedBill ? getInvoiceLabel(savedBill) : null;
@@ -344,6 +345,7 @@ export default function GenerateBill({
   const savedBalance = Math.max(0, Number(savedBill?.total_amount || totals.total) - savedAmountPaid);
 
   if (savedBill) {
+    const billProfile = restaurantProfiles[selectedRestaurant] || {};
     return (
       <div className="space-y-4 max-w-3xl mx-auto animate-fadeIn pb-16">
         {/* Top Actions Bar */}
@@ -380,9 +382,9 @@ export default function GenerateBill({
                   gst_mode: gstMode,
                   bill_date: billDate,
                   invoice_no: savedBill.invoice_no || customInvoiceNo,
-                  gst_num: customGstNum || profile.gst_num
+                  gst_num: billProfile.gst_num || ''
                 };
-                exportBillPDF(billObj, profile);
+                exportBillPDF(billObj, billProfile);
               }}
               className="px-3.5 py-2 rounded-xl bg-slate-900 text-white text-xs font-black hover:bg-slate-800 cursor-pointer flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
             >
