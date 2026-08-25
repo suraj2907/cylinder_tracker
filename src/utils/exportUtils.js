@@ -454,27 +454,20 @@ export const generateInvoicePDFDoc = (bill, profile = {}) => {
   doc.text(`Rs. ${paidAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
   rY += 4.5;
 
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(71, 85, 105);
-  doc.text('Previous Balance:', 118, rY);
-  doc.text(`Rs. ${prevBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
-  rY += 5;
-
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(225, 29, 72);
-  doc.text('Current Balance:', 118, rY);
-  doc.text(`Rs. ${currentBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
+  doc.text('Balance Due:', 118, rY);
+  doc.text(`Rs. ${Math.max(0, totAmt - paidAmt).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
 
-  // Total in Words Box Below (Current Balance / Total Outstanding Due)
+  // Total in Words Box Below
   doc.setFontSize(7.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(71, 85, 105);
-  doc.text('Balance (in words):', 14, finalY + 48);
+  doc.text('Amount (in words):', 14, finalY + 48);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(15, 23, 42);
-  doc.text(numberToWords(Math.round(currentBal)), 45, finalY + 48);
+  doc.text(numberToWords(Math.round(Math.max(0, totAmt - paidAmt))), 45, finalY + 48);
 
   // Footer note
   doc.setFontSize(7);

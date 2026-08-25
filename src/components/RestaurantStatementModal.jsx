@@ -1225,14 +1225,10 @@ function RestaurantStatementModal({
                             <span>Received Amount</span>
                             <span className="text-slate-700 font-bold">₹{paidAmt.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                           </div>
-                          <div className="flex justify-between items-center text-slate-500 font-semibold">
-                            <span>Previous Balance</span>
-                            <span className="text-slate-700 font-bold">₹{prevBal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                          </div>
                           <div className="flex justify-between items-center pt-0.5 border-t border-slate-200/60">
-                            <span className="font-black text-rose-700 text-xs uppercase">Current Balance</span>
+                            <span className="font-black text-rose-700 text-xs uppercase">Balance Due</span>
                             <span className="font-black text-rose-700 text-sm">
-                              ₹{currentBal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              ₹{Math.max(0, totAmt - paidAmt).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                           </div>
                         </div>
@@ -1241,9 +1237,9 @@ function RestaurantStatementModal({
 
                     {/* Total in words */}
                     <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
-                      <span className="font-bold text-slate-500">Balance in Words:</span>
+                      <span className="font-bold text-slate-500">Amount in Words:</span>
                       <span className="font-black text-slate-900">
-                        {numberToWords(Math.round(currentBal))}
+                        {numberToWords(Math.round(Math.max(0, totAmt - paidAmt)))}
                       </span>
                     </div>
                   </div>

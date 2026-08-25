@@ -563,20 +563,16 @@ export default function GenerateBill({
                   <span>Received Amount</span>
                   <span className="text-slate-700 font-bold">₹{savedAmountPaid.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
-                <div className="flex justify-between items-center text-slate-500 font-semibold">
-                  <span>Previous Balance</span>
-                  <span className="text-slate-700 font-bold">₹{previousBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
                 <div className="flex justify-between items-center pt-1 border-t border-slate-200/60">
-                  <span className="font-black text-rose-700 text-xs uppercase">Current Balance</span>
-                  <span className="font-black text-rose-700 text-sm">₹{(previousBalance + totals.total - savedAmountPaid).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="font-black text-rose-700 text-xs uppercase">Balance Due</span>
+                  <span className="font-black text-rose-700 text-sm">₹{Math.max(0, totals.total - savedAmountPaid).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               </div>
 
               <div className="pt-1">
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Balance (in words)</span>
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Amount (in words)</span>
                 <span className="text-xs font-black text-slate-800 capitalize mt-0.5 block">
-                  {numberToWords(Math.round(currentBalance > 0 ? currentBalance : totals.total))}
+                  {numberToWords(Math.round(Math.max(0, totals.total - savedAmountPaid)))}
                 </span>
               </div>
             </div>
