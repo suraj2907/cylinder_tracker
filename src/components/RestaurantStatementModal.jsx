@@ -393,58 +393,62 @@ function RestaurantStatementModal({
 
   return (
     <div className="modal-overlay-universal no-print">
-      <div className="modal-card-universal max-w-6xl border border-customBorder p-3 sm:p-6 space-y-3 sm:space-y-4">
+      <div className="modal-card-universal max-w-6xl border border-customBorder p-2.5 sm:p-5 space-y-2 sm:space-y-3.5">
         
-        {/* Modal Header */}
-        <div className="flex items-center justify-between border-b border-customBorder pb-3 flex-wrap gap-2">
-          <div className="flex items-center gap-2">
+        {/* Modal Header (Compact 1-line on mobile) */}
+        <div className="flex items-center justify-between border-b border-customBorder pb-2 gap-2">
+          <div className="flex items-center gap-1.5 min-w-0">
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 text-sm flex items-center justify-center cursor-pointer"
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 text-xs sm:text-sm flex items-center justify-center cursor-pointer shrink-0"
+              title="Back"
             >
               ←
             </button>
-            <div>
-              <span className="text-[10px] font-black text-sky-700 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-md uppercase tracking-wider">
-                Party Transaction Passbook
-              </span>
-              <h2 className="text-base sm:text-lg font-black text-slate-900 mt-0.5">
-                {restaurantName}
-              </h2>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] font-black text-sky-700 bg-sky-50 border border-sky-200 px-1.5 py-0.2 rounded uppercase tracking-wider">
+                  Passbook
+                </span>
+                <h2 className="text-xs sm:text-base font-black text-slate-900 truncate">
+                  {restaurantName}
+                </h2>
+              </div>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 font-bold hover:bg-slate-200 text-base flex items-center justify-center shrink-0 cursor-pointer"
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-100 text-slate-500 font-bold hover:bg-slate-200 text-xs sm:text-sm flex items-center justify-center shrink-0 cursor-pointer"
+            title="Close"
           >
             ✕
           </button>
         </div>
 
         {/* Compact Current Balance Header Strip */}
-        <div className="bg-slate-50 rounded-xl px-4 py-2.5 flex items-center justify-between border border-slate-200">
-          <div>
-            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Current Balance (Outstanding)</div>
-            <div className="text-xl sm:text-2xl font-black text-rose-600">
+        <div className="bg-slate-50 rounded-xl px-2.5 py-1.5 sm:px-4 sm:py-2.5 flex items-center justify-between border border-slate-200 gap-2">
+          <div className="min-w-0">
+            <div className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider">Current Balance (Outstanding)</div>
+            <div className="text-base sm:text-2xl font-black text-rose-600 truncate">
               ₹{closingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-xs font-bold text-slate-800">{restaurantName}</div>
-            <div className="text-[11px] text-slate-500 font-medium">
-              Holding: <span className="font-bold text-amber-700">{overallStats.totalOut} Cylinders</span> {profile.mobile ? `• +91-${profile.mobile}` : ''}
+          <div className="text-right shrink-0">
+            <div className="text-[11px] sm:text-xs font-bold text-slate-800 truncate">{restaurantName}</div>
+            <div className="text-[9.5px] sm:text-[11px] text-slate-500 font-medium">
+              Holding: <span className="font-bold text-amber-700">{overallStats.totalOut} Cyl</span> {profile.mobile ? `• ${profile.mobile}` : ''}
             </div>
           </div>
         </div>
 
-        {/* Filter Period Controls & Export Buttons */}
-        <div className="flex items-center justify-between gap-2 flex-wrap bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-1 p-0.5 bg-white border border-slate-200 rounded-lg">
+        {/* Filter Period Controls & Export Buttons (Compact 2-row layout on mobile) */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 bg-slate-50 p-2 sm:p-2.5 rounded-xl border border-slate-200">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center gap-0.5 p-0.5 bg-white border border-slate-200 rounded-lg">
               <button
                 onClick={() => setRangeMode(false)}
-                className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                className={`px-2 py-0.5 sm:py-1 rounded text-[10px] sm:text-xs font-bold transition-all cursor-pointer ${
                   !rangeMode ? 'bg-sky-600 text-white shadow-sm font-extrabold' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -452,7 +456,7 @@ function RestaurantStatementModal({
               </button>
               <button
                 onClick={() => setRangeMode(true)}
-                className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                className={`px-2 py-0.5 sm:py-1 rounded text-[10px] sm:text-xs font-bold transition-all cursor-pointer ${
                   rangeMode ? 'bg-sky-600 text-white shadow-sm font-extrabold' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
@@ -464,7 +468,7 @@ function RestaurantStatementModal({
               <select
                 value={filterPeriod}
                 onChange={e => setFilterPeriod(e.target.value)}
-                className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 shadow-sm focus:border-sky-500"
+                className="bg-white border border-slate-300 rounded-lg px-2 py-0.5 sm:py-1 text-[11px] sm:text-xs font-bold text-slate-800 shadow-sm focus:border-sky-500 flex-1 sm:flex-initial"
               >
                 <option value="all">All Time (Complete History)</option>
                 {availableMonths.map(mStr => {
@@ -476,104 +480,130 @@ function RestaurantStatementModal({
                 })}
               </select>
             ) : (
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <input
                   type="date"
                   value={startDate}
                   onChange={e => setStartDate(e.target.value)}
-                  className="px-2 py-0.5 rounded-lg border border-slate-300 bg-white text-xs font-bold"
+                  className="px-1.5 py-0.5 rounded border border-slate-300 bg-white text-[10px] sm:text-xs font-bold"
                 />
-                <span className="text-xs text-slate-400 font-bold">to</span>
+                <span className="text-[10px] text-slate-400 font-bold">to</span>
                 <input
                   type="date"
                   value={endDate}
                   onChange={e => setEndDate(e.target.value)}
-                  className="px-2 py-0.5 rounded-lg border border-slate-300 bg-white text-xs font-bold"
+                  className="px-1.5 py-0.5 rounded border border-slate-300 bg-white text-[10px] sm:text-xs font-bold"
                 />
               </div>
             )}
           </div>
 
           {/* Download Party Statement Buttons */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={() => {
                 const pLabel = rangeMode ? `${startDate} to ${endDate}` : (filterPeriod === 'all' ? 'All Time' : filterPeriod);
                 exportPartyLedgerPDF(restaurantName, filteredActivities, profile, pLabel, stats);
               }}
-              className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+              className="flex-1 sm:flex-initial px-2.5 py-1 sm:py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-[10px] sm:text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
               title="Download PDF Ledger Statement"
             >
               <span>📄</span>
-              <span>Download PDF</span>
+              <span>PDF</span>
             </button>
             <button
               onClick={() => {
                 const pLabel = rangeMode ? `${startDate} to ${endDate}` : (filterPeriod === 'all' ? 'All Time' : filterPeriod);
                 exportPartyLedgerExcel(restaurantName, filteredActivities, profile, pLabel, stats);
               }}
-              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+              className="flex-1 sm:flex-initial px-2.5 py-1 sm:py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-[10px] sm:text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
               title="Download Excel Spreadsheet"
             >
               <span>📊</span>
-              <span>Export Excel</span>
+              <span>Excel</span>
             </button>
           </div>
         </div>
 
-        {/* Summary KPIs Strip for this Hotel */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {/* Summary KPIs Strip for this Hotel (Micro-cards on mobile) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
           {/* Delivered Card */}
-          <div className="bg-sky-50/70 py-1.5 px-2.5 rounded-xl border border-sky-200">
-            <div className="text-[9px] font-bold text-sky-800 uppercase tracking-wider">📦 Total Delivered</div>
-            <div className="text-sm font-black text-sky-950">{stats.totalDel} units</div>
-            <div className="text-[9px] text-sky-800 font-bold">
-              19.2kg: {stats.del192} | 21kg: {stats.del21}
+          <div className="bg-sky-50/70 py-1 px-2 sm:py-1.5 sm:px-2.5 rounded-lg sm:rounded-xl border border-sky-200">
+            <div className="text-[8px] sm:text-[9px] font-bold text-sky-800 uppercase tracking-wider">📦 Delivered</div>
+            <div className="text-xs sm:text-sm font-black text-sky-950">{stats.totalDel} units</div>
+            <div className="text-[8px] sm:text-[9px] text-sky-800 font-bold">
+              19.2: {stats.del192} | 21: {stats.del21}
             </div>
           </div>
 
           {/* Khali Returned Card */}
-          <div className="bg-teal-50/70 py-1.5 px-2.5 rounded-xl border border-teal-200">
-            <div className="text-[9px] font-bold text-teal-800 uppercase tracking-wider">♻️ Khali Returned</div>
-            <div className="text-sm font-black text-teal-950">{stats.totalRet} units</div>
-            <div className="text-[9px] text-teal-800 font-bold">
-              19.2kg: {stats.ret192} | 21kg: {stats.ret21}
+          <div className="bg-teal-50/70 py-1 px-2 sm:py-1.5 sm:px-2.5 rounded-lg sm:rounded-xl border border-teal-200">
+            <div className="text-[8px] sm:text-[9px] font-bold text-teal-800 uppercase tracking-wider">♻️ Returned</div>
+            <div className="text-xs sm:text-sm font-black text-teal-950">{stats.totalRet} units</div>
+            <div className="text-[8px] sm:text-[9px] text-teal-800 font-bold">
+              19.2: {stats.ret192} | 21: {stats.ret21}
             </div>
           </div>
 
           {/* Outstanding Empty Card */}
-          <div className={`py-1.5 px-2.5 rounded-xl border ${
+          <div className={`py-1 px-2 sm:py-1.5 sm:px-2.5 rounded-lg sm:rounded-xl border ${
             overallStats.totalOut > 0 ? 'bg-amber-50/80 border-amber-300' : 'bg-emerald-50/80 border-emerald-200'
           }`}>
-            <div className="text-[9px] font-bold uppercase tracking-wider text-slate-700">
-              {filterPeriod === 'all' && !rangeMode ? '⚠️ Outstanding Khali' : '⚠️ Live Total Holding'}
+            <div className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-slate-700 truncate">
+              {filterPeriod === 'all' && !rangeMode ? '⚠️ Outstanding' : '⚠️ Total Holding'}
             </div>
-            <div className={`text-sm font-black ${overallStats.totalOut > 0 ? 'text-amber-950' : 'text-emerald-900'}`}>
-              {overallStats.totalOut} cylinders
+            <div className={`text-xs sm:text-sm font-black ${overallStats.totalOut > 0 ? 'text-amber-950' : 'text-emerald-900'}`}>
+              {overallStats.totalOut} cyl
             </div>
-            <div className="text-[9px] font-bold text-slate-700">
+            <div className="text-[8px] sm:text-[9px] font-bold text-slate-700 truncate">
               {filterPeriod === 'all' && !rangeMode ? (
-                `19.2kg: ${overallStats.out192} | 21kg: ${overallStats.out21}`
+                `19.2: ${overallStats.out192} | 21: ${overallStats.out21}`
               ) : (
-                `Period Net: ${stats.totalOut >= 0 ? `+${stats.totalOut}` : `${stats.totalOut}`} units`
+                `Net: ${stats.totalOut >= 0 ? `+${stats.totalOut}` : `${stats.totalOut}`} units`
               )}
             </div>
           </div>
 
           {/* Closing Balance Card */}
-          <div className={`py-1.5 px-2.5 rounded-xl border ${
+          <div className={`py-1 px-2 sm:py-1.5 sm:px-2.5 rounded-lg sm:rounded-xl border ${
             closingBalance > 0 ? 'bg-rose-50/70 border-rose-250 text-rose-900' : 'bg-emerald-50/70 border-emerald-250 text-emerald-950'
           }`}>
-            <div className={`text-[9px] font-bold uppercase tracking-wider ${closingBalance > 0 ? 'text-rose-800' : 'text-emerald-800'}`}>
-              🔴 Closing Balance
+            <div className={`text-[8px] sm:text-[9px] font-bold uppercase tracking-wider ${closingBalance > 0 ? 'text-rose-800' : 'text-emerald-800'}`}>
+              🔴 Closing Bal
             </div>
-            <div className="text-sm font-black">
-              ₹{closingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            <div className="text-xs sm:text-sm font-black truncate">
+              ₹{closingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
-            <div className={`text-[9px] font-bold ${closingBalance > 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
-              Opening: ₹{openingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+            <div className="text-[8px] sm:text-[9px] font-semibold opacity-75 truncate">
+              Opening: ₹{openingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </div>
+        </div>
+
+        {/* Section Tabs Switcher: Ledger History vs Invoices View */}
+        <div className="flex items-center gap-1.5 border-b border-customBorder pb-1.5 no-print">
+          <button
+            onClick={() => setActiveSection('ledger')}
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+              activeSection === 'ledger'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <span>📜</span>
+            <span>Ledger History</span>
+          </button>
+          <button
+            onClick={() => setActiveSection('invoices')}
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+              activeSection === 'invoices'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <span>🧾</span>
+            <span>Invoices ({restaurantBills.length})</span>
+          </button>
         </div>
 
         {/* Date-Wise Complete Passbook Table / Invoices List */}
