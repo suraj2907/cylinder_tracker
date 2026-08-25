@@ -503,12 +503,13 @@ export function getAllPartiesCurrentBalances(restaurantProfiles = {}, bills = []
     if (isNewBill(b)) {
       const normP = norm(b.restaurant_name);
       const amt = parseFloat(b.total_amount) || 0;
+      const paid = parseFloat(b.amount_paid) || (b.payment_status === 'paid' ? amt : 0);
       if (amt > 0.05) {
         if (!partyEvents[normP]) partyEvents[normP] = [];
         partyEvents[normP].push({
           date: b.bill_date || b.created_at || '2026-08-25',
           debit: amt,
-          credit: 0
+          credit: paid
         });
       }
     }
@@ -521,7 +522,13 @@ export function getAllPartiesCurrentBalances(restaurantProfiles = {}, bills = []
     const isZero = ZERO_BALANCE_PARTIES.some(h => norm(h) === normP);
     let curBal = isZero ? 0 : (map[normP] || 0);
 
-    const events = (partyEvents[normP] || []).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    // Sort chronologically; on the same day, process debits (bills) before credits (payments)
+    const events = (partyEvents[normP] || []).sort((a, b) => {
+      const dateCmp = (a.date || '').localeCompare(b.date || '');
+      if (dateCmp !== 0) return dateCmp;
+      return (b.debit || 0) - (a.debit || 0);
+    });
+
     events.forEach(e => {
       if (e.debit > 0) curBal += e.debit;
       if (e.credit > 0) curBal = Math.max(0, curBal - e.credit);
