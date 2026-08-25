@@ -383,8 +383,8 @@ export const generateInvoicePDFDoc = (bill, profile = {}) => {
   const cgst = Number(bill.cgst || 0);
   const sgst = Number(bill.sgst || 0);
   const paidAmt = Number(bill.amount_paid || (bill.payment_status === 'paid' ? totAmt : 0));
-  const prevBal = parseFloat(profile.previous_balance || bill.previous_balance || 0);
-  const currentBal = prevBal + totAmt - paidAmt;
+  const prevBal = parseFloat(profile.previous_balance !== undefined ? profile.previous_balance : (bill.previous_balance || 0));
+  const currentBal = profile.current_balance !== undefined ? parseFloat(profile.current_balance) : (prevBal + totAmt - paidAmt);
 
   // Bank details Box (Left)
   doc.setFillColor(248, 250, 252);
@@ -516,9 +516,8 @@ export const shareInvoicePDFOnWhatsApp = async (bill, profile = {}) => {
   const recipient = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
 
   const totAmt = Number(bill.total_amount || 0);
-  const paidAmt = Number(bill.amount_paid || (bill.payment_status === 'paid' ? totAmt : 0));
-  const prevBal = parseFloat(profile.previous_balance || bill.previous_balance || 0);
-  const currentBal = prevBal + totAmt - paidAmt;
+  const prevBal = parseFloat(profile.previous_balance !== undefined ? profile.previous_balance : (bill.previous_balance || 0));
+  const currentBal = profile.current_balance !== undefined ? parseFloat(profile.current_balance) : (prevBal + totAmt - paidAmt);
   const onlineLink = bill.invoice_link || `https://cylinder-tracker.vercel.app/`;
 
   const message = `🧾 *TAX INVOICE*\n` +
