@@ -467,14 +467,14 @@ export const generateInvoicePDFDoc = (bill, profile = {}) => {
   doc.text('Current Balance:', 118, rY);
   doc.text(`Rs. ${currentBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
 
-  // Total in Words Box Below
+  // Total in Words Box Below (Current Balance / Total Outstanding Due)
   doc.setFontSize(7.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(71, 85, 105);
-  doc.text('Total Amount (in words):', 14, finalY + 48);
+  doc.text('Balance (in words):', 14, finalY + 48);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(15, 23, 42);
-  doc.text(numberToWords(Math.round(totAmt)), 50, finalY + 48);
+  doc.text(numberToWords(Math.round(currentBal)), 45, finalY + 48);
 
   // Footer note
   doc.setFontSize(7);
