@@ -229,14 +229,18 @@ function RestaurantStatementModal({
     
     let currentBalance = (ledgerRows && ledgerRows.length > 0) ? 0 : baseBalance;
     const listWithBalance = sortedAsc.map(item => {
-      const debit = parseFloat(item.debit) || 0;
-      const credit = parseFloat(item.credit) || 0;
-      
-      if (debit > 0) {
-        currentBalance += debit;
-      }
-      if (credit > 0) {
-        currentBalance = Math.max(0, currentBalance - credit);
+      if (item.isOfficialLedger && item.officialBalance !== null && item.officialBalance !== undefined) {
+        currentBalance = item.officialBalance;
+      } else {
+        const debit = parseFloat(item.debit) || 0;
+        const credit = parseFloat(item.credit) || 0;
+        
+        if (debit > 0) {
+          currentBalance += debit;
+        }
+        if (credit > 0) {
+          currentBalance = Math.max(0, currentBalance - credit);
+        }
       }
       
       return {
