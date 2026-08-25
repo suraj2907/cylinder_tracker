@@ -114,8 +114,14 @@ export function useCylinderData(currentUser) {
           };
 
           const fetchPaymentsChain = async () => {
-            const ranges = [[0, 999], [1000, 1999], [2000, 2999], [3000, 3999]];
-            const res = await Promise.all(ranges.map(([f, t]) => supabase.from('payments').select('*').order('id', { ascending: true }).range(f, t)));
+            const ranges = [
+              [0, 999], [1000, 1999], [2000, 2999], [3000, 3999],
+              [4000, 4999], [5000, 5999], [6000, 6999], [7000, 7999],
+              [8000, 8999], [9000, 9999]
+            ];
+            const res = await Promise.all(ranges.map(([f, t]) => 
+              supabase.from('payments').select('*').order('id', { ascending: false }).range(f, t)
+            ));
             return res.flatMap(r => r.data || []);
           };
 

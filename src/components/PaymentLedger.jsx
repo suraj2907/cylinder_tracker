@@ -46,18 +46,12 @@ function PaymentLedgerComponent({
     setEditingCostBatch(null);
   }
 
-  // Calculate Batch Cashflow summaries
+  // Calculate Batch Cashflow summaries (Tracked batches starting #128)
   const batchSummaries = useMemo(() => {
-    const latestBatchNum = batches[0]?.batch || 132;
-    return batches.map(b => {
-      const bNum = b.batch;
-      const isLatest = Number(bNum) === Number(latestBatchNum);
-      const bPayments = payments.filter(p => {
-        const pBatch = Number(p.batch_num || p.batchNum);
-        if (pBatch === Number(bNum)) return true;
-        if (!pBatch && isLatest) return true;
-        return false;
-      });
+    const trackedBatches = (batches || []).filter(b => Number(b.batch) >= 128);
+    return trackedBatches.map(b => {
+      const bNum = Number(b.batch);
+      const bPayments = payments.filter(p => Number(p.batch_num || p.batchNum) === bNum);
       
       const totalCash = bPayments.filter(p => (p.payment_mode || p.paymentMode || p.mode) === 'Cash').reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
       const totalUPI = bPayments.filter(p => (p.payment_mode || p.paymentMode || p.mode) !== 'Cash').reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
@@ -81,21 +75,11 @@ function PaymentLedgerComponent({
     }).sort((a, b) => b.batchNum - a.batchNum);
   }, [batches, payments]);
 
-  // Overall totals across all payments
+  // Overall totals across tracked active batches
   const totalCostAll = useMemo(() => batchSummaries.reduce((s, b) => s + b.bookingCost, 0), [batchSummaries]);
-  const totalCashAll = useMemo(() => {
-    return payments
-      .filter(p => (p.payment_mode || p.paymentMode || p.mode) === 'Cash')
-      .reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
-  }, [payments]);
-
-  const totalUPIAll = useMemo(() => {
-    return payments
-      .filter(p => (p.payment_mode || p.paymentMode || p.mode) !== 'Cash')
-      .reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
-  }, [payments]);
-
-  const totalCollectedAll = useMemo(() => totalCashAll + totalUPIAll, [totalCashAll, totalUPIAll]);
+  const totalCollectedAll = useMemo(() => batchSummaries.reduce((s, b) => s + b.totalCollected, 0), [batchSummaries]);
+  const totalCashAll = useMemo(() => batchSummaries.reduce((s, b) => s + b.totalCash, 0), [batchSummaries]);
+  const totalUPIAll = useMemo(() => batchSummaries.reduce((s, b) => s + b.totalUPI, 0), [batchSummaries]);
   const netWalletBalance = totalCollectedAll - totalCostAll;
 
   function handleSubmit(e) {
@@ -106,7 +90,7 @@ function PaymentLedgerComponent({
     }
 
     onAddPayment({
-      batchNum: form.batchNum ? parseInt(form.batchNum) : 128,
+      batchNum: form.batchNum ? parseInt(form.batchNum) : latestBatchNum,
       restaurantName: norm(form.restaurantName),
       amount: parseFloat(form.amount),
       paymentMode: form.paymentMode,
@@ -116,7 +100,7 @@ function PaymentLedgerComponent({
     });
 
     setForm({
-      batchNum: form.batchNum || "128",
+      batchNum: String(latestBatchNum),
       restaurantName: "",
       amount: "",
       paymentMode: "Cash",
@@ -132,52 +116,52 @@ function PaymentLedgerComponent({
   }
 
   return (
-    <div className="space-y-6 fade">
+    <div className="space-y-4 sm:space-y-6 fade pb-12">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-customBorder shadow-soft">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-customBorder shadow-soft">
         <div>
-          <h2 className="text-xl font-black text-textSlate flex items-center gap-2">
+          <h2 className="text-lg sm:text-xl font-black text-textSlate flex items-center gap-2">
             <span>💰 Batch Cashflow & Wallet Manager</span>
           </h2>
-          <p className="text-xs font-medium text-mutedSlate mt-1">
+          <p className="text-[11px] sm:text-xs font-medium text-mutedSlate mt-0.5">
             Track date-wise collections per batch & compare with booking cost (Suraj ↔ Shivam).
           </p>
         </div>
 
         <button
           onClick={() => openPaymentModalForBatch(latestBatchNum)}
-          className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-bold shadow-soft hover:bg-emerald-700 active:scale-95 transition-all flex items-center gap-2 justify-center"
+          className="px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-black shadow-soft hover:bg-emerald-700 active:scale-95 transition-all flex items-center gap-1.5 justify-center cursor-pointer"
         >
           <span>➕ Record Payment Collection</span>
         </button>
       </div>
 
       {/* Booking Wallet Summary Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-2xl border border-customBorder shadow-soft">
-          <div className="text-xs font-bold text-mutedSlate uppercase tracking-wider">Total Collection</div>
-          <div className="text-2xl font-black text-emerald-600 mt-1">₹{totalCollectedAll.toLocaleString()}</div>
-          <div className="text-[10px] font-semibold text-slate-400 mt-1">All batches collection</div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+        <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-customBorder shadow-soft flex flex-col justify-between">
+          <div className="text-[10px] sm:text-xs font-black text-mutedSlate uppercase tracking-wider">Total Collection</div>
+          <div className="text-lg sm:text-2xl font-black text-emerald-600 mt-1 truncate">₹{totalCollectedAll.toLocaleString('en-IN')}</div>
+          <div className="text-[9px] sm:text-[10px] font-semibold text-slate-400 mt-0.5">Batches #128..#{latestBatchNum}</div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-customBorder shadow-soft">
-          <div className="text-xs font-bold text-mutedSlate uppercase tracking-wider">Cash in Hand</div>
-          <div className="text-2xl font-black text-amber-600 mt-1">₹{totalCashAll.toLocaleString()}</div>
-          <div className="text-[10px] font-semibold text-slate-400 mt-1">Physical Cash</div>
+        <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-customBorder shadow-soft flex flex-col justify-between">
+          <div className="text-[10px] sm:text-xs font-black text-mutedSlate uppercase tracking-wider">Cash in Hand</div>
+          <div className="text-lg sm:text-2xl font-black text-amber-600 mt-1 truncate">₹{totalCashAll.toLocaleString('en-IN')}</div>
+          <div className="text-[9px] sm:text-[10px] font-semibold text-slate-400 mt-0.5">Physical Cash</div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-customBorder shadow-soft">
-          <div className="text-xs font-bold text-mutedSlate uppercase tracking-wider">UPI / Bank Transfer</div>
-          <div className="text-2xl font-black text-sky-600 mt-1">₹{totalUPIAll.toLocaleString()}</div>
-          <div className="text-[10px] font-semibold text-slate-400 mt-1">Digital transfer</div>
+        <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-customBorder shadow-soft flex flex-col justify-between">
+          <div className="text-[10px] sm:text-xs font-black text-mutedSlate uppercase tracking-wider">UPI / Bank Transfer</div>
+          <div className="text-lg sm:text-2xl font-black text-sky-600 mt-1 truncate">₹{totalUPIAll.toLocaleString('en-IN')}</div>
+          <div className="text-[9px] sm:text-[10px] font-semibold text-slate-400 mt-0.5">Digital transfer</div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-customBorder shadow-soft">
-          <div className="text-xs font-bold text-mutedSlate uppercase tracking-wider">Net Booking Wallet</div>
-          <div className={`text-2xl font-black mt-1 ${netWalletBalance >= 0 ? 'text-emerald-600' : 'text-amber-700'}`}>
-            {netWalletBalance >= 0 ? `+₹${netWalletBalance.toLocaleString()}` : `-₹${Math.abs(netWalletBalance).toLocaleString()}`}
+        <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-customBorder shadow-soft flex flex-col justify-between">
+          <div className="text-[10px] sm:text-xs font-black text-mutedSlate uppercase tracking-wider">Net Booking Wallet</div>
+          <div className={`text-lg sm:text-2xl font-black mt-1 truncate ${netWalletBalance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+            {netWalletBalance >= 0 ? `+₹${netWalletBalance.toLocaleString('en-IN')}` : `-₹${Math.abs(netWalletBalance).toLocaleString('en-IN')}`}
           </div>
-          <div className="text-[10px] font-semibold text-slate-400 mt-1">
+          <div className="text-[9px] sm:text-[10px] font-bold mt-0.5 truncate">
             {netWalletBalance >= 0 ? '🟢 Extra Cash for Next Booking' : '🔴 Pocket se lagana padega'}
           </div>
         </div>
