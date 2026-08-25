@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { getInvoiceLabel, norm } from '../utils/dataUtils';
+import { getInvoiceLabel, norm, getPartyCurrentBalance } from '../utils/dataUtils';
 import { shareInvoicePDFOnWhatsApp, exportBillPDF } from '../utils/exportUtils';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -160,36 +160,13 @@ export default function GenerateBill({
                   Object.values(restaurantProfiles || {}).find(p => norm(p.name) === norm(selectedRestaurant)) ||
                   {};
   
-  // Calculate dynamic previous balance for selected party prior to bill date
+  // Calculate exact chronological previous balance for selected party
   const previousBalance = useMemo(() => {
     if (!selectedRestaurant) return 0;
-    const normTarget = selectedRestaurant.trim().toLowerCase();
-
-    const profileObj = restaurantProfiles[selectedRestaurant] || {};
-    const openingBal = parseFloat(profileObj.previous_balance || 0);
-
-    let totalBilled = 0;
-    (bills || []).forEach(b => {
-      if ((b.restaurant_name || "").trim().toLowerCase() === normTarget) {
-        if (!billDate || (b.bill_date && b.bill_date < billDate)) {
-          totalBilled += (parseFloat(b.total_amount) || 0);
-        }
-      }
-    });
-
-    let totalPaid = 0;
-    (payments || []).forEach(p => {
-      const pName = (p.restaurant_name || p.restaurantName || "").trim().toLowerCase();
-      if (pName === normTarget) {
-        const pDate = p.date || (p.created_at ? p.created_at.slice(0, 10) : "");
-        if (!billDate || (pDate && pDate < billDate)) {
-          totalPaid += (parseFloat(p.amount) || 0);
-        }
-      }
-    });
-
-    return Math.max(0, openingBal + totalBilled - totalPaid);
-  }, [selectedRestaurant, restaurantProfiles, bills, payments, billDate]);
+    // Exclude the currently active savedBill to get previous balance before this bill
+    const otherBills = (bills || []).filter(b => !savedBill || b.id !== savedBill.id);
+    return getPartyCurrentBalance(selectedRestaurant, restaurantProfiles, otherBills, payments);
+  }, [selectedRestaurant, restaurantProfiles, bills, payments, savedBill]);
 
   const handleItemChange = (idx, itemId) => {
     const itemObj = itemsCatalog.find(i => i.id === itemId);
