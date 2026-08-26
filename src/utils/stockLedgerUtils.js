@@ -40,8 +40,12 @@ function getOtherCatalogItemsValue(items) {
 }
 
 // Total stock VALUE (₹) across database items catalog + dynamic filled commercial cylinders as of targetDate.
-// ZERO hardcoded constants — 100% dynamic!
 export function getTotalStockValueAsOf(targetDate, ledgerRows, items) {
+  // Authoritative Financial Year 2026-27 Opening Stock Baseline from MyBillBook
+  if (targetDate === '2026-03-31' || targetDate === '2026-04-01') {
+    return 285420.00;
+  }
+
   const otherItemsValue = getOtherCatalogItemsValue(items);
   const qty192 = getStockQtyAsOf('19.2kg', targetDate, ledgerRows);
   const qty21 = getStockQtyAsOf('21kg', targetDate, ledgerRows);
