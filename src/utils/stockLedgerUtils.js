@@ -24,16 +24,29 @@ function findItemRate(itemType, items) {
   return pPrice;
 }
 
-// Base inventory assets from MyBillBook Stock Summary:
-// 117 Empty Cylinders (@ ₹ 2,100 = ₹ 2,45,700) + Regulators & Convertors (₹ 4,520) = ₹ 2,50,220.00
-const BASE_INVENTORY_ASSETS = 250220.00;
+// Computes the total stock value of non-gas inventory items (Empty Cylinders,
+// Regulators, Convertors, fittings, etc.) dynamically from the items catalog.
+function getOtherCatalogItemsValue(items) {
+  return (items || [])
+    .filter(i => {
+      const name = (i.name || '').toLowerCase();
+      return !name.includes('19.2') && !name.includes('21kg') && !name.includes('21 kg') && !name.includes('15kg');
+    })
+    .reduce((sum, i) => {
+      const qty = parseFloat(i.current_stock) || 0;
+      const price = parseFloat(i.purchase_price) || 0;
+      return sum + Math.max(0, qty * price);
+    }, 0);
+}
 
-// Total stock VALUE (₹) across base assets + dynamic filled cylinders, as of a given date.
+// Total stock VALUE (₹) across database items catalog + dynamic filled commercial cylinders as of targetDate.
+// ZERO hardcoded constants — 100% dynamic!
 export function getTotalStockValueAsOf(targetDate, ledgerRows, items) {
+  const otherItemsValue = getOtherCatalogItemsValue(items);
   const qty192 = getStockQtyAsOf('19.2kg', targetDate, ledgerRows);
   const qty21 = getStockQtyAsOf('21kg', targetDate, ledgerRows);
   const rate192 = findItemRate('19.2kg', items);
   const rate21 = findItemRate('21kg', items);
   const filledCylindersValue = Math.max(0, qty192 * rate192) + Math.max(0, qty21 * rate21);
-  return Math.round((BASE_INVENTORY_ASSETS + filledCylindersValue) * 100) / 100;
+  return Math.round((otherItemsValue + filledCylindersValue) * 100) / 100;
 }
