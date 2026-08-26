@@ -16,15 +16,36 @@ import PublicLedgerView from './components/PublicLedgerView';
 import { useInventory } from './hooks/useInventory';
 import { useExpenses } from './hooks/useExpenses';
 
-// Lazy load secondary tabs for instant initial bundle loading and 0ms navigation
-const CalendarView = lazy(() => import('./components/CalendarView'));
-const GenerateBill = lazy(() => import('./components/GenerateBill'));
-const InventoryManager = lazy(() => import('./components/InventoryManager'));
-const ExpenseTracker = lazy(() => import('./components/ExpenseTracker'));
-const SalesSummaryDashboard = lazy(() => import('./components/SalesSummaryDashboard'));
-const ProfitLossReport = lazy(() => import('./components/ProfitLossReport'));
-const Gstr3bReport = lazy(() => import('./components/Gstr3bReport'));
-const OutstandingBills = lazy(() => import('./components/OutstandingBills'));
+// Auto-retry helper for dynamic lazy imports when a new build is deployed
+const lazyWithRetry = (componentImport) =>
+  lazy(async () => {
+    const pageHasBeenForceRefreshed = JSON.parse(
+      window.sessionStorage.getItem('page-has-been-force-refreshed') || 'false'
+    );
+
+    try {
+      const component = await componentImport();
+      window.sessionStorage.setItem('page-has-been-force-refreshed', 'false');
+      return component;
+    } catch (error) {
+      if (!pageHasBeenForceRefreshed) {
+        window.sessionStorage.setItem('page-has-been-force-refreshed', 'true');
+        window.location.reload();
+        return new Promise(() => {}); // never resolves as page is reloading
+      }
+      throw error;
+    }
+  });
+
+// Lazy load secondary tabs with auto-retry on build changes
+const CalendarView = lazyWithRetry(() => import('./components/CalendarView'));
+const GenerateBill = lazyWithRetry(() => import('./components/GenerateBill'));
+const InventoryManager = lazyWithRetry(() => import('./components/InventoryManager'));
+const ExpenseTracker = lazyWithRetry(() => import('./components/ExpenseTracker'));
+const SalesSummaryDashboard = lazyWithRetry(() => import('./components/SalesSummaryDashboard'));
+const ProfitLossReport = lazyWithRetry(() => import('./components/ProfitLossReport'));
+const Gstr3bReport = lazyWithRetry(() => import('./components/Gstr3bReport'));
+const OutstandingBills = lazyWithRetry(() => import('./components/OutstandingBills'));
 
 export default function App() {
   const { session, currentUser, logout, loading: authLoading } = useUser();
