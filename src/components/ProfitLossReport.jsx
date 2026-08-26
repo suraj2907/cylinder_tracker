@@ -154,9 +154,9 @@ export default function ProfitLossReport({
       return (amt / 1.18) * 0.86;
     };
 
-    // Audited Verified Inventory Baseline (as of 01-August-2026)
+    // Audited Verified Inventory Baseline (as of 01-August-2026 from MyBillBook P&L)
     const AUDITED_AUG_OPENING_STOCK = 263399.84;
-    const AUDITED_AUG_CLOSING_STOCK = 301523.80;
+    const AUDITED_AUG_CLOSING_STOCK = 303523.82;
 
     // Period Sales COGS & Taxable Purchases
     let periodCOGS = 0;
