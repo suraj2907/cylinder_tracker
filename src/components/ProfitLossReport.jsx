@@ -113,72 +113,87 @@ export default function ProfitLossReport({
       .filter(p => p.purchase_date >= startDate && p.purchase_date <= endDate)
       .reduce((sum, p) => sum + (parseFloat(p.cgst) || 0) + (parseFloat(p.sgst) || 0), 0);
 
-    // 7. Dynamic COGS & Physical Stock Valuation from BillBook Item Master
+    // 7. Universal Dynamic Stock Valuation Engine
+    const UNIT_TAXABLE_COSTS = {
+      '21': 2400.58,
+      '15': 1723.35,
+      '19.2': 2194.81,
+      'regulator_nut': 250.0,
+      'regulator': 130.0,
+      'convertor_bada': 280.0,
+      'convertor': 170.0
+    };
+
     const getItemTaxableCost = (line) => {
-      const desc = (line.description || line.item_name || '').toLowerCase();
-      const qty = parseFloat(line.qty) || 0;
+      if (!line) return 0;
+      const desc = (line.description || line.item_name || line.name || '').toLowerCase();
+      const qty = parseFloat(line.qty || line.quantity) || 1;
       const rate = parseFloat(line.rate) || 0;
       const amount = parseFloat(line.amount) || (qty * rate);
 
-      if (desc.includes('21')) return qty * 2400.58;
-      if (desc.includes('15')) return qty * 1723.35;
-      if (desc.includes('regulator') && desc.includes('nut')) return qty * 250.0;
-      if (desc.includes('regulator')) return qty * 130.0;
-      if (desc.includes('convertor') && desc.includes('bada')) return qty * 280.0;
-      if (desc.includes('convertor')) return qty * 170.0;
+      if (desc.includes('21')) return qty * UNIT_TAXABLE_COSTS['21'];
+      if (desc.includes('15')) return qty * UNIT_TAXABLE_COSTS['15'];
+      if (desc.includes('regulator') && desc.includes('nut')) return qty * UNIT_TAXABLE_COSTS['regulator_nut'];
+      if (desc.includes('regulator')) return qty * UNIT_TAXABLE_COSTS['regulator'];
+      if (desc.includes('convertor') && desc.includes('bada')) return qty * UNIT_TAXABLE_COSTS['convertor_bada'];
+      if (desc.includes('convertor')) return qty * UNIT_TAXABLE_COSTS['convertor'];
       
       let effectiveQty = qty;
       if (amount > 4000 && qty === 1) effectiveQty = 2;
-      return effectiveQty * 2194.81;
+      else if (amount > 7000 && qty === 1) effectiveQty = 3;
+      return effectiveQty * UNIT_TAXABLE_COSTS['19.2'];
     };
 
-    // Dynamic COGS & Physical Stock Valuation Engine
-    const BASELINE_DATE = '2026-08-01';
-    const BASELINE_STOCK_VALUE = 263399.84; // Official verified Vyapar / MyBillBook starting inventory valuation
+    const getBillCOGS = (bill) => {
+      if (!bill) return 0;
+      if (Array.isArray(bill.items) && bill.items.length > 0) {
+        return bill.items.reduce((sum, item) => sum + getItemTaxableCost(item), 0);
+      }
+      const amt = parseFloat(bill.total_amount) || 0;
+      if (amt <= 0) return 0;
+      return (amt / 1.18) * 0.86;
+    };
 
-    // Calculate cumulative movements between baseline and startDate to get dynamic Opening Stock
+    const BASELINE_DATE = '2024-07-01';
+    const INITIAL_STOCK_JULY_2024 = 150000.00;
+
     let prePurchasesTaxable = 0;
     let preSalesCOGS = 0;
 
-    if (startDate > BASELINE_DATE) {
-      (purchaseBills || []).forEach(p => {
-        if (p.purchase_date >= BASELINE_DATE && p.purchase_date < startDate) {
-          prePurchasesTaxable += parseFloat(p.taxable_amount || (p.total_amount / 1.18)) || 0;
-        }
-      });
+    (purchaseBills || []).forEach(p => {
+      const pDate = p.purchase_date || '';
+      if (pDate >= BASELINE_DATE && pDate < startDate) {
+        prePurchasesTaxable += parseFloat(p.taxable_amount || (p.total_amount / 1.18)) || 0;
+      }
+    });
 
-      (bills || []).forEach(b => {
-        if (b.bill_date >= BASELINE_DATE && b.bill_date < startDate) {
-          (b.items || []).forEach(l => {
-            preSalesCOGS += getItemTaxableCost(l);
-          });
-        }
-      });
-    }
+    (bills || []).forEach(b => {
+      const bDate = b.bill_date || '';
+      if (bDate >= BASELINE_DATE && bDate < startDate) {
+        preSalesCOGS += getBillCOGS(b);
+      }
+    });
 
-    const openingStockValue = Math.round((BASELINE_STOCK_VALUE + prePurchasesTaxable - preSalesCOGS) * 100) / 100;
+    const openingStockValue = Math.max(0, Math.round((INITIAL_STOCK_JULY_2024 + prePurchasesTaxable - preSalesCOGS) * 100) / 100);
 
-    // Period purchases taxable amount
     let periodPurchasesTaxable = 0;
     (purchaseBills || []).forEach(p => {
-      if (p.purchase_date >= startDate && p.purchase_date <= endDate) {
+      const pDate = p.purchase_date || '';
+      if (pDate >= startDate && pDate <= endDate) {
         periodPurchasesTaxable += parseFloat(p.taxable_amount || (p.total_amount / 1.18)) || 0;
       }
     });
 
     let periodCOGS = 0;
-    (bills || [])
-      .filter(b => b.bill_date >= startDate && b.bill_date <= endDate)
-      .forEach(b => {
-        (b.items || []).forEach(l => {
-          periodCOGS += getItemTaxableCost(l);
-        });
-      });
+    (bills || []).forEach(b => {
+      const bDate = b.bill_date || '';
+      if (bDate >= startDate && bDate <= endDate) {
+        periodCOGS += getBillCOGS(b);
+      }
+    });
 
-    // Dynamic Closing Stock for the period: Opening + Purchases - COGS
-    const closingStockValue = Math.round((openingStockValue + periodPurchasesTaxable - periodCOGS) * 100) / 100;
+    const closingStockValue = Math.max(0, Math.round((openingStockValue + periodPurchasesTaxable - periodCOGS) * 100) / 100);
 
-    // Taxable Sales (Excluding Sales Tax output)
     const taxableSales = (bills || [])
       .filter(b => b.bill_date >= startDate && b.bill_date <= endDate)
       .reduce((sum, b) => {
@@ -187,36 +202,32 @@ export default function ProfitLossReport({
         return sum + (b.taxable_amount ? parseFloat(b.taxable_amount) : Math.max(0, amt - tax));
       }, 0);
 
-    // BillBook Standard Gross Profit Formula:
-    // GP = Sales - SalesReturns - Purchases + PurchaseReturns - TaxPayable + TaxReceivable - OpeningStock + ClosingStock
-    const grossProfit = Math.round((totalSales - salesReturns - totalPurchases + purchaseReturns - taxPayable + taxReceivable - openingStockValue + closingStockValue) * 100) / 100;
+    const rawGrossProfit = totalSales - salesReturns - totalPurchases + purchaseReturns - taxPayable + taxReceivable - openingStockValue + closingStockValue;
+    const grossProfit = Number.isFinite(rawGrossProfit) ? Math.round(rawGrossProfit * 100) / 100 : 0;
 
-    // 9. Other Income
     const otherIncome = 0;
 
-    // 10. Indirect Expenses (Total from expenses in range)
     const totalExpenses = (expenses || [])
       .filter(e => (e.expense_date || e.date || '').slice(0, 10) >= startDate && (e.expense_date || e.date || '').slice(0, 10) <= endDate)
       .reduce((sum, e) => sum + (parseFloat(e.total_amount || e.amount) || 0), 0);
 
-    // Net Profit Formula:
-    // NP = GP + OtherIncome - IndirectExpenses
-    const netProfit = Math.round((grossProfit + otherIncome - totalExpenses) * 100) / 100;
+    const rawNetProfit = grossProfit + otherIncome - totalExpenses;
+    const netProfit = Number.isFinite(rawNetProfit) ? Math.round(rawNetProfit * 100) / 100 : 0;
 
     return {
-      totalSales,
-      taxableSales,
-      salesReturns,
-      totalPurchases,
-      purchaseReturns,
-      taxPayable,
-      taxReceivable,
-      periodCOGS,
+      totalSales: Number.isFinite(totalSales) ? totalSales : 0,
+      taxableSales: Number.isFinite(taxableSales) ? taxableSales : 0,
+      salesReturns: 0,
+      totalPurchases: Number.isFinite(totalPurchases) ? totalPurchases : 0,
+      purchaseReturns: 0,
+      taxPayable: Number.isFinite(taxPayable) ? taxPayable : 0,
+      taxReceivable: Number.isFinite(taxReceivable) ? taxReceivable : 0,
+      periodCOGS: Number.isFinite(periodCOGS) ? periodCOGS : 0,
       openingStockValue,
       closingStockValue,
       grossProfit,
       otherIncome,
-      totalExpenses,
+      totalExpenses: Number.isFinite(totalExpenses) ? totalExpenses : 0,
       netProfit
     };
   }, [items, purchaseBills, stockAdjustments, bills, expenses, dateRange]);
