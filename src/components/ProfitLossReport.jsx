@@ -132,6 +132,40 @@ export default function ProfitLossReport({
       return effectiveQty * 2194.81;
     };
 
+    // Dynamic COGS & Physical Stock Valuation Engine
+    const BASELINE_DATE = '2026-08-01';
+    const BASELINE_STOCK_VALUE = 263399.84; // Official verified Vyapar / MyBillBook starting inventory valuation
+
+    // Calculate cumulative movements between baseline and startDate to get dynamic Opening Stock
+    let prePurchasesTaxable = 0;
+    let preSalesCOGS = 0;
+
+    if (startDate > BASELINE_DATE) {
+      (purchaseBills || []).forEach(p => {
+        if (p.purchase_date >= BASELINE_DATE && p.purchase_date < startDate) {
+          prePurchasesTaxable += parseFloat(p.taxable_amount || (p.total_amount / 1.18)) || 0;
+        }
+      });
+
+      (bills || []).forEach(b => {
+        if (b.bill_date >= BASELINE_DATE && b.bill_date < startDate) {
+          (b.items || []).forEach(l => {
+            preSalesCOGS += getItemTaxableCost(l);
+          });
+        }
+      });
+    }
+
+    const openingStockValue = Math.round((BASELINE_STOCK_VALUE + prePurchasesTaxable - preSalesCOGS) * 100) / 100;
+
+    // Period purchases taxable amount
+    let periodPurchasesTaxable = 0;
+    (purchaseBills || []).forEach(p => {
+      if (p.purchase_date >= startDate && p.purchase_date <= endDate) {
+        periodPurchasesTaxable += parseFloat(p.taxable_amount || (p.total_amount / 1.18)) || 0;
+      }
+    });
+
     let periodCOGS = 0;
     (bills || [])
       .filter(b => b.bill_date >= startDate && b.bill_date <= endDate)
@@ -141,6 +175,9 @@ export default function ProfitLossReport({
         });
       });
 
+    // Dynamic Closing Stock for the period: Opening + Purchases - COGS
+    const closingStockValue = Math.round((openingStockValue + periodPurchasesTaxable - periodCOGS) * 100) / 100;
+
     // Taxable Sales (Excluding Sales Tax output)
     const taxableSales = (bills || [])
       .filter(b => b.bill_date >= startDate && b.bill_date <= endDate)
@@ -149,20 +186,6 @@ export default function ProfitLossReport({
         const amt = parseFloat(b.total_amount) || 0;
         return sum + (b.taxable_amount ? parseFloat(b.taxable_amount) : Math.max(0, amt - tax));
       }, 0);
-
-    // Exact Opening & Closing Stock values matching BillBook
-    let openingStockValue = 261399.84;
-    let closingStockValue = 303718.61;
-
-    if (startDate === '2026-08-01' && endDate.startsWith('2026-08')) {
-      openingStockValue = 261399.84;
-      closingStockValue = 303718.61;
-    } else if (startDate === '2026-04-01') {
-      openingStockValue = 285420.00;
-      closingStockValue = 303718.61;
-    } else {
-      openingStockValue = Math.max(0, closingStockValue - periodStockDelta);
-    }
 
     // BillBook Standard Gross Profit Formula:
     // GP = Sales - SalesReturns - Purchases + PurchaseReturns - TaxPayable + TaxReceivable - OpeningStock + ClosingStock
