@@ -97,6 +97,7 @@ export default function App() {
     purchaseBills,
     stockAdjustments,
     partyItemPrices,
+    itemStockLedger,
     saveItem,
     saveStockAdjustment,
     savePurchaseBill,
@@ -378,7 +379,7 @@ export default function App() {
             {tab === "inventory" && <InventoryManager items={itemsCatalog} purchaseBills={purchaseBills} stockAdjustments={stockAdjustments} partyItemPrices={partyItemPrices} restaurants={restaurants} saveItem={saveItem} saveStockAdjustment={saveStockAdjustment} savePurchaseBill={savePurchaseBill} deletePurchaseBill={deletePurchaseBill} savePartyPrice={savePartyPrice} deletePartyPrice={deletePartyPrice} />}
             {tab === "expenses" && <ExpenseTracker categories={expenseCategories} expenseItems={expenseItems} expenses={expenses} saveCategory={saveCategory} deleteCategory={deleteCategory} saveExpenseItem={saveExpenseItem} deleteExpenseItem={deleteExpenseItem} saveExpense={saveExpense} deleteExpense={deleteExpense} />}
             {tab === "salesReport" && <SalesSummaryDashboard bills={bills} restaurants={restaurants} deleteBill={deleteBill} />}
-            {tab === "profitLoss" && <ProfitLossReport items={itemsCatalog} purchaseBills={purchaseBills} stockAdjustments={stockAdjustments} bills={bills} expenses={expenses} />}
+            {tab === "profitLoss" && <ProfitLossReport items={itemsCatalog} purchaseBills={purchaseBills} stockAdjustments={stockAdjustments} bills={bills} expenses={expenses} itemStockLedger={itemStockLedger} />}
             {tab === "gstReport" && <Gstr3bReport items={itemsCatalog} purchaseBills={purchaseBills} bills={bills} />}
             {tab === "payments" && <PaymentLedger payments={payments} onAddPayment={handleAddPayment} onDeletePayment={handleDeletePayment} batches={batches} onUpdateBatchCost={handleUpdateBatchCost} restMap={restMap} />}
             {tab === "calendar" && <CalendarView dateMap={dateMap} selectedDate={selectedDate} setSelectedDate={setSelectedDate} handleDeleteEntry={handleDeleteEntry} payments={payments} batches={batches} bills={bills} deleteBill={deleteBill} removeDeliveryEntries={removeDeliveryEntries} restaurantProfiles={restaurantProfiles} onDeletePayment={handleDeletePayment} />}

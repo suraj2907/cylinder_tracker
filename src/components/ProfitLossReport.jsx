@@ -3,6 +3,7 @@ import DateRangePicker from './DateRangePicker';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { getTotalStockValueAsOf } from '../utils/stockLedgerUtils';
 
 function formatLocalYMD(d) {
   if (!d) return '';
@@ -17,7 +18,8 @@ export default function ProfitLossReport({
   purchaseBills = [],
   stockAdjustments = [],
   bills = [],
-  expenses = []
+  expenses = [],
+  itemStockLedger = []
 }) {
   const [dateRange, setDateRange] = useState(() => {
     // Default to this month
@@ -35,51 +37,6 @@ export default function ProfitLossReport({
     const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
     d.setDate(d.getDate() - 1);
     return formatLocalYMD(d);
-  };
-
-  const isItemMatch = (line, item) => {
-    if (!line || !item) return false;
-    if (line.item_id && line.item_id === item.id) return true;
-    const desc = (line.description || line.item_name || '').toLowerCase().trim();
-    const itemName = (item.name || '').toLowerCase().trim();
-    if (desc === itemName) return true;
-    if (itemName.includes('19.2') && (desc.includes('19.2') || desc.includes('commercial') || desc.includes('lpg cylinder'))) return true;
-    if (itemName.includes('21') && (desc.includes('21') || desc.includes('21kg'))) return true;
-    if (itemName.includes('15') && desc.includes('15')) return true;
-    return false;
-  };
-
-  const getStockAsOf = (item, date) => {
-    // 1. Purchases up to date from purchaseBills items
-    let totalPurchases = 0;
-    (purchaseBills || []).forEach(pb => {
-      if (pb.purchase_date <= date && Array.isArray(pb.items)) {
-        pb.items.forEach(line => {
-          if (isItemMatch(line, item)) {
-            totalPurchases += (parseFloat(line.qty) || 0);
-          }
-        });
-      }
-    });
-
-    // 2. Sales up to date from bills items
-    let totalSales = 0;
-    (bills || []).forEach(bill => {
-      if (bill.bill_date <= date && Array.isArray(bill.items)) {
-        bill.items.forEach(line => {
-          if (isItemMatch(line, item)) {
-            totalSales += (parseFloat(line.qty) || 0);
-          }
-        });
-      }
-    });
-
-    // 3. Adjustments up to date
-    const totalAdjustments = (stockAdjustments || [])
-      .filter(a => a.item_id === item.id && (a.created_at || '').slice(0, 10) <= date)
-      .reduce((sum, a) => sum + (parseFloat(a.adjustment_qty) || 0), 0);
-
-    return totalPurchases - totalSales + totalAdjustments;
   };
 
   // Compute P&L data for the period
@@ -113,128 +70,8 @@ export default function ProfitLossReport({
       .filter(p => p.purchase_date >= startDate && p.purchase_date <= endDate)
       .reduce((sum, p) => sum + (parseFloat(p.cgst) || 0) + (parseFloat(p.sgst) || 0), 0);
 
-    // Monthly Historical Gas Refill Rates Matrix
-    const MONTHLY_RATES = {
-      '2024-07': { p192: 1487.62, p21: 1625.71 },
-      '2024-08': { p192: 1500.00, p21: 1640.95 },
-      '2024-09': { p192: 1536.19, p21: 1680.95 },
-      '2024-10': { p192: 1583.54, p21: 1731.43 },
-      '2024-11': { p192: 1623.95, p21: 1776.20 },
-      '2024-12': { p192: 1634.56, p21: 1787.80 },
-      '2025-01': { p192: 1448.14, p21: 1583.90 },
-      '2025-02': { p192: 1443.90, p21: 1579.27 },
-      '2025-03': { p192: 1392.48, p21: 1523.03 },
-      '2025-04': { p192: 1411.85, p21: 1544.21 },
-      '2025-05': { p192: 1397.69, p21: 1528.73 },
-      '2025-06': { p192: 1376.37, p21: 1505.42 },
-      '2025-07': { p192: 1350.34, p21: 1476.94 },
-      '2025-08': { p192: 1301.00, p21: 1422.97 },
-      '2025-09': { p192: 1254.34, p21: 1371.94 },
-      '2025-10': { p192: 1267.85, p21: 1386.71 },
-      '2025-11': { p192: 1263.78, p21: 1382.26 },
-      '2025-12': { p192: 1331.31, p21: 1374.40 },
-      '2026-01': { p192: 1350.18, p21: 1476.76 },
-      '2026-02': { p192: 1392.16, p21: 1522.68 },
-      '2026-03': { p192: 1726.04, p21: 1887.86 },
-      '2026-04': { p192: 3172.88, p21: 3114.41 },
-      '2026-05': { p192: 2676.61, p21: 2915.40 },
-      '2026-06': { p192: 2644.07, p21: 2802.88 },
-      '2026-07': { p192: 2371.69, p21: 2594.03 },
-      '2026-08': { p192: 2194.81, p21: 2400.58 }
-    };
-
-    const getRateForDate = (dateStr) => {
-      const ym = (dateStr || '').slice(0, 7);
-      return MONTHLY_RATES[ym] || { p192: 2194.81, p21: 2400.58 };
-    };
-
-    const getItemTaxableCost = (line, billDate) => {
-      if (!line) return 0;
-      const desc = (line.description || line.item_name || line.name || '').toLowerCase();
-      const qty = parseFloat(line.qty || line.quantity) || 1;
-      const rates = getRateForDate(billDate);
-
-      if (desc.includes('21')) return qty * rates.p21;
-      if (desc.includes('15')) return qty * 1723.35;
-      if (desc.includes('regulator') && desc.includes('nut')) return qty * 250.0;
-      if (desc.includes('regulator')) return qty * 130.0;
-      if (desc.includes('convertor') && desc.includes('bada')) return qty * 280.0;
-      if (desc.includes('convertor')) return qty * 170.0;
-      return qty * rates.p192;
-    };
-
-    const getBillCOGS = (bill) => {
-      if (!bill) return 0;
-      if (Array.isArray(bill.items) && bill.items.length > 0) {
-        return bill.items.reduce((sum, item) => sum + getItemTaxableCost(item, bill.bill_date), 0);
-      }
-      const amt = parseFloat(bill.total_amount) || 0;
-      if (amt <= 0) return 0;
-      return (amt / 1.18) * 0.86;
-    };
-
-    // 8. Continuous Daily Timeline Inventory Engine
-    const dailyEvents = {};
-    const getOrCreateDay = (d) => {
-      if (!dailyEvents[d]) {
-        dailyEvents[d] = { purchasesTaxable: 0, salesCOGS: 0 };
-      }
-      return dailyEvents[d];
-    };
-
-    (purchaseBills || []).forEach(p => {
-      const d = p.purchase_date;
-      if (!d) return;
-      const day = getOrCreateDay(d);
-      day.purchasesTaxable += parseFloat(p.taxable_amount || (p.total_amount / 1.18)) || 0;
-    });
-
-    (bills || []).forEach(b => {
-      const d = b.bill_date;
-      if (!d) return;
-      const day = getOrCreateDay(d);
-      day.salesCOGS += getBillCOGS(b);
-    });
-
-    const allDays = Object.keys(dailyEvents).sort();
-    const closingStockByDate = {};
-    const BASE_DATE = '2026-08-01';
-    const BASE_STOCK = 263399.84;
-
-    // Roll forward from 2026-08-01
-    let runningStock = BASE_STOCK;
-    allDays.filter(d => d >= BASE_DATE).forEach(d => {
-      const day = dailyEvents[d];
-      runningStock = runningStock + day.purchasesTaxable - day.salesCOGS;
-      closingStockByDate[d] = Math.round(runningStock * 100) / 100;
-    });
-
-    // Roll backwards before 2026-08-01
-    runningStock = BASE_STOCK;
-    allDays.filter(d => d < BASE_DATE).reverse().forEach(d => {
-      const day = dailyEvents[d];
-      closingStockByDate[d] = Math.round(runningStock * 100) / 100;
-      runningStock = runningStock - day.purchasesTaxable + day.salesCOGS;
-    });
-
-    // Opening Stock = Closing Stock of Day Before Start Date
-    const sortedDaysBefore = allDays.filter(d => d < startDate);
-    const dayBefore = sortedDaysBefore.length > 0 ? sortedDaysBefore[sortedDaysBefore.length - 1] : null;
-    const openingStockValue = dayBefore ? (closingStockByDate[dayBefore] || BASE_STOCK) : (closingStockByDate[allDays[0]] || BASE_STOCK);
-
-    // Closing Stock = Closing Stock of End Date
-    const sortedDaysInRange = allDays.filter(d => d <= endDate);
-    const lastDayInRange = sortedDaysInRange.length > 0 ? sortedDaysInRange[sortedDaysInRange.length - 1] : null;
-    const closingStockValue = lastDayInRange ? (closingStockByDate[lastDayInRange] || openingStockValue) : openingStockValue;
-
-    // Period COGS
-    let periodCOGS = 0;
-    (bills || []).forEach(b => {
-      const bDate = b.bill_date || '';
-      if (bDate >= startDate && bDate <= endDate) {
-        periodCOGS += getBillCOGS(b);
-      }
-    });
+    const openingStockValue = getTotalStockValueAsOf(prevDate, itemStockLedger, items);
+    const closingStockValue = getTotalStockValueAsOf(endDate, itemStockLedger, items);
 
     const taxableSales = (bills || [])
       .filter(b => b.bill_date >= startDate && b.bill_date <= endDate)
@@ -264,7 +101,6 @@ export default function ProfitLossReport({
       purchaseReturns: 0,
       taxPayable: Number.isFinite(taxPayable) ? taxPayable : 0,
       taxReceivable: Number.isFinite(taxReceivable) ? taxReceivable : 0,
-      periodCOGS: Number.isFinite(periodCOGS) ? periodCOGS : 0,
       openingStockValue,
       closingStockValue,
       grossProfit,
@@ -272,7 +108,7 @@ export default function ProfitLossReport({
       totalExpenses: Number.isFinite(totalExpenses) ? totalExpenses : 0,
       netProfit
     };
-  }, [items, purchaseBills, stockAdjustments, bills, expenses, dateRange]);
+  }, [items, purchaseBills, stockAdjustments, bills, expenses, dateRange, itemStockLedger]);
 
   const exportExcel = () => {
     const data = [
