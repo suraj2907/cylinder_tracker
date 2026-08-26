@@ -158,6 +158,23 @@ export default function ProfitLossReport({
     const AUDITED_AUG_OPENING_STOCK = 263399.84;
     const AUDITED_AUG_CLOSING_STOCK = 301523.80;
 
+    // Period Sales COGS & Taxable Purchases
+    let periodCOGS = 0;
+    (bills || []).forEach(b => {
+      const bDate = b.bill_date || '';
+      if (bDate >= startDate && bDate <= endDate) {
+        periodCOGS += getBillCOGS(b);
+      }
+    });
+
+    let periodPurchases = 0;
+    (purchaseBills || []).forEach(p => {
+      const pDate = p.purchase_date || '';
+      if (pDate >= startDate && pDate <= endDate) {
+        periodPurchases += parseFloat(p.taxable_amount || (p.total_amount / 1.18)) || 0;
+      }
+    });
+
     let openingStockValue = 0;
     let closingStockValue = 0;
 
@@ -185,23 +202,6 @@ export default function ProfitLossReport({
       });
 
       openingStockValue = Math.max(0, Math.round((AUDITED_AUG_CLOSING_STOCK + postAugPurchases - postAugCOGS) * 100) / 100);
-
-      let periodPurchases = 0;
-      (purchaseBills || []).forEach(p => {
-        const pDate = p.purchase_date || '';
-        if (pDate >= startDate && pDate <= endDate) {
-          periodPurchases += parseFloat(p.taxable_amount || (p.total_amount / 1.18)) || 0;
-        }
-      });
-
-      let periodCOGS = 0;
-      (bills || []).forEach(b => {
-        const bDate = b.bill_date || '';
-        if (bDate >= startDate && bDate <= endDate) {
-          periodCOGS += getBillCOGS(b);
-        }
-      });
-
       closingStockValue = Math.max(0, Math.round((openingStockValue + periodPurchases - periodCOGS) * 100) / 100);
     } else {
       // Pre-August 2026 or All-Time Historical Ranges
