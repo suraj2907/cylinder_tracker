@@ -13,10 +13,15 @@ export function getStockQtyAsOf(itemType, targetDate, ledgerRows) {
 }
 
 // Finds the item's current purchase price from the items catalog, matching by
-// substring in the item name (e.g. "19.2kg Filled Cylinder" matches "19.2kg").
+// substring in the item name (e.g. "19.2kg Cylinder" matches "19.2kg").
 function findItemRate(itemType, items) {
-  const match = (items || []).find(i => (i.name || '').includes(itemType));
-  return match ? parseFloat(match.purchase_price) || 0 : (itemType === '19.2kg' ? 2194.81 : 2400.58);
+  const match = (items || []).find(i => (i.name || '').toLowerCase().includes(itemType.toLowerCase()));
+  if (!match) return itemType === '19.2kg' ? 2194.81 : 2400.58;
+  const pPrice = parseFloat(match.purchase_price) || 0;
+  if (match.price_includes_tax && pPrice > 2500) {
+    return Math.round((pPrice / 1.18) * 100) / 100;
+  }
+  return pPrice;
 }
 
 // Base inventory assets from MyBillBook Stock Summary:
