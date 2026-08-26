@@ -113,52 +113,121 @@ export default function ProfitLossReport({
       .filter(p => p.purchase_date >= startDate && p.purchase_date <= endDate)
       .reduce((sum, p) => sum + (parseFloat(p.cgst) || 0) + (parseFloat(p.sgst) || 0), 0);
 
-    // 7. Universal Dynamic Stock Valuation Engine
-    const UNIT_TAXABLE_COSTS = {
-      '21': 2400.58,
-      '15': 1723.35,
-      '19.2': 2194.81,
-      'regulator_nut': 250.0,
-      'regulator': 130.0,
-      'convertor_bada': 280.0,
-      'convertor': 170.0
+    // Monthly Historical Gas Refill Rates Matrix
+    const MONTHLY_RATES = {
+      '2024-07': { p192: 1487.62, p21: 1625.71 },
+      '2024-08': { p192: 1500.00, p21: 1640.95 },
+      '2024-09': { p192: 1536.19, p21: 1680.95 },
+      '2024-10': { p192: 1583.54, p21: 1731.43 },
+      '2024-11': { p192: 1623.95, p21: 1776.20 },
+      '2024-12': { p192: 1634.56, p21: 1787.80 },
+      '2025-01': { p192: 1448.14, p21: 1583.90 },
+      '2025-02': { p192: 1443.90, p21: 1579.27 },
+      '2025-03': { p192: 1392.48, p21: 1523.03 },
+      '2025-04': { p192: 1411.85, p21: 1544.21 },
+      '2025-05': { p192: 1397.69, p21: 1528.73 },
+      '2025-06': { p192: 1376.37, p21: 1505.42 },
+      '2025-07': { p192: 1350.34, p21: 1476.94 },
+      '2025-08': { p192: 1301.00, p21: 1422.97 },
+      '2025-09': { p192: 1254.34, p21: 1371.94 },
+      '2025-10': { p192: 1267.85, p21: 1386.71 },
+      '2025-11': { p192: 1263.78, p21: 1382.26 },
+      '2025-12': { p192: 1331.31, p21: 1374.40 },
+      '2026-01': { p192: 1350.18, p21: 1476.76 },
+      '2026-02': { p192: 1392.16, p21: 1522.68 },
+      '2026-03': { p192: 1726.04, p21: 1887.86 },
+      '2026-04': { p192: 3172.88, p21: 3114.41 },
+      '2026-05': { p192: 2676.61, p21: 2915.40 },
+      '2026-06': { p192: 2644.07, p21: 2802.88 },
+      '2026-07': { p192: 2371.69, p21: 2594.03 },
+      '2026-08': { p192: 2194.81, p21: 2400.58 }
     };
 
-    const getItemTaxableCost = (line) => {
+    const getRateForDate = (dateStr) => {
+      const ym = (dateStr || '').slice(0, 7);
+      return MONTHLY_RATES[ym] || { p192: 2194.81, p21: 2400.58 };
+    };
+
+    const getItemTaxableCost = (line, billDate) => {
       if (!line) return 0;
       const desc = (line.description || line.item_name || line.name || '').toLowerCase();
       const qty = parseFloat(line.qty || line.quantity) || 1;
-      const rate = parseFloat(line.rate) || 0;
-      const amount = parseFloat(line.amount) || (qty * rate);
+      const rates = getRateForDate(billDate);
 
-      if (desc.includes('21')) return qty * UNIT_TAXABLE_COSTS['21'];
-      if (desc.includes('15')) return qty * UNIT_TAXABLE_COSTS['15'];
-      if (desc.includes('regulator') && desc.includes('nut')) return qty * UNIT_TAXABLE_COSTS['regulator_nut'];
-      if (desc.includes('regulator')) return qty * UNIT_TAXABLE_COSTS['regulator'];
-      if (desc.includes('convertor') && desc.includes('bada')) return qty * UNIT_TAXABLE_COSTS['convertor_bada'];
-      if (desc.includes('convertor')) return qty * UNIT_TAXABLE_COSTS['convertor'];
-      
-      let effectiveQty = qty;
-      if (amount > 4000 && qty === 1) effectiveQty = 2;
-      else if (amount > 7000 && qty === 1) effectiveQty = 3;
-      return effectiveQty * UNIT_TAXABLE_COSTS['19.2'];
+      if (desc.includes('21')) return qty * rates.p21;
+      if (desc.includes('15')) return qty * 1723.35;
+      if (desc.includes('regulator') && desc.includes('nut')) return qty * 250.0;
+      if (desc.includes('regulator')) return qty * 130.0;
+      if (desc.includes('convertor') && desc.includes('bada')) return qty * 280.0;
+      if (desc.includes('convertor')) return qty * 170.0;
+      return qty * rates.p192;
     };
 
     const getBillCOGS = (bill) => {
       if (!bill) return 0;
       if (Array.isArray(bill.items) && bill.items.length > 0) {
-        return bill.items.reduce((sum, item) => sum + getItemTaxableCost(item), 0);
+        return bill.items.reduce((sum, item) => sum + getItemTaxableCost(item, bill.bill_date), 0);
       }
       const amt = parseFloat(bill.total_amount) || 0;
       if (amt <= 0) return 0;
       return (amt / 1.18) * 0.86;
     };
 
-    // Audited Verified Inventory Baseline (as of 01-August-2026 from MyBillBook P&L)
-    const AUDITED_AUG_OPENING_STOCK = 263399.84;
-    const AUDITED_AUG_CLOSING_STOCK = 303523.82;
+    // 8. Continuous Daily Timeline Inventory Engine
+    const dailyEvents = {};
+    const getOrCreateDay = (d) => {
+      if (!dailyEvents[d]) {
+        dailyEvents[d] = { purchasesTaxable: 0, salesCOGS: 0 };
+      }
+      return dailyEvents[d];
+    };
 
-    // Period Sales COGS & Taxable Purchases
+    (purchaseBills || []).forEach(p => {
+      const d = p.purchase_date;
+      if (!d) return;
+      const day = getOrCreateDay(d);
+      day.purchasesTaxable += parseFloat(p.taxable_amount || (p.total_amount / 1.18)) || 0;
+    });
+
+    (bills || []).forEach(b => {
+      const d = b.bill_date;
+      if (!d) return;
+      const day = getOrCreateDay(d);
+      day.salesCOGS += getBillCOGS(b);
+    });
+
+    const allDays = Object.keys(dailyEvents).sort();
+    const closingStockByDate = {};
+    const BASE_DATE = '2026-08-01';
+    const BASE_STOCK = 263399.84;
+
+    // Roll forward from 2026-08-01
+    let runningStock = BASE_STOCK;
+    allDays.filter(d => d >= BASE_DATE).forEach(d => {
+      const day = dailyEvents[d];
+      runningStock = runningStock + day.purchasesTaxable - day.salesCOGS;
+      closingStockByDate[d] = Math.round(runningStock * 100) / 100;
+    });
+
+    // Roll backwards before 2026-08-01
+    runningStock = BASE_STOCK;
+    allDays.filter(d => d < BASE_DATE).reverse().forEach(d => {
+      const day = dailyEvents[d];
+      closingStockByDate[d] = Math.round(runningStock * 100) / 100;
+      runningStock = runningStock - day.purchasesTaxable + day.salesCOGS;
+    });
+
+    // Opening Stock = Closing Stock of Day Before Start Date
+    const sortedDaysBefore = allDays.filter(d => d < startDate);
+    const dayBefore = sortedDaysBefore.length > 0 ? sortedDaysBefore[sortedDaysBefore.length - 1] : null;
+    const openingStockValue = dayBefore ? (closingStockByDate[dayBefore] || BASE_STOCK) : (closingStockByDate[allDays[0]] || BASE_STOCK);
+
+    // Closing Stock = Closing Stock of End Date
+    const sortedDaysInRange = allDays.filter(d => d <= endDate);
+    const lastDayInRange = sortedDaysInRange.length > 0 ? sortedDaysInRange[sortedDaysInRange.length - 1] : null;
+    const closingStockValue = lastDayInRange ? (closingStockByDate[lastDayInRange] || openingStockValue) : openingStockValue;
+
+    // Period COGS
     let periodCOGS = 0;
     (bills || []).forEach(b => {
       const bDate = b.bill_date || '';
@@ -166,48 +235,6 @@ export default function ProfitLossReport({
         periodCOGS += getBillCOGS(b);
       }
     });
-
-    let periodPurchases = 0;
-    (purchaseBills || []).forEach(p => {
-      const pDate = p.purchase_date || '';
-      if (pDate >= startDate && pDate <= endDate) {
-        periodPurchases += parseFloat(p.taxable_amount || (p.total_amount / 1.18)) || 0;
-      }
-    });
-
-    let openingStockValue = 0;
-    let closingStockValue = 0;
-
-    if (startDate === '2026-08-01' && endDate.startsWith('2026-08')) {
-      // Current Month (August 2026) Exact Audited Valuation
-      openingStockValue = AUDITED_AUG_OPENING_STOCK;
-      closingStockValue = AUDITED_AUG_CLOSING_STOCK;
-    } else if (startDate >= '2026-09-01') {
-      // Future Months (September 2026 onwards) - Roll forward from August Closing Stock
-      let postAugPurchases = 0;
-      let postAugCOGS = 0;
-
-      (purchaseBills || []).forEach(p => {
-        const pDate = p.purchase_date || '';
-        if (pDate >= '2026-09-01' && pDate < startDate) {
-          postAugPurchases += parseFloat(p.taxable_amount || (p.total_amount / 1.18)) || 0;
-        }
-      });
-
-      (bills || []).forEach(b => {
-        const bDate = b.bill_date || '';
-        if (bDate >= '2026-09-01' && bDate < startDate) {
-          postAugCOGS += getBillCOGS(b);
-        }
-      });
-
-      openingStockValue = Math.max(0, Math.round((AUDITED_AUG_CLOSING_STOCK + postAugPurchases - postAugCOGS) * 100) / 100);
-      closingStockValue = Math.max(0, Math.round((openingStockValue + periodPurchases - periodCOGS) * 100) / 100);
-    } else {
-      // Pre-August 2026 or All-Time Historical Ranges
-      openingStockValue = AUDITED_AUG_OPENING_STOCK;
-      closingStockValue = AUDITED_AUG_CLOSING_STOCK;
-    }
 
     const taxableSales = (bills || [])
       .filter(b => b.bill_date >= startDate && b.bill_date <= endDate)
