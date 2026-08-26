@@ -1,6 +1,24 @@
-// Returns the stock QUANTITY of an item type as of a given date, straight from
-// myBillBook's own authoritative running balance — no reconstruction needed.
-export function getStockQtyAsOf(itemType, targetDate, ledgerRows) {
+function formatLocalYMD(d) {
+  if (!d) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// Returns the stock QUANTITY of an item type as of a given date.
+// For today/future: uses the live real-time current_stock from the items catalog.
+// For past dates: uses myBillBook's authoritative historical running balance.
+export function getStockQtyAsOf(itemType, targetDate, ledgerRows, items) {
+  const todayStr = formatLocalYMD(new Date());
+
+  if (targetDate >= todayStr && Array.isArray(items)) {
+    const match = items.find(i => (i.name || '').toLowerCase().includes(itemType.toLowerCase()));
+    if (match && match.current_stock !== undefined && match.current_stock !== null) {
+      return parseFloat(match.current_stock) || 0;
+    }
+  }
+
   const relevant = (ledgerRows || [])
     .filter(r => r.item_type === itemType && r.entry_date <= targetDate)
     .sort((a, b) => {
@@ -52,8 +70,8 @@ export function getTotalStockValueAsOf(targetDate, ledgerRows, items) {
   }
 
   const otherItemsValue = getOtherCatalogItemsValue(items);
-  const qty192 = getStockQtyAsOf('19.2kg', targetDate, ledgerRows);
-  const qty21 = getStockQtyAsOf('21kg', targetDate, ledgerRows);
+  const qty192 = getStockQtyAsOf('19.2kg', targetDate, ledgerRows, items);
+  const qty21 = getStockQtyAsOf('21kg', targetDate, ledgerRows, items);
   const rate192 = findItemRate('19.2kg', items);
   const rate21 = findItemRate('21kg', items);
   const filledCylindersValue = Math.max(0, qty192 * rate192) + Math.max(0, qty21 * rate21);
