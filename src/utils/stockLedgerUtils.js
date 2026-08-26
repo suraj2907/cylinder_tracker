@@ -41,7 +41,12 @@ function getOtherCatalogItemsValue(items) {
 
 // Total stock VALUE (₹) across database items catalog + dynamic filled commercial cylinders as of targetDate.
 export function getTotalStockValueAsOf(targetDate, ledgerRows, items) {
-  // Authoritative Financial Year 2026-27 Opening Stock Baseline from MyBillBook
+  // 1. Before business inception / first inventory entry (before 16-July-2024), stock is ₹ 0.00
+  if (!targetDate || targetDate < '2024-07-16') {
+    return 0;
+  }
+
+  // 2. Authoritative Financial Year 2026-27 Opening Stock Baseline from MyBillBook
   if (targetDate === '2026-03-31' || targetDate === '2026-04-01') {
     return 285420.00;
   }
