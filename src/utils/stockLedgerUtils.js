@@ -19,11 +19,16 @@ function findItemRate(itemType, items) {
   return match ? parseFloat(match.purchase_price) || 0 : (itemType === '19.2kg' ? 2194.81 : 2400.58);
 }
 
-// Total stock VALUE (₹) across both item types, as of a given date.
+// Base inventory assets from MyBillBook Stock Summary:
+// 117 Empty Cylinders (@ ₹ 2,100 = ₹ 2,45,700) + Regulators & Convertors (₹ 4,520) = ₹ 2,50,220.00
+const BASE_INVENTORY_ASSETS = 250220.00;
+
+// Total stock VALUE (₹) across base assets + dynamic filled cylinders, as of a given date.
 export function getTotalStockValueAsOf(targetDate, ledgerRows, items) {
   const qty192 = getStockQtyAsOf('19.2kg', targetDate, ledgerRows);
   const qty21 = getStockQtyAsOf('21kg', targetDate, ledgerRows);
   const rate192 = findItemRate('19.2kg', items);
   const rate21 = findItemRate('21kg', items);
-  return Math.max(0, qty192 * rate192) + Math.max(0, qty21 * rate21);
+  const filledCylindersValue = Math.max(0, qty192 * rate192) + Math.max(0, qty21 * rate21);
+  return Math.round((BASE_INVENTORY_ASSETS + filledCylindersValue) * 100) / 100;
 }
