@@ -143,28 +143,15 @@ export default function ReceivePaymentModal({
     try {
       const partyName = selectedParty.name;
       const partyId = selectedParty.id;
+      const newPendingBalance = Math.max(0, selectedParty.previous_balance - payAmount);
 
-      // 1. Calculate new pending balance after payment
-      const currentBalance = selectedParty.previous_balance;
-      const newPendingBalance = Math.max(0, currentBalance - payAmount);
-
-      // 2. Insert row into `legacy_ledger_entries` in Supabase
-      const { error: ledgerErr } = await supabase.from('legacy_ledger_entries').insert([{
-        restaurant_name: partyName,
-        entry_date: paymentDate,
-        voucher_type: 'Payment-in',
-        payment_mode: paymentMode,
-        credit: payAmount,
-        debit: 0,
-        balance: newPendingBalance,
-        payment_status: 'paid'
-      }]);
-
-      if (ledgerErr) {
-        console.error('Error inserting payment into legacy_ledger_entries:', ledgerErr.message);
-      }
-
-      // 3. Insert row into `payments` table with all alias field names
+      // Insert row into `payments` table with all alias field names. This is the single,
+      // live source of truth for payments - it is NOT also mirrored into
+      // `legacy_ledger_entries` (that table is a frozen import of pre-app history), because
+      // doing so caused the Passbook to double-count every payment recorded here: once from
+      // `legacy_ledger_entries` (read unconditionally as "official ledger" rows) and once from
+      // `payments` (read via isNewPayment) - inflating a party's Passbook balance while the
+      // Directory/Dashboard (which only reads `payments`) stayed correct.
       const payPayload = {
         batch_num: targetBatchNum || activeBatchNum,
         batchNum: targetBatchNum || activeBatchNum,

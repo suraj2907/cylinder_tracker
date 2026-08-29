@@ -304,6 +304,7 @@ export const VALID_RESTAURANTS = [
   "Sher-e-punjab",
   "Gurudev Rice Mill",
   "Jalaram Namkeen",
+  "Jalaram cafe",
   "Shri Venkatesh Fast Food",
   "Shivam",
   "Silver Spoon",
