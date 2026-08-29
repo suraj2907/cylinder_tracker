@@ -103,9 +103,31 @@ function PaymentLedgerComponent({
       const netPosition = totalCollected - bookingCost - totalExpenses;
       const isProfit = netPosition >= 0;
 
+      // Which calendar month this batch counts toward in the month-wise summary strip: the month
+      // where the majority (by amount) of its actual dated activity (payments + expenses) landed,
+      // not its Khali Date's month. A batch closed on the last day of a month typically does almost
+      // all its real collecting in the following month (e.g. Khali Date 31-Jul but every payment
+      // and expense dated Aug 1-5) - falls back to the Khali Date's month when there's no dated
+      // activity yet (a brand-new batch with no payments/expenses recorded).
+      const activityByMonth = {};
+      bPayments.forEach(p => {
+        const m = (p.date || '').slice(0, 7);
+        if (m) activityByMonth[m] = (activityByMonth[m] || 0) + (parseFloat(p.amount) || 0);
+      });
+      bExpenses.forEach(e => {
+        const m = (e.expense_date || '').slice(0, 7);
+        if (m) activityByMonth[m] = (activityByMonth[m] || 0) + (parseFloat(e.total_amount) || 0);
+      });
+      let activeMonth = (b.khaliDate || '').slice(0, 7);
+      let maxAmt = -1;
+      Object.entries(activityByMonth).forEach(([m, amt]) => {
+        if (amt > maxAmt) { maxAmt = amt; activeMonth = m; }
+      });
+
       return {
         batchNum: bNum,
         khaliDate: b.khaliDate,
+        activeMonth,
         bookingCost,
         totalCash,
         totalUPI,
@@ -126,23 +148,24 @@ function PaymentLedgerComponent({
   const totalUPIAll = useMemo(() => batchSummaries.reduce((s, b) => s + b.totalUPI, 0), [batchSummaries]);
   const totalExpensesAll = useMemo(() => batchSummaries.reduce((s, b) => s + b.totalExpenses, 0), [batchSummaries]);
 
-  // Same totals, but scoped to whichever batches' Khali Date falls in the selected month - this
-  // reuses each batch's own trusted totals (same bookingCost shown & edited on its card), so the
-  // summary strip always exactly equals the sum of the batch cards visible below for that month.
+  // Collection and Booking Cost stay scoped to whichever batches' Khali Date falls in the selected
+  // month - these reuse each batch's own trusted totals (same numbers shown on its card below), so
+  // Net Wallet is always the exact sum of each batch's own "Agla Batch Booking Status", not a
+  // separately recomputed figure that could disagree with what the batch cards show.
   const summary = useMemo(() => {
     const relevantBatches = summaryMonth === 'ALL'
       ? batchSummaries
-      : batchSummaries.filter(b => (b.khaliDate || '').startsWith(summaryMonth));
+      : batchSummaries.filter(b => b.activeMonth === summaryMonth);
 
     const collected = relevantBatches.reduce((s, b) => s + b.totalCollected, 0);
     const cash = relevantBatches.reduce((s, b) => s + b.totalCash, 0);
     const upi = relevantBatches.reduce((s, b) => s + b.totalUPI, 0);
     const bookingCostTotal = relevantBatches.reduce((s, b) => s + b.bookingCost, 0);
+    const netTotal = relevantBatches.reduce((s, b) => s + b.netPosition, 0);
 
-    // Expenses have their own real date, no batch to attribute them to - filter directly by
-    // expense_date instead of going through batches, so one straddling a month boundary (e.g.
-    // dated the same week a new batch got opened) can't silently fall into the wrong batch's
-    // date-range and get excluded from the month it's actually dated in.
+    // The Total Expenses tile alone still filters by the expense's own real date (not the batch's
+    // date-range) so it reports the true calendar-month expense total, matching the Expense
+    // Tracker - it's informational only and isn't what Net Wallet is derived from.
     const expensesTotal = (summaryMonth === 'ALL'
       ? (expenses || [])
       : (expenses || []).filter(e => (e.expense_date || '').startsWith(summaryMonth))
@@ -154,7 +177,7 @@ function PaymentLedgerComponent({
       upi,
       expenses: expensesTotal,
       bookingCost: bookingCostTotal,
-      net: collected - expensesTotal - bookingCostTotal,
+      net: netTotal,
       batchNums: relevantBatches.map(b => b.batchNum).sort((a, b) => a - b)
     };
   }, [summaryMonth, batchSummaries, expenses]);
