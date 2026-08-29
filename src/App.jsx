@@ -382,7 +382,7 @@ export default function App() {
             {tab === "salesReport" && <SalesSummaryDashboard bills={bills} restaurants={restaurants} deleteBill={deleteBill} />}
             {tab === "profitLoss" && <ProfitLossReport items={itemsCatalog} purchaseBills={purchaseBills} stockAdjustments={stockAdjustments} bills={bills} expenses={expenses} itemStockLedger={itemStockLedger} />}
             {tab === "gstReport" && <Gstr3bReport items={itemsCatalog} purchaseBills={purchaseBills} bills={bills} />}
-            {tab === "payments" && <PaymentLedger payments={payments} onAddPayment={handleAddPayment} onDeletePayment={handleDeletePayment} batches={batches} onUpdateBatchCost={handleUpdateBatchCost} restMap={restMap} />}
+            {tab === "payments" && <PaymentLedger payments={payments} onAddPayment={handleAddPayment} onDeletePayment={handleDeletePayment} batches={batches} onUpdateBatchCost={handleUpdateBatchCost} restMap={restMap} expenses={expenses} />}
             {tab === "calendar" && <CalendarView dateMap={dateMap} selectedDate={selectedDate} setSelectedDate={setSelectedDate} handleDeleteEntry={handleDeleteEntry} payments={payments} batches={batches} bills={bills} deleteBill={deleteBill} removeDeliveryEntries={removeDeliveryEntries} restaurantProfiles={restaurantProfiles} onDeletePayment={handleDeletePayment} />}
             {tab === "batches" && <BatchesList filteredBatches={filteredBatches} batchSearch={batchSearch} setBatchSearch={setBatchSearch} handleDeleteBatch={handleDeleteBatch} handleUpdateBatchCost={handleUpdateBatchCost} handleAdd={handleAdd} batches={batches} />}
             {tab === "add" && <AddEntry newEntry={newEntry} setNewEntry={setNewEntry} handleAdd={handleAdd} restMap={restMap} batches={batches} />}

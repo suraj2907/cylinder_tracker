@@ -173,6 +173,7 @@ export function useCylinderData(currentUser) {
                 note: b.note || "",
                 bookingCost: bCost,
                 booking_cost: bCost,
+                createdAt: b.created_at || "",
                 entries: []
               };
             } else {
@@ -182,6 +183,7 @@ export function useCylinderData(currentUser) {
                 batchesMap[b.batch_num].bookingCost = bCost;
                 batchesMap[b.batch_num].booking_cost = bCost;
               }
+              if (b.created_at) batchesMap[b.batch_num].createdAt = b.created_at;
             }
           });
 

@@ -2,13 +2,14 @@ import React, { useState, useMemo, memo } from 'react';
 import { useUser } from '../context/UserContext';
 import { norm } from '../utils/dataUtils';
 
-function PaymentLedgerComponent({ 
-  payments = [], 
-  onAddPayment, 
-  onDeletePayment, 
+function PaymentLedgerComponent({
+  payments = [],
+  onAddPayment,
+  onDeletePayment,
   batches = [],
   onUpdateBatchCost,
-  restMap = {}
+  restMap = {},
+  expenses = []
 }) {
   const { currentUser } = useUser();
   const latestBatchNum = useMemo(() => {
@@ -24,6 +25,22 @@ function PaymentLedgerComponent({
   const [editingCostBatch, setEditingCostBatch] = useState(null);
   const [tempCost, setTempCost] = useState("");
   const [search, setSearch] = useState("");
+
+  // Month filter for the top summary strip - grouped by each batch's Khali Date, same as the
+  // batch cards below, so the summary strip is always exactly the sum of whichever batch cards
+  // are shown for that month (same Booking Cost number you'd see and trust on each card).
+  const [summaryMonth, setSummaryMonth] = useState('ALL');
+  const monthOptions = useMemo(() => {
+    const set = new Set();
+    (batches || []).forEach(b => { if (b.khaliDate) set.add(b.khaliDate.slice(0, 7)); });
+    return [...set].sort().reverse();
+  }, [batches]);
+
+  function formatMonthLabel(ym) {
+    const [y, m] = ym.split('-');
+    const names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${names[parseInt(m, 10) - 1]} ${y}`;
+  }
 
   const [form, setForm] = useState({
     batchNum: String(latestBatchNum),
@@ -46,19 +63,44 @@ function PaymentLedgerComponent({
     setEditingCostBatch(null);
   }
 
+  // Each batch is "active" (owns dates for matching expenses to it) from when it was created
+  // until the next batch was created - batches don't store an explicit date range, but
+  // createdAt boundaries line up with real booking cycles (confirmed against real data).
+  const batchDateRanges = useMemo(() => {
+    const sorted = [...(batches || [])]
+      .filter(b => b.createdAt)
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    const ranges = {};
+    sorted.forEach((b, i) => {
+      const start = b.createdAt.slice(0, 10);
+      const end = i + 1 < sorted.length ? sorted[i + 1].createdAt.slice(0, 10) : '9999-12-31';
+      ranges[Number(b.batch)] = { start, end };
+    });
+    return ranges;
+  }, [batches]);
+
   // Calculate Batch Cashflow summaries (Tracked batches starting #128)
   const batchSummaries = useMemo(() => {
     const trackedBatches = (batches || []).filter(b => Number(b.batch) >= 128);
     return trackedBatches.map(b => {
       const bNum = Number(b.batch);
       const bPayments = payments.filter(p => Number(p.batch_num || p.batchNum) === bNum);
-      
+
       const totalCash = bPayments.filter(p => (p.payment_mode || p.paymentMode || p.mode) === 'Cash').reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
       const totalUPI = bPayments.filter(p => (p.payment_mode || p.paymentMode || p.mode) !== 'Cash').reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
       const totalCollected = totalCash + totalUPI;
 
+      const range = batchDateRanges[bNum];
+      const bExpenses = range
+        ? (expenses || []).filter(e => {
+            const d = (e.expense_date || '').slice(0, 10);
+            return d >= range.start && d < range.end;
+          })
+        : [];
+      const totalExpenses = bExpenses.reduce((s, e) => s + (parseFloat(e.total_amount) || 0), 0);
+
       const bookingCost = parseFloat(b.bookingCost || b.booking_cost || 0);
-      const netPosition = totalCollected - bookingCost;
+      const netPosition = totalCollected - bookingCost - totalExpenses;
       const isProfit = netPosition >= 0;
 
       return {
@@ -68,19 +110,55 @@ function PaymentLedgerComponent({
         totalCash,
         totalUPI,
         totalCollected,
+        totalExpenses,
         netPosition,
         isProfit,
-        bPayments
+        bPayments,
+        bExpenses
       };
     }).sort((a, b) => b.batchNum - a.batchNum);
-  }, [batches, payments]);
+  }, [batches, payments, expenses, batchDateRanges]);
 
-  // Overall totals across tracked active batches
+  // Overall totals across tracked active batches (all-time, batch-scoped)
   const totalCostAll = useMemo(() => batchSummaries.reduce((s, b) => s + b.bookingCost, 0), [batchSummaries]);
   const totalCollectedAll = useMemo(() => batchSummaries.reduce((s, b) => s + b.totalCollected, 0), [batchSummaries]);
   const totalCashAll = useMemo(() => batchSummaries.reduce((s, b) => s + b.totalCash, 0), [batchSummaries]);
   const totalUPIAll = useMemo(() => batchSummaries.reduce((s, b) => s + b.totalUPI, 0), [batchSummaries]);
-  const netWalletBalance = totalCollectedAll - totalCostAll;
+  const totalExpensesAll = useMemo(() => batchSummaries.reduce((s, b) => s + b.totalExpenses, 0), [batchSummaries]);
+
+  // Same totals, but scoped to whichever batches' Khali Date falls in the selected month - this
+  // reuses each batch's own trusted totals (same bookingCost shown & edited on its card), so the
+  // summary strip always exactly equals the sum of the batch cards visible below for that month.
+  const summary = useMemo(() => {
+    const relevantBatches = summaryMonth === 'ALL'
+      ? batchSummaries
+      : batchSummaries.filter(b => (b.khaliDate || '').startsWith(summaryMonth));
+
+    const collected = relevantBatches.reduce((s, b) => s + b.totalCollected, 0);
+    const cash = relevantBatches.reduce((s, b) => s + b.totalCash, 0);
+    const upi = relevantBatches.reduce((s, b) => s + b.totalUPI, 0);
+    const bookingCostTotal = relevantBatches.reduce((s, b) => s + b.bookingCost, 0);
+
+    // Expenses have their own real date, no batch to attribute them to - filter directly by
+    // expense_date instead of going through batches, so one straddling a month boundary (e.g.
+    // dated the same week a new batch got opened) can't silently fall into the wrong batch's
+    // date-range and get excluded from the month it's actually dated in.
+    const expensesTotal = (summaryMonth === 'ALL'
+      ? (expenses || [])
+      : (expenses || []).filter(e => (e.expense_date || '').startsWith(summaryMonth))
+    ).reduce((s, e) => s + (parseFloat(e.total_amount) || 0), 0);
+
+    return {
+      collected,
+      cash,
+      upi,
+      expenses: expensesTotal,
+      bookingCost: bookingCostTotal,
+      net: collected - expensesTotal - bookingCostTotal,
+      batchNums: relevantBatches.map(b => b.batchNum).sort((a, b) => a - b)
+    };
+  }, [summaryMonth, batchSummaries, expenses]);
+  const netWalletBalance = summary.net;
 
   function handleSubmit(e) {
     e.preventDefault();
@@ -137,27 +215,55 @@ function PaymentLedgerComponent({
       </div>
 
       {/* Booking Wallet Summary Strip */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs font-bold text-mutedSlate uppercase tracking-wider">Summary Period</span>
+        <select
+          value={summaryMonth}
+          onChange={e => setSummaryMonth(e.target.value)}
+          className="px-3 py-1.5 rounded-xl border border-customBorder bg-white text-xs font-bold text-textSlate focus:border-accentCyan shadow-sm cursor-pointer"
+        >
+          <option value="ALL">All Time (Batches #128..#{latestBatchNum})</option>
+          {monthOptions.map(ym => (
+            <option key={ym} value={ym}>{formatMonthLabel(ym)}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4">
         <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-customBorder shadow-soft flex flex-col justify-between">
           <div className="text-[10px] sm:text-xs font-black text-mutedSlate uppercase tracking-wider">Total Collection</div>
-          <div className="text-lg sm:text-2xl font-black text-emerald-600 mt-1 truncate">₹{totalCollectedAll.toLocaleString('en-IN')}</div>
-          <div className="text-[9px] sm:text-[10px] font-semibold text-slate-400 mt-0.5">Batches #128..#{latestBatchNum}</div>
+          <div className="text-lg sm:text-2xl font-black text-emerald-600 mt-1 truncate">₹{summary.collected.toLocaleString('en-IN')}</div>
+          <div className="text-[9px] sm:text-[10px] font-semibold text-slate-400 mt-0.5">
+            {summaryMonth === 'ALL' ? `Batches #128..#${latestBatchNum}` : `Batches ${summary.batchNums.map(n => '#' + n).join(', ') || '-'}`}
+          </div>
         </div>
 
         <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-customBorder shadow-soft flex flex-col justify-between">
           <div className="text-[10px] sm:text-xs font-black text-mutedSlate uppercase tracking-wider">Cash in Hand</div>
-          <div className="text-lg sm:text-2xl font-black text-amber-600 mt-1 truncate">₹{totalCashAll.toLocaleString('en-IN')}</div>
+          <div className="text-lg sm:text-2xl font-black text-amber-600 mt-1 truncate">₹{summary.cash.toLocaleString('en-IN')}</div>
           <div className="text-[9px] sm:text-[10px] font-semibold text-slate-400 mt-0.5">Physical Cash</div>
         </div>
 
         <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-customBorder shadow-soft flex flex-col justify-between">
           <div className="text-[10px] sm:text-xs font-black text-mutedSlate uppercase tracking-wider">UPI / Bank Transfer</div>
-          <div className="text-lg sm:text-2xl font-black text-sky-600 mt-1 truncate">₹{totalUPIAll.toLocaleString('en-IN')}</div>
+          <div className="text-lg sm:text-2xl font-black text-sky-600 mt-1 truncate">₹{summary.upi.toLocaleString('en-IN')}</div>
           <div className="text-[9px] sm:text-[10px] font-semibold text-slate-400 mt-0.5">Digital transfer</div>
         </div>
 
         <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-customBorder shadow-soft flex flex-col justify-between">
-          <div className="text-[10px] sm:text-xs font-black text-mutedSlate uppercase tracking-wider">Net Booking Wallet</div>
+          <div className="text-[10px] sm:text-xs font-black text-mutedSlate uppercase tracking-wider">Total Expenses</div>
+          <div className="text-lg sm:text-2xl font-black text-rose-600 mt-1 truncate">-₹{summary.expenses.toLocaleString('en-IN')}</div>
+          <div className="text-[9px] sm:text-[10px] font-semibold text-slate-400 mt-0.5">Driver, fuel, repairs...</div>
+        </div>
+
+        <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-customBorder shadow-soft flex flex-col justify-between">
+          <div className="text-[10px] sm:text-xs font-black text-mutedSlate uppercase tracking-wider">Booking Cost</div>
+          <div className="text-lg sm:text-2xl font-black text-rose-600 mt-1 truncate">-₹{summary.bookingCost.toLocaleString('en-IN')}</div>
+          <div className="text-[9px] sm:text-[10px] font-semibold text-slate-400 mt-0.5">Paid to Gaspoint</div>
+        </div>
+
+        <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-customBorder shadow-soft flex flex-col justify-between">
+          <div className="text-[10px] sm:text-xs font-black text-mutedSlate uppercase tracking-wider">Net Wallet</div>
           <div className={`text-lg sm:text-2xl font-black mt-1 truncate ${netWalletBalance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
             {netWalletBalance >= 0 ? `+₹${netWalletBalance.toLocaleString('en-IN')}` : `-₹${Math.abs(netWalletBalance).toLocaleString('en-IN')}`}
           </div>
@@ -186,7 +292,19 @@ function PaymentLedgerComponent({
           const filteredBatchPayments = b.bPayments.filter(p => {
             if (!search) return true;
             return (p.restaurant_name || p.restaurantName || "").toLowerCase().includes(search.toLowerCase()) || String(p.batch_num || p.batchNum).includes(search);
-          }).sort((x, y) => new Date(y.date) - new Date(x.date));
+          });
+
+          const filteredBatchExpenses = b.bExpenses.filter(e => {
+            if (!search) return true;
+            const label = (e.items && e.items[0] && e.items[0].item_name) || e.note || '';
+            return label.toLowerCase().includes(search.toLowerCase()) || String(b.batchNum).includes(search);
+          });
+
+          // Merge payments (+) and expenses (-) into one date-wise cashflow list for this batch.
+          const batchLedger = [
+            ...filteredBatchPayments.map(p => ({ kind: 'payment', date: p.date, raw: p })),
+            ...filteredBatchExpenses.map(e => ({ kind: 'expense', date: e.expense_date, raw: e }))
+          ].sort((x, y) => new Date(y.date) - new Date(x.date));
 
           return (
             <div key={b.batchNum} className="bg-white border border-customBorder rounded-2xl shadow-soft overflow-hidden hover:shadow-md transition-all">
@@ -212,7 +330,7 @@ function PaymentLedgerComponent({
               </div>
 
               {/* Financial Strip */}
-              <div className="p-4 bg-slate-50/50 border-b border-customBorder grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div className="p-4 bg-slate-50/50 border-b border-customBorder grid grid-cols-1 sm:grid-cols-5 gap-3">
                 {/* 1. Booking Cost */}
                 <div className="bg-white p-3 rounded-xl border border-customBorder shadow-sm flex flex-col justify-between">
                   <div className="text-[10px] font-bold text-mutedSlate uppercase tracking-wider flex items-center justify-between">
@@ -260,7 +378,16 @@ function PaymentLedgerComponent({
                   </div>
                 </div>
 
-                {/* 3. Batch Profit / Pocket Position */}
+                {/* 3. Batch Expenses */}
+                <div className="bg-white p-3 rounded-xl border border-customBorder shadow-sm">
+                  <div className="text-[10px] font-bold text-mutedSlate uppercase tracking-wider">Batch Expenses</div>
+                  <div className="text-base font-black text-rose-600 mt-1">-₹{b.totalExpenses.toLocaleString()}</div>
+                  <div className="text-[10px] text-slate-500 font-semibold mt-0.5">
+                    {b.bExpenses.length} {b.bExpenses.length === 1 ? 'entry' : 'entries'}
+                  </div>
+                </div>
+
+                {/* 4. Batch Profit / Pocket Position */}
                 <div className="bg-white p-3 rounded-xl border border-customBorder shadow-sm sm:col-span-2">
                   <div className="text-[10px] font-bold text-mutedSlate uppercase tracking-wider">
                     Agla Batch Booking Status
@@ -285,16 +412,16 @@ function PaymentLedgerComponent({
                 </div>
               </div>
 
-              {/* Date-wise Collections Table */}
+              {/* Date-wise Cashflow Table: collections (+) and expenses (-) together */}
               <div className="p-4 bg-white space-y-2">
                 <div className="text-xs font-bold text-slate-700 flex items-center justify-between">
-                  <span>📜 Date-wise Collections Recorded for Batch #{b.batchNum}</span>
-                  <span className="text-[11px] font-semibold text-slate-500">{filteredBatchPayments.length} entries</span>
+                  <span>📜 Date-wise Cashflow for Batch #{b.batchNum}</span>
+                  <span className="text-[11px] font-semibold text-slate-500">{batchLedger.length} entries</span>
                 </div>
 
-                {filteredBatchPayments.length === 0 ? (
+                {batchLedger.length === 0 ? (
                   <div className="text-center py-4 text-xs text-slate-400 font-semibold bg-slate-50 rounded-xl border border-dashed">
-                    No payment entries recorded for Batch #{b.batchNum} yet. Click "+ Add Payment" to record.
+                    No collections or expenses recorded for Batch #{b.batchNum} yet. Click "+ Add Payment" to record.
                   </div>
                 ) : (
                   <div className="overflow-x-auto border border-customBorder rounded-xl">
@@ -302,7 +429,7 @@ function PaymentLedgerComponent({
                       <thead>
                         <tr className="bg-slate-50 border-b border-customBorder">
                           <th className="py-2.5 px-3 text-[10px] font-bold text-mutedSlate uppercase">Date</th>
-                          <th className="py-2.5 px-3 text-[10px] font-bold text-mutedSlate uppercase">Restaurant / Hotel Name</th>
+                          <th className="py-2.5 px-3 text-[10px] font-bold text-mutedSlate uppercase">Party / Expense</th>
                           <th className="py-2.5 px-3 text-[10px] font-bold text-mutedSlate uppercase">Amount</th>
                           <th className="py-2.5 px-3 text-[10px] font-bold text-mutedSlate uppercase">Mode</th>
                           <th className="py-2.5 px-3 text-[10px] font-bold text-mutedSlate uppercase">Recorded By</th>
@@ -310,38 +437,64 @@ function PaymentLedgerComponent({
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {filteredBatchPayments.map((p, idx) => (
-                          <tr key={p.id || idx} className="hover:bg-slate-50 transition-colors">
-                            <td className="py-2.5 px-3 text-xs font-medium text-slate-600">{p.date || "N/A"}</td>
-                            <td className="py-2.5 px-3 text-xs font-extrabold text-slate-900">{p.restaurant_name || p.restaurantName}</td>
-                            <td className="py-2.5 px-3 text-xs font-black text-emerald-600">₹{parseFloat(p.amount).toLocaleString()}</td>
-                            <td className="py-2.5 px-3 text-xs font-bold">
-                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] ${
-                                (p.payment_mode || p.paymentMode) === 'UPI' 
-                                  ? 'bg-sky-100 text-sky-700 border border-sky-200' 
-                                  : 'bg-amber-100 text-amber-800 border border-amber-200'
-                              }`}>
-                                {(p.payment_mode || p.paymentMode) === 'UPI' ? '📱 UPI' : '💵 Cash'}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-3 text-xs font-semibold text-slate-600">
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-slate-100 text-[10px] font-bold text-slate-800 border border-slate-200">
-                                👤 {p.user_name || "Suraj"}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-3 text-xs text-right">
-                              {onDeletePayment && (
-                                <button
-                                  onClick={() => onDeletePayment(p)}
-                                  className="text-red-500 hover:text-red-700 font-bold p-1 text-xs"
-                                  title="Delete entry"
-                                >
-                                  🗑️
-                                </button>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
+                        {batchLedger.map((row, idx) => {
+                          if (row.kind === 'payment') {
+                            const p = row.raw;
+                            return (
+                              <tr key={`pay-${p.id || idx}`} className="hover:bg-slate-50 transition-colors">
+                                <td className="py-2.5 px-3 text-xs font-medium text-slate-600">{p.date || "N/A"}</td>
+                                <td className="py-2.5 px-3 text-xs font-extrabold text-slate-900">{p.restaurant_name || p.restaurantName}</td>
+                                <td className="py-2.5 px-3 text-xs font-black text-emerald-600">+₹{parseFloat(p.amount).toLocaleString()}</td>
+                                <td className="py-2.5 px-3 text-xs font-bold">
+                                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] ${
+                                    (p.payment_mode || p.paymentMode) === 'UPI'
+                                      ? 'bg-sky-100 text-sky-700 border border-sky-200'
+                                      : 'bg-amber-100 text-amber-800 border border-amber-200'
+                                  }`}>
+                                    {(p.payment_mode || p.paymentMode) === 'UPI' ? '📱 UPI' : '💵 Cash'}
+                                  </span>
+                                </td>
+                                <td className="py-2.5 px-3 text-xs font-semibold text-slate-600">
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-slate-100 text-[10px] font-bold text-slate-800 border border-slate-200">
+                                    👤 {p.user_name || "Suraj"}
+                                  </span>
+                                </td>
+                                <td className="py-2.5 px-3 text-xs text-right">
+                                  {onDeletePayment && (
+                                    <button
+                                      onClick={() => onDeletePayment(p)}
+                                      className="text-red-500 hover:text-red-700 font-bold p-1 text-xs"
+                                      title="Delete entry"
+                                    >
+                                      🗑️
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          }
+
+                          const e = row.raw;
+                          const label = (e.items && e.items[0] && e.items[0].item_name) || e.note || 'Expense';
+                          return (
+                            <tr key={`exp-${e.id || idx}`} className="hover:bg-rose-50/40 transition-colors bg-rose-50/20">
+                              <td className="py-2.5 px-3 text-xs font-medium text-slate-600">{e.expense_date || "N/A"}</td>
+                              <td className="py-2.5 px-3 text-xs font-extrabold text-slate-900">{label}</td>
+                              <td className="py-2.5 px-3 text-xs font-black text-rose-600">-₹{parseFloat(e.total_amount).toLocaleString()}</td>
+                              <td className="py-2.5 px-3 text-xs font-bold">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] bg-rose-100 text-rose-700 border border-rose-200">
+                                  💸 Expense
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3 text-xs font-semibold text-slate-600">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-slate-100 text-[10px] font-bold text-slate-800 border border-slate-200">
+                                  👤 {e.created_by || "Suraj"}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3 text-xs text-right text-slate-300">—</td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
