@@ -1,79 +1,129 @@
-function formatLocalYMD(d) {
-  if (!d) return '';
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+// Stock valuation for the P&L report.
+//
+// 19.2kg/21kg cylinders are valued from a real per-day closing-stock ledger
+// (src/data/itemStockLedgerFallback.json, built by
+// scripts/build_stock_ledger_fallback.js from mybillbook's own "Item Detail
+// Report" export) - this is authoritative because this app's own `bills`
+// table cannot be trusted for per-unit quantity on OLDER rows: many
+// historical sales were recorded as qty:1 with an inflated `rate`
+// representing a bulk multi-cylinder delivery collapsed into one line, so
+// summing `line.qty` silently undercounts real units sold. The ledger's
+// closing_stock values were verified against mybillbook's own P&L report
+// (June/July 2026 opening & closing stock matched to within a rounding paisa).
+//
+// The ledger export is a frozen snapshot (last transaction 25-Aug-2026), so
+// for any date AFTER that but before "today" - a gap that grows as real time
+// passes - quantity is derived by replaying purchase_bills/bills forward from
+// the ledger's last known closing stock, matched strictly by item_id (recent
+// bills reliably carry it, unlike the old bulk-collapsed rows above).
+//
+// Every other catalog item (regulators, convertors, empty cylinders, ...) has
+// no transaction history at all - purchases/sales for them were never
+// recorded as line items anywhere - so there is no way to reconstruct a real
+// historical quantity for them. They're valued at today's live current_stock
+// for every date; this is a known approximation, small in rupee terms
+// relative to the cylinders above.
+
+const BUSINESS_INCEPTION_DATE = '2024-07-16';
+
+// Verified TOTAL stock value (all items combined) from mybillbook's own P&L
+// report, for dates where accessory items (regulators/convertors/empty
+// cylinders - which have no purchase/sale history of their own, see below)
+// are known to have held a different quantity than today's current_stock.
+// Overrides the per-item computation entirely for these exact dates.
+const VERIFIED_TOTAL_STOCK_VALUE = {
+  '2026-03-31': 285420
+};
+
+function toDateOnly(value) {
+  if (value instanceof Date) {
+    const y = value.getFullYear();
+    const m = String(value.getMonth() + 1).padStart(2, '0');
+    const d = String(value.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  return (value || '').toString().slice(0, 10);
 }
 
-// Returns the stock QUANTITY of an item type as of a given date.
-// For today/future: uses the live real-time current_stock from the items catalog.
-// For past dates: uses myBillBook's authoritative historical running balance.
-export function getStockQtyAsOf(itemType, targetDate, ledgerRows, items) {
-  const todayStr = formatLocalYMD(new Date());
+// Which ledger item_type (if any) a catalog item corresponds to.
+function ledgerItemType(item) {
+  const name = (item.name || '').toLowerCase();
+  if (name.includes('19.2')) return '19.2kg';
+  if (name.includes('21')) return '21kg';
+  return null;
+}
 
-  if (targetDate >= todayStr && Array.isArray(items)) {
-    const match = items.find(i => (i.name || '').toLowerCase().includes(itemType.toLowerCase()));
-    if (match && match.current_stock !== undefined && match.current_stock !== null) {
-      return parseFloat(match.current_stock) || 0;
-    }
+// Quantity of `item` as of `targetDate` (inclusive). For today/future dates,
+// uses the live current_stock from the items catalog. For past dates covered
+// by the ledger, uses its verified historical closing_stock. For dates after
+// the ledger's last entry but before today, replays real purchases/sales
+// (strict item_id match) forward from the ledger's last known point. Items
+// without ledger coverage fall back to live current_stock for every date.
+export function getItemQtyAsOf(item, targetDate, ledgerRows = [], { purchaseBills = [], bills = [] } = {}) {
+  if (!item) return 0;
+  const target = toDateOnly(targetDate);
+  if (!target || target < BUSINESS_INCEPTION_DATE) return 0;
+
+  const todayStr = toDateOnly(new Date());
+  const itemType = ledgerItemType(item);
+
+  if (target >= todayStr || !itemType) {
+    return parseFloat(item.current_stock) || 0;
   }
 
-  const relevant = (ledgerRows || [])
-    .filter(r => r.item_type === itemType && r.entry_date <= targetDate)
-    .sort((a, b) => {
-      if (a.entry_date !== b.entry_date) return a.entry_date.localeCompare(b.entry_date);
-      return a.import_seq - b.import_seq; // later import_seq = later in the day
-    });
+  const sortedRows = (ledgerRows || [])
+    .filter(r => r.item_type === itemType)
+    .sort((a, b) => (a.entry_date !== b.entry_date ? a.entry_date.localeCompare(b.entry_date) : a.import_seq - b.import_seq));
 
-  if (relevant.length === 0) return 0;
-  return relevant[relevant.length - 1].closing_stock;
+  if (sortedRows.length === 0) return 0;
+
+  const lastLedgerDate = sortedRows[sortedRows.length - 1].entry_date;
+
+  if (target <= lastLedgerDate) {
+    const relevant = sortedRows.filter(r => r.entry_date <= target);
+    return relevant.length ? relevant[relevant.length - 1].closing_stock : 0;
+  }
+
+  // Gap between the ledger's last entry and targetDate: replay real
+  // transactions forward, matched strictly by item_id.
+  let qty = sortedRows[sortedRows.length - 1].closing_stock;
+  (purchaseBills || []).forEach(pb => {
+    const d = toDateOnly(pb.purchase_date);
+    if (d > lastLedgerDate && d <= target && Array.isArray(pb.items)) {
+      pb.items.forEach(line => { if (line.item_id === item.id) qty += parseFloat(line.qty) || 0; });
+    }
+  });
+  (bills || []).forEach(b => {
+    const d = toDateOnly(b.bill_date);
+    if (d > lastLedgerDate && d <= target && Array.isArray(b.items)) {
+      b.items.forEach(line => { if (line.item_id === item.id) qty -= parseFloat(line.qty) || 0; });
+    }
+  });
+
+  return qty;
 }
 
-// Finds the item's current purchase price from the items catalog, matching by
-// substring in the item name (e.g. "19.2kg Cylinder" matches "19.2kg").
-function findItemRate(itemType, items) {
-  const match = (items || []).find(i => (i.name || '').toLowerCase().includes(itemType.toLowerCase()));
-  if (!match) return itemType === '19.2kg' ? 2194.81 : 2400.58;
-  const pPrice = parseFloat(match.purchase_price) || 0;
-  if (match.price_includes_tax && pPrice > 2500) {
+// Valuation rate for an item: its purchase price, converted from
+// tax-inclusive to taxable value when applicable.
+function getItemRate(item) {
+  const pPrice = parseFloat(item.purchase_price) || 0;
+  if (item.price_includes_tax && pPrice > 2500) {
     return Math.round((pPrice / 1.18) * 100) / 100;
   }
   return pPrice;
 }
 
-// Computes the total stock value of non-gas inventory items (Empty Cylinders,
-// Regulators, Convertors, fittings, etc.) dynamically from the items catalog.
-function getOtherCatalogItemsValue(items) {
-  return (items || [])
-    .filter(i => {
-      const name = (i.name || '').toLowerCase();
-      return !name.includes('19.2') && !name.includes('21kg') && !name.includes('21 kg') && !name.includes('15kg');
-    })
-    .reduce((sum, i) => {
-      const qty = parseFloat(i.current_stock) || 0;
-      const price = parseFloat(i.purchase_price) || 0;
-      return sum + Math.max(0, qty * price);
-    }, 0);
-}
+// Total stock VALUE (Rs) across every catalog item as of targetDate.
+export function getTotalStockValueAsOf(targetDate, items = [], ledgerRows = [], transactions = {}) {
+  const target = toDateOnly(targetDate);
+  if (!target || target < BUSINESS_INCEPTION_DATE) return 0;
+  if (target in VERIFIED_TOTAL_STOCK_VALUE) return VERIFIED_TOTAL_STOCK_VALUE[target];
 
-// Total stock VALUE (₹) across database items catalog + dynamic filled commercial cylinders as of targetDate.
-export function getTotalStockValueAsOf(targetDate, ledgerRows, items) {
-  // 1. Before business inception / first inventory entry (before 16-July-2024), stock is ₹ 0.00
-  if (!targetDate || targetDate < '2024-07-16') {
-    return 0;
-  }
+  const total = (items || []).reduce((sum, item) => {
+    const qty = getItemQtyAsOf(item, target, ledgerRows, transactions);
+    const rate = getItemRate(item);
+    return sum + Math.max(0, qty * rate);
+  }, 0);
 
-  // 2. Authoritative Financial Year 2026-27 Opening Stock Baseline from MyBillBook
-  if (targetDate === '2026-03-31' || targetDate === '2026-04-01') {
-    return 285420.00;
-  }
-
-  const otherItemsValue = getOtherCatalogItemsValue(items);
-  const qty192 = getStockQtyAsOf('19.2kg', targetDate, ledgerRows, items);
-  const qty21 = getStockQtyAsOf('21kg', targetDate, ledgerRows, items);
-  const rate192 = findItemRate('19.2kg', items);
-  const rate21 = findItemRate('21kg', items);
-  const filledCylindersValue = Math.max(0, qty192 * rate192) + Math.max(0, qty21 * rate21);
-  return Math.round((otherItemsValue + filledCylindersValue) * 100) / 100;
+  return Math.round(total * 100) / 100;
 }

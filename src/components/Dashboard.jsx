@@ -1,13 +1,21 @@
-import React, { useMemo } from 'react';
-import { FileText, TrendingUp, Package, Percent, ChevronRight } from 'lucide-react';
-import { norm, getAllPartiesCurrentBalances } from '../utils/dataUtils';
+import React, { useMemo, useState } from 'react';
+import { FileText, TrendingUp, Package, Percent, Receipt } from 'lucide-react';
+import { getAllPartiesCurrentBalances, getFifoInvoiceStatuses } from '../utils/dataUtils';
+import DateRangePicker, { PRESETS } from './DateRangePicker';
 
-export default function Dashboard({ restaurants = [], restaurantProfiles = {}, bills = [], payments = [], setTab }) {
+function formatLocalYMD(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+export default function Dashboard({ restaurants = [], restaurantProfiles = {}, bills = [], payments = [], purchaseBills = [], legacyLedgerEntries = [], setTab }) {
 
   // Single-pass accurate party balance calculation
   const partyBalanceMap = useMemo(() => {
-    return getAllPartiesCurrentBalances(restaurantProfiles, bills, payments);
-  }, [restaurantProfiles, bills, payments]);
+    return getAllPartiesCurrentBalances(restaurantProfiles, bills, payments, legacyLedgerEntries);
+  }, [restaurantProfiles, bills, payments, legacyLedgerEntries]);
 
   // Total money pending to collect across customer accounts
   const totalToCollect = useMemo(() => {
@@ -17,28 +25,90 @@ export default function Dashboard({ restaurants = [], restaurantProfiles = {}, b
     }, 0);
   }, [partyBalanceMap]);
 
-  // Top active customer restaurants sorted by highest pending balance
-  const topActiveList = useMemo(() => {
-    const list = (restaurants || []).map(r => ({
-      ...r,
-      balance: partyBalanceMap[norm(r.name)] || 0
-    }));
-    // Also include any customer profiles with positive balance not present in current cylinder deliveries
-    Object.entries(partyBalanceMap).forEach(([normName, bal]) => {
-      if (bal > 0 && !normName.toLowerCase().includes('gaspoint') && !list.some(r => norm(r.name) === normName)) {
-        list.push({
-          name: normName,
-          outstanding: 0,
-          total: 0,
-          balance: bal
-        });
-      }
+  // Recent Activity: unified feed of sales, payments & purchases, defaulting to last 7 days
+  const [activityRange, setActivityRange] = useState(() => {
+    const today = new Date();
+    const start = new Date();
+    start.setDate(today.getDate() - 6);
+    return { startDate: formatLocalYMD(start), endDate: formatLocalYMD(today) };
+  });
+
+  // FIFO-allocated paid/unpaid status per invoice, scoped consistently with the official party
+  // balance - see getFifoInvoiceStatuses for why this is needed: a generic "Receive Payment"
+  // doesn't update the specific bill's own amount_paid.
+  const fifoStatuses = useMemo(() => {
+    return getFifoInvoiceStatuses(bills, payments, restaurantProfiles);
+  }, [bills, payments, restaurantProfiles]);
+
+  const activityFeed = useMemo(() => {
+    const { startDate, endDate } = activityRange;
+    const inRange = (d) => d && d >= startDate && d <= endDate;
+    const events = [];
+
+    (bills || []).forEach(b => {
+      const date = (b.bill_date || '').slice(0, 10);
+      if (!inRange(date)) return;
+      const fifo = fifoStatuses.get(b.id);
+      const balance = fifo ? fifo.balance : (parseFloat(b.total_amount || 0) - parseFloat(b.amount_paid || 0));
+      events.push({
+        key: `bill-${b.id}`,
+        date,
+        txn: b.invoice_no || b.id,
+        type: 'Sales Invoice',
+        party: b.restaurant_name || '-',
+        amount: parseFloat(b.total_amount) || 0,
+        sub: balance > 0.5 ? `Rs ${balance.toLocaleString('en-IN')} unpaid` : null,
+        tone: 'sky',
+        typeRank: 3
+      });
     });
-    return list
-      .filter(r => !r.name.toLowerCase().includes('gaspoint'))
-      .sort((a, b) => (b.balance || 0) - (a.balance || 0))
-      .slice(0, 10);
-  }, [restaurants, partyBalanceMap]);
+
+    (payments || []).forEach(p => {
+      const date = (p.date || p.created_at || '').slice(0, 10);
+      if (!inRange(date)) return;
+      events.push({
+        key: `pay-${p.id}`,
+        date,
+        txn: p.id,
+        type: 'Payment In',
+        party: p.restaurant_name || '-',
+        amount: parseFloat(p.amount) || 0,
+        sub: p.payment_mode || null,
+        tone: 'emerald',
+        typeRank: 1
+      });
+    });
+
+    (purchaseBills || []).forEach(pb => {
+      const date = (pb.purchase_date || '').slice(0, 10);
+      if (!inRange(date)) return;
+      events.push({
+        key: `pb-${pb.id}`,
+        date,
+        txn: pb.invoice_no || pb.id,
+        type: 'Purchase',
+        party: pb.supplier_name || '-',
+        amount: parseFloat(pb.total_amount) || 0,
+        sub: null,
+        tone: 'amber',
+        typeRank: 2
+      });
+    });
+
+    // Newest date first; within the same date, match the Passbook's own convention
+    // (Payment -> Supply/Purchase -> Invoice).
+    return events.sort((a, b) => {
+      const dateCmp = b.date.localeCompare(a.date);
+      if (dateCmp !== 0) return dateCmp;
+      return a.typeRank - b.typeRank;
+    });
+  }, [bills, payments, purchaseBills, activityRange, fifoStatuses]);
+
+  const toneClasses = {
+    sky: 'bg-sky-50 text-sky-700 border-sky-200',
+    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    amber: 'bg-amber-50 text-amber-700 border-amber-200'
+  };
 
   return (
     <div className="max-w-4xl mx-auto w-full space-y-6 animate-fadeIn pb-16 px-3 sm:px-6">
@@ -119,48 +189,50 @@ export default function Dashboard({ restaurants = [], restaurantProfiles = {}, b
         </button>
       </div>
 
-      {/* Top Active Restaurants Section */}
-      <div className="bg-white border border-[#EEEEEE] rounded-3xl p-5 sm:p-6 shadow-xs space-y-3">
-        <div className="flex items-center justify-between pb-2 border-b border-[#EEEEEE]">
+      {/* Recent Activity Section */}
+      <div className="bg-white border border-[#EEEEEE] rounded-3xl p-5 sm:p-6 shadow-xs space-y-3.5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#EEEEEE]">
           <div>
-            <h2 className="text-sm sm:text-base font-bold text-[#1A1A1A] tracking-tight">
-              Top Active Restaurants
+            <h2 className="text-sm sm:text-base font-bold text-[#1A1A1A] tracking-tight flex items-center gap-1.5">
+              <Receipt className="w-4 h-4 text-[#737373]" />
+              Recent Activity
             </h2>
-            <p className="text-xs text-[#737373]">Parties with assigned cylinders & pending amounts</p>
+            <p className="text-xs text-[#737373]">Sales, payments & purchases in the selected period</p>
           </div>
-          <button
-            onClick={() => setTab('restaurants')}
-            className="text-xs font-semibold text-sky-600 hover:text-sky-700 hover:underline flex items-center gap-1 cursor-pointer"
-          >
-            <span>View All ({restaurants.length})</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
+          <div className="w-full sm:w-56 shrink-0">
+            <DateRangePicker value={activityRange} onChange={setActivityRange} defaultPreset={PRESETS.LAST_7_DAYS} />
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-          {topActiveList.map((rest) => (
-            <button
-              key={rest.name}
-              id={`btn-restaurant-row-${rest.name}`}
-              onClick={() => setTab('restaurants')}
-              className="w-full flex items-center justify-between p-3.5 bg-[#FDFDFD] hover:bg-[#F5F5F5] rounded-xl border border-[#EEEEEE] hover:border-[#CCCCCC] active:scale-[0.99] transition-all text-left cursor-pointer shadow-none"
+        <div className="space-y-2 pt-1">
+          {activityFeed.length === 0 && (
+            <div className="text-center text-xs text-[#999999] py-6">No activity in this date range.</div>
+          )}
+          {activityFeed.map((ev) => (
+            <div
+              key={ev.key}
+              className="w-full flex items-center justify-between p-3.5 bg-[#FDFDFD] rounded-xl border border-[#EEEEEE]"
             >
               <div className="min-w-0 flex-1 pr-3">
-                <div className="text-xs sm:text-sm font-semibold text-[#1A1A1A] truncate">
-                  {rest.name}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${toneClasses[ev.tone]}`}>
+                    {ev.type}
+                  </span>
+                  <span className="text-[10px] text-[#999999] font-semibold">#{ev.txn}</span>
+                  <span className="text-[10px] text-[#999999]">{ev.date}</span>
                 </div>
-                <div className="text-[11px] text-[#737373] font-normal mt-0.5">
-                  {rest.outstanding || 0} Cylinders Assigned
+                <div className="text-xs sm:text-sm font-semibold text-[#1A1A1A] truncate mt-1">
+                  {ev.party}
                 </div>
+                {ev.sub && (
+                  <div className="text-[11px] text-rose-500 font-medium mt-0.5">{ev.sub}</div>
+                )}
               </div>
 
-              <div className="flex items-center gap-2">
-                <div className={`text-xs sm:text-sm font-bold ${rest.balance > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
-                  ₹ {rest.balance > 0 ? rest.balance.toLocaleString('en-IN') : '0'}
-                </div>
-                <ChevronRight className="w-4 h-4 text-[#CCCCCC]" />
+              <div className="text-xs sm:text-sm font-bold text-[#1A1A1A] shrink-0">
+                ₹ {ev.amount.toLocaleString('en-IN')}
               </div>
-            </button>
+            </div>
           ))}
         </div>
       </div>

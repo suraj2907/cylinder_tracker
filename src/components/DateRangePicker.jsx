@@ -22,8 +22,8 @@ function formatLocalYMD(d) {
   return `${y}-${m}-${day}`;
 }
 
-export default function DateRangePicker({ value = { startDate: '', endDate: '' }, onChange }) {
-  const [activePreset, setActivePreset] = useState(PRESETS.THIS_MONTH);
+export default function DateRangePicker({ value = { startDate: '', endDate: '' }, onChange, defaultPreset = PRESETS.THIS_MONTH }) {
+  const [activePreset, setActivePreset] = useState(defaultPreset);
   const [showDropdown, setShowDropdown] = useState(false);
 
   const getDatesForPreset = (preset, customStart = '', customEnd = '') => {

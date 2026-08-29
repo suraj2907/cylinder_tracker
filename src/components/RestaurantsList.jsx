@@ -24,6 +24,7 @@ function RestaurantsList({
   restaurantProfiles = {},
   onSaveRestaurantProfile,
   bills = [],
+  legacyLedgerEntries = [],
   deleteBill,
   removeDeliveryEntries
 }) {
@@ -34,8 +35,8 @@ function RestaurantsList({
 
   // Single-pass ultra-fast party financial balance map computation (<1ms)
   const partyFinancialMap = useMemo(() => {
-    return getAllPartiesCurrentBalances(restaurantProfiles, bills, payments);
-  }, [restaurantProfiles, bills, payments]);
+    return getAllPartiesCurrentBalances(restaurantProfiles, bills, payments, legacyLedgerEntries);
+  }, [restaurantProfiles, bills, payments, legacyLedgerEntries]);
 
   const totalRupeeOutstandingAll = useMemo(() => {
     return Object.values(partyFinancialMap).reduce((acc, val) => acc + (val > 0 ? val : 0), 0);

@@ -11,6 +11,7 @@ export default function ReceivePaymentModal({
   bills = [],
   payments = [],
   batches = [],
+  legacyLedgerEntries = [],
   onPaymentSuccess
 }) {
   const { currentUser } = useUser();
@@ -84,7 +85,7 @@ export default function ReceivePaymentModal({
     });
 
     // Compute live balance for each canonical party using single-pass map
-    const balanceMap = getAllPartiesCurrentBalances(restaurantProfiles, bills, payments);
+    const balanceMap = getAllPartiesCurrentBalances(restaurantProfiles, bills, payments, legacyLedgerEntries);
 
     const sortedNames = Object.keys(map).sort((a, b) => a.localeCompare(b));
 
@@ -97,7 +98,7 @@ export default function ReceivePaymentModal({
         previous_balance: balanceMap[name] !== undefined ? balanceMap[name] : map[name].previous_balance
       };
     });
-  }, [restaurantProfiles, restaurants, bills, payments]);
+  }, [restaurantProfiles, restaurants, bills, payments, legacyLedgerEntries]);
 
   // Autocomplete matching suggestions based on search query
   const suggestions = useMemo(() => {

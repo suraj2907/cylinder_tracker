@@ -470,7 +470,7 @@ export function isNewPayment(p) {
   return note.includes('Payment Received') || (p.date >= '2026-08-21' && p.id >= 8632 && !note.includes('Legacy') && !note.includes('Official'));
 }
 
-export function getAllPartiesCurrentBalances(restaurantProfiles = {}, bills = [], payments = []) {
+export function getAllPartiesCurrentBalances(restaurantProfiles = {}, bills = [], payments = [], legacyLedgerEntries = []) {
   const map = {};
 
   // 1. Base closing balances from profiles (synced up to 20th August, ONLY Rasoi Restaurant and Route 66 start at 0)
@@ -540,9 +540,66 @@ export function getAllPartiesCurrentBalances(restaurantProfiles = {}, bills = []
   return map;
 }
 
-export function getPartyCurrentBalance(partyName, restaurantProfiles = {}, bills = [], payments = []) {
+export function getPartyCurrentBalance(partyName, restaurantProfiles = {}, bills = [], payments = [], legacyLedgerEntries = []) {
   if (!partyName) return 0;
   const normP = norm(partyName);
-  const map = getAllPartiesCurrentBalances(restaurantProfiles, bills, payments);
+  const map = getAllPartiesCurrentBalances(restaurantProfiles, bills, payments, legacyLedgerEntries);
   return map[normP] || 0;
+}
+
+// FIFO payment allocation per party, for DISPLAY only (does not touch bill.amount_paid in the
+// DB). A generic "Receive Payment" isn't tied to one invoice, so a bill's own amount_paid field
+// can stay stale/unpaid even after the party has paid enough overall to cover it. This mirrors
+// mybillbook's own behaviour: each party's total payments are applied to their oldest bill
+// first, then the next, etc., so a bill only shows unpaid once earlier bills are already covered.
+//
+// Scoped to the SAME "new" bills/payments (isNewBill/isNewPayment) and previous_balance
+// checkpoint that getAllPartiesCurrentBalances uses - using each party's full lifetime
+// bills/payments here instead would silently disagree with the official party balance shown
+// elsewhere (older/legacy bills and payments aren't reliably matched 1:1, so a lifetime FIFO
+// can "pay off" a recent bill using payments that were already accounted for pre-cutoff).
+// Returns a Map keyed by bill.id -> { amountPaid, balance, isPaid }.
+export function getFifoInvoiceStatuses(bills = [], payments = [], restaurantProfiles = {}) {
+  const byParty = {};
+  (bills || []).forEach(b => {
+    if (!isNewBill(b)) return;
+    const normP = norm(b.restaurant_name);
+    if (!byParty[normP]) byParty[normP] = { bills: [], totalPaid: 0 };
+    byParty[normP].bills.push(b);
+  });
+  (payments || []).forEach(p => {
+    if (!isNewPayment(p)) return;
+    const normP = norm(p.restaurant_name || p.restaurantName);
+    if (!byParty[normP]) byParty[normP] = { bills: [], totalPaid: 0 };
+    byParty[normP].totalPaid += parseFloat(p.amount) || 0;
+  });
+
+  const result = new Map();
+  Object.entries(byParty).forEach(([normP, { bills: partyBills, totalPaid }]) => {
+    const profile = Object.values(restaurantProfiles || {}).find(p => norm(p.name) === normP);
+    const isZero = ZERO_BALANCE_PARTIES.some(h => norm(h) === normP);
+    const previousBalance = isZero ? 0 : Math.max(0, parseFloat(profile?.previous_balance || 0));
+
+    const sorted = [...partyBills].sort((a, b) => {
+      const dateCmp = (a.bill_date || '').localeCompare(b.bill_date || '');
+      if (dateCmp !== 0) return dateCmp;
+      return (parseInt(a.invoice_no, 10) || 0) - (parseInt(b.invoice_no, 10) || 0);
+    });
+
+    // Payments first pay down the pre-existing (pre-cutoff) balance; only the leftover is
+    // available to apply against the new bills, oldest first.
+    let remaining = Math.max(0, totalPaid - previousBalance);
+    sorted.forEach(b => {
+      const total = parseFloat(b.total_amount) || 0;
+      const applied = Math.max(0, Math.min(total, remaining));
+      remaining -= applied;
+      result.set(b.id, {
+        amountPaid: Math.round(applied * 100) / 100,
+        balance: Math.round((total - applied) * 100) / 100,
+        isPaid: applied >= total - 0.5
+      });
+    });
+  });
+
+  return result;
 }

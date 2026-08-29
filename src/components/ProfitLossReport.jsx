@@ -70,8 +70,9 @@ export default function ProfitLossReport({
       .filter(p => p.purchase_date >= startDate && p.purchase_date <= endDate)
       .reduce((sum, p) => sum + (parseFloat(p.cgst) || 0) + (parseFloat(p.sgst) || 0), 0);
 
-    const openingStockValue = getTotalStockValueAsOf(prevDate, itemStockLedger, items);
-    const closingStockValue = getTotalStockValueAsOf(endDate, itemStockLedger, items);
+    const stockTransactions = { purchaseBills, bills };
+    const openingStockValue = getTotalStockValueAsOf(prevDate, items, itemStockLedger, stockTransactions);
+    const closingStockValue = getTotalStockValueAsOf(endDate, items, itemStockLedger, stockTransactions);
 
     const taxableSales = (bills || [])
       .filter(b => b.bill_date >= startDate && b.bill_date <= endDate)

@@ -78,7 +78,8 @@ export default function GenerateBill({
   bills = [],
   payments = [],
   nextSuggestedInvoiceNo = 3499,
-  batches = []
+  batches = [],
+  legacyLedgerEntries = []
 }) {
   const [selectedRestaurant, setSelectedRestaurant] = useState('');
   const [search, setSearch] = useState('');
@@ -165,8 +166,8 @@ export default function GenerateBill({
     if (!selectedRestaurant) return 0;
     // Exclude the currently active savedBill to get previous balance before this bill
     const otherBills = (bills || []).filter(b => !savedBill || b.id !== savedBill.id);
-    return getPartyCurrentBalance(selectedRestaurant, restaurantProfiles, otherBills, payments);
-  }, [selectedRestaurant, restaurantProfiles, bills, payments, savedBill]);
+    return getPartyCurrentBalance(selectedRestaurant, restaurantProfiles, otherBills, payments, legacyLedgerEntries);
+  }, [selectedRestaurant, restaurantProfiles, bills, payments, savedBill, legacyLedgerEntries]);
 
   const handleItemChange = (idx, itemId) => {
     const itemObj = itemsCatalog.find(i => i.id === itemId);
