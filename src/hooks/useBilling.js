@@ -336,6 +336,88 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
     return finalBill;
   };
 
+  // Edits an existing bill in place (same id, same invoice number) - reverses the old bill's
+  // side effects (stock deduction, cylinder delivery entry, auto-recorded payment) the same way
+  // deleteBill does, then reapplies them for the new details the same way createBill does, so
+  // stock/cylinder-outstanding/passbook numbers stay correct after the edit.
+  const updateBill = async (id, billData) => {
+    const oldBill = (bills || []).find(b => b.id === id) || (await supabase.from('bills').select('*').eq('id', id).single()).data;
+    if (!oldBill) throw new Error('Original bill not found');
+
+    // 1. Reverse old bill's stock deduction and cylinder delivery entry
+    if (Array.isArray(oldBill.items) && typeof restoreStock === 'function') {
+      restoreStock(oldBill.items);
+    }
+    if (typeof onRemoveDeliveryEntry === 'function') {
+      await onRemoveDeliveryEntry(oldBill.restaurant_name, oldBill.bill_date);
+    }
+    // Remove the old auto-recorded payment tied to this invoice, if any
+    if (oldBill.invoice_no) {
+      const invNote = `Payment Received (INV-${String(oldBill.invoice_no).padStart(4, '0')})`;
+      await supabase.from('payments').delete().ilike('note', `%${invNote}%`);
+    }
+
+    // 2. Apply new bill's stock deduction and cylinder delivery entry
+    const targetRestName = billData.restaurant_name;
+    const targetDate = billData.bill_date;
+    const targetBatchNum = parseInt(billData.batch_num, 10) || oldBill.batch_num || 133;
+
+    if (typeof deductStock === 'function') {
+      deductStock(billData.items);
+    }
+    if (Array.isArray(billData.items) && typeof onAddDeliveryEntry === 'function') {
+      for (const it of billData.items) {
+        const q = parseInt(it.qty, 10) || 0;
+        if (q > 0) {
+          const desc = (it.description || it.item_name || it.name || '').toLowerCase();
+          let cylType = '19.2kg-delivery';
+          if (desc.includes('21')) cylType = '21kg-delivery';
+          else if (desc.includes('15')) cylType = '15kg-delivery';
+          else if (desc.includes('empty') || desc.includes('khali')) continue;
+
+          onAddDeliveryEntry(targetRestName, q, cylType, targetDate, targetBatchNum, false);
+        }
+      }
+    }
+
+    // 3. Update the bill row itself (same id, same invoice_no - just the content changes).
+    // batch_num/restaurant_id aren't real columns on `bills` - only used above to drive the
+    // delivery-entry sync, same as createBill strips them before its insert.
+    const payload = { ...billData };
+    delete payload.id;
+    delete payload.invoice_no;
+    delete payload.created_by;
+    delete payload.created_at;
+    delete payload.batch_num;
+    delete payload.restaurant_id;
+
+    const { data: updated, error } = await supabase.from('bills').update(payload).eq('id', id).select().single();
+    if (error) {
+      console.error('Error updating bill:', error);
+      throw error;
+    }
+
+    setBills(prev => prev.map(b => (b.id === id ? updated : b)));
+
+    // 4. Re-record the auto payment for the new amount_paid, if any
+    const paidAmt = parseFloat(billData.amount_paid || (billData.payment_status === 'paid' ? billData.total_amount : 0)) || 0;
+    if (paidAmt > 0) {
+      const invLabel = `INV-${String(oldBill.invoice_no).padStart(4, '0')}`;
+      const payMode = (billData.payment_type || 'cash').toLowerCase().includes('upi') ? 'UPI' : 'Cash';
+      await supabase.from('payments').insert([{
+        batch_num: targetBatchNum,
+        restaurant_name: targetRestName,
+        amount: paidAmt,
+        payment_mode: payMode,
+        user_name: currentUser || 'Suraj',
+        date: targetDate,
+        note: `Payment Received (${invLabel})`
+      }]);
+    }
+
+    return updated;
+  };
+
   const deleteBill = async (id, onDeliveryRemoved) => {
     // 1. Find bill details before deletion
     let billData = (bills || []).find(b => b.id === id);
@@ -402,6 +484,7 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
     nextSuggestedInvoiceNo,
     saveRestaurantProfile,
     createBill,
+    updateBill,
     deleteBill,
     updateBillStatus,
     recordBillPayment,

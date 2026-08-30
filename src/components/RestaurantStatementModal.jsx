@@ -31,7 +31,8 @@ function RestaurantStatementModal({
   bills = [],
   deleteBill,
   removeDeliveryEntries,
-  restaurantProfiles = {}
+  restaurantProfiles = {},
+  onEditBill
 }) {
   const today = new Date().toISOString().slice(0, 10);
   const currentMonthStr = today.slice(0, 7);
@@ -703,6 +704,14 @@ function RestaurantStatementModal({
                                 Delete
                               </button>
                             )}
+                            {item.kind === 'bill' && item.rawBillObj && onEditBill && (
+                              <button
+                                onClick={() => onEditBill(item.rawBillObj)}
+                                className="px-3 py-1.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 text-xs font-black active:scale-95 cursor-pointer transition-all shadow-2xs mr-1.5"
+                              >
+                                Edit
+                              </button>
+                            )}
                             {item.kind === 'bill' && deleteBill && (
                               <button
                                 onClick={() => performDeleteBill(item)}
@@ -820,6 +829,15 @@ function RestaurantStatementModal({
                                 🗑️
                               </button>
                             )}
+                            {item.kind === 'bill' && item.rawBillObj && onEditBill && (
+                              <button
+                                onClick={() => onEditBill(item.rawBillObj)}
+                                className="px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 text-xs font-bold cursor-pointer active:scale-95 transition-all shadow-2xs inline-flex items-center justify-center mr-1"
+                                title="Edit Invoice"
+                              >
+                                ✏️
+                              </button>
+                            )}
                             {item.kind === 'bill' && deleteBill && (
                               <button
                                 onClick={() => performDeleteBill(item)}
@@ -835,7 +853,7 @@ function RestaurantStatementModal({
                     </tbody>
                   </table>
                 </div>
-                          
+
                 {visibleActivities.length < filteredActivities.length && (
                   <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 no-print">
                     <span>
@@ -916,6 +934,15 @@ function RestaurantStatementModal({
                             >
                               <span>👁️</span> View
                             </button>
+                            {onEditBill && (
+                              <button
+                                onClick={() => onEditBill(b)}
+                                className="w-7 h-7 rounded-lg bg-sky-50 border border-sky-200 text-sky-700 text-xs font-bold flex items-center justify-center cursor-pointer"
+                                title="Edit Invoice"
+                              >
+                                ✏️
+                              </button>
+                            )}
                             <button
                               onClick={() => performDeleteBill({ rawBillObj: b, invoiceLabel: getInvoiceLabel(b) })}
                               className="w-7 h-7 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center justify-center cursor-pointer"
@@ -972,6 +999,15 @@ function RestaurantStatementModal({
                               >
                                 🖨️ View
                               </button>
+                              {onEditBill && (
+                                <button
+                                  onClick={() => onEditBill(b)}
+                                  className="px-2 py-1 rounded-lg bg-sky-50 border border-sky-200 text-sky-700 hover:bg-sky-100 text-[11px] font-bold transition-all cursor-pointer"
+                                  title="Edit Invoice"
+                                >
+                                  ✏️
+                                </button>
+                              )}
                               <button
                                 onClick={() => performDeleteBill({ rawBillObj: b, invoiceLabel: getInvoiceLabel(b) })}
                                 className="px-2 py-1 rounded-lg bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 text-[11px] font-bold transition-all cursor-pointer"

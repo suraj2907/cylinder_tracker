@@ -115,9 +115,17 @@ export default function App() {
     nextSuggestedInvoiceNo,
     saveRestaurantProfile,
     createBill,
+    updateBill,
     deleteBill,
     recordBillPayment
   } = useBilling(currentUser, handleAdd, removeDeliveryEntries, deductStock, restoreStock);
+
+  const [editingBill, setEditingBill] = useState(null);
+  const startEditBill = (bill) => {
+    setEditingBill(bill);
+    setTab('billing');
+  };
+  const stopEditBill = () => setEditingBill(null);
 
   const {
     categories: expenseCategories,
@@ -374,8 +382,8 @@ export default function App() {
         }>
           <div key={tab} className="animate-fadeIn">
             {tab === "dashboard" && <Dashboard restaurants={restaurants} batchStats={batchStats} restMap={restMap} totAll={totAll} tot21={tot21} tot192={tot192} totEmpty={totEmpty} totOutstanding={totOutstanding} restaurantProfiles={restaurantProfiles} bills={bills} payments={payments} purchaseBills={purchaseBills} legacyLedgerEntries={legacyLedgerEntries} setTab={setTab} />}
-            {tab === "restaurants" && <RestaurantsList restaurants={restaurants} tot21={tot21} tot192={tot192} totEmpty={totEmpty} totEmpty21={totEmpty21} totEmpty192={totEmpty192} totAll={totAll} totOutstanding={totOutstanding} search={search} setSearch={setSearch} sortBy={sortBy} setSortBy={setSortBy} batches={batches} payments={payments} handleDeleteEntry={handleDeleteEntry} onDeletePayment={handleDeletePayment} restaurantProfiles={restaurantProfiles} onSaveRestaurantProfile={saveRestaurantProfile} bills={bills} legacyLedgerEntries={legacyLedgerEntries} deleteBill={deleteBill} removeDeliveryEntries={removeDeliveryEntries} />}
-            {tab === "billing" && <GenerateBill restaurants={restaurants} restaurantProfiles={restaurantProfiles} createBill={createBill} itemsCatalog={itemsCatalog} partyItemPrices={partyItemPrices} bills={bills} payments={payments} nextSuggestedInvoiceNo={nextSuggestedInvoiceNo} batches={batches} legacyLedgerEntries={legacyLedgerEntries} />}
+            {tab === "restaurants" && <RestaurantsList restaurants={restaurants} tot21={tot21} tot192={tot192} totEmpty={totEmpty} totEmpty21={totEmpty21} totEmpty192={totEmpty192} totAll={totAll} totOutstanding={totOutstanding} search={search} setSearch={setSearch} sortBy={sortBy} setSortBy={setSortBy} batches={batches} payments={payments} handleDeleteEntry={handleDeleteEntry} onDeletePayment={handleDeletePayment} restaurantProfiles={restaurantProfiles} onSaveRestaurantProfile={saveRestaurantProfile} bills={bills} legacyLedgerEntries={legacyLedgerEntries} deleteBill={deleteBill} removeDeliveryEntries={removeDeliveryEntries} onEditBill={startEditBill} />}
+            {tab === "billing" && <GenerateBill restaurants={restaurants} restaurantProfiles={restaurantProfiles} createBill={createBill} updateBill={updateBill} editingBill={editingBill} onDoneEditing={stopEditBill} itemsCatalog={itemsCatalog} partyItemPrices={partyItemPrices} bills={bills} payments={payments} nextSuggestedInvoiceNo={nextSuggestedInvoiceNo} batches={batches} legacyLedgerEntries={legacyLedgerEntries} />}
             {tab === "outstandingBills" && <OutstandingBills bills={bills} recordBillPayment={recordBillPayment} />}
             {tab === "inventory" && <InventoryManager items={itemsCatalog} purchaseBills={purchaseBills} stockAdjustments={stockAdjustments} partyItemPrices={partyItemPrices} restaurants={restaurants} saveItem={saveItem} saveStockAdjustment={saveStockAdjustment} savePurchaseBill={savePurchaseBill} deletePurchaseBill={deletePurchaseBill} savePartyPrice={savePartyPrice} deletePartyPrice={deletePartyPrice} />}
             {tab === "expenses" && <ExpenseTracker categories={expenseCategories} expenseItems={expenseItems} expenses={expenses} saveCategory={saveCategory} deleteCategory={deleteCategory} saveExpenseItem={saveExpenseItem} deleteExpenseItem={deleteExpenseItem} saveExpense={saveExpense} deleteExpense={deleteExpense} />}

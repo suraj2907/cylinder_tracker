@@ -73,6 +73,9 @@ export default function GenerateBill({
   restaurants = [],
   restaurantProfiles = {},
   createBill,
+  updateBill,
+  editingBill = null,
+  onDoneEditing,
   itemsCatalog = [],
   partyItemPrices = [],
   bills = [],
@@ -109,10 +112,24 @@ export default function GenerateBill({
   }, [nextSuggestedInvoiceNo]);
 
   useEffect(() => {
-    if (latestActiveBatch) {
+    if (latestActiveBatch && !editingBill) {
       setBatchNum(String(latestActiveBatch));
     }
-  }, [latestActiveBatch]);
+  }, [latestActiveBatch, editingBill]);
+
+  // Pre-fill the whole form from the bill being edited
+  useEffect(() => {
+    if (editingBill) {
+      setSelectedRestaurant(editingBill.restaurant_name || '');
+      setGstMode(editingBill.gst_mode || 'gst');
+      setBillDate((editingBill.bill_date || '').slice(0, 10) || new Date().toISOString().slice(0, 10));
+      setCustomInvoiceNo(String(editingBill.invoice_no || editingBill.legacy_invoice_no || ''));
+      setBatchNum(String(editingBill.batch_num || latestActiveBatch));
+      setItems(Array.isArray(editingBill.items) && editingBill.items.length ? editingBill.items : [emptyItem()]);
+      setSavedBill(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingBill]);
 
   // Comprehensive party list combining Supabase restaurant profiles, valid list, and cylinder list with canonical deduplication
   const allAvailableParties = useMemo(() => {
@@ -269,24 +286,44 @@ export default function GenerateBill({
 
       const restObj = restaurantProfiles[selectedRestaurant] || {};
       const chosenBatch = parseInt(batchNum, 10) || latestActiveBatch;
-      const bill = await createBill({
-        restaurant_name: selectedRestaurant,
-        restaurant_id: restObj.id || undefined,
-        bill_date: billDate,
-        batch_num: chosenBatch,
-        invoice_no: customInvoiceNo ? parseInt(customInvoiceNo, 10) : undefined,
-        gst_mode: gstMode,
-        items,
-        subtotal: totals.subtotal,
-        taxable_amount: totals.taxable,
-        cgst: totals.cgst,
-        sgst: totals.sgst,
-        total_amount: totals.total,
-        due_date: dueDate,
-        payment_status: 'unpaid',
-        amount_paid: 0
-      });
-      setSavedBill(bill);
+
+      if (editingBill) {
+        const bill = await updateBill(editingBill.id, {
+          restaurant_name: selectedRestaurant,
+          bill_date: billDate,
+          batch_num: chosenBatch,
+          gst_mode: gstMode,
+          items,
+          subtotal: totals.subtotal,
+          taxable_amount: totals.taxable,
+          cgst: totals.cgst,
+          sgst: totals.sgst,
+          total_amount: totals.total,
+          due_date: dueDate,
+          payment_status: editingBill.payment_status || 'unpaid',
+          amount_paid: editingBill.amount_paid || 0
+        });
+        setSavedBill(bill);
+      } else {
+        const bill = await createBill({
+          restaurant_name: selectedRestaurant,
+          restaurant_id: restObj.id || undefined,
+          bill_date: billDate,
+          batch_num: chosenBatch,
+          invoice_no: customInvoiceNo ? parseInt(customInvoiceNo, 10) : undefined,
+          gst_mode: gstMode,
+          items,
+          subtotal: totals.subtotal,
+          taxable_amount: totals.taxable,
+          cgst: totals.cgst,
+          sgst: totals.sgst,
+          total_amount: totals.total,
+          due_date: dueDate,
+          payment_status: 'unpaid',
+          amount_paid: 0
+        });
+        setSavedBill(bill);
+      }
     } catch (err) {
       alert('Bill save nahi hua: ' + err.message);
     } finally {
@@ -330,6 +367,10 @@ export default function GenerateBill({
         <div className="flex justify-between items-center no-print flex-wrap gap-2.5 bg-white p-4 rounded-2xl border border-slate-200 shadow-soft">
           <button
             onClick={() => {
+              if (editingBill) {
+                if (typeof onDoneEditing === 'function') onDoneEditing();
+                return;
+              }
               const nextNo = (savedBill?.invoice_no ? parseInt(savedBill.invoice_no, 10) + 1 : nextSuggestedInvoiceNo);
               setCustomInvoiceNo(String(nextNo));
               setSavedBill(null);
@@ -338,7 +379,7 @@ export default function GenerateBill({
             }}
             className="text-xs font-black text-sky-700 hover:text-sky-900 flex items-center gap-1 cursor-pointer bg-sky-50 px-3 py-2 rounded-xl border border-sky-200"
           >
-            ← Naya Bill Banao
+            {editingBill ? '← Done, Back to Ledger' : '← Naya Bill Banao'}
           </button>
           <div className="flex items-center gap-2">
             <button
@@ -591,11 +632,21 @@ export default function GenerateBill({
     <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-soft space-y-6 max-w-2xl mx-auto animate-fadeIn pb-12">
       <div className="flex items-center justify-between border-b border-slate-100 pb-3">
         <h2 className="text-base font-black text-slate-900 tracking-tight flex items-center gap-2">
-          Create New Invoice
+          {editingBill ? `Edit Invoice ${getInvoiceLabel(editingBill)}` : 'Create New Invoice'}
         </h2>
-        <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-lg bg-sky-50 text-sky-700 border border-sky-200">
-          GST & Plain Billing
-        </span>
+        <div className="flex items-center gap-2">
+          {editingBill && typeof onDoneEditing === 'function' && (
+            <button
+              onClick={onDoneEditing}
+              className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200 cursor-pointer"
+            >
+              Cancel
+            </button>
+          )}
+          <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-lg bg-sky-50 text-sky-700 border border-sky-200">
+            {editingBill ? 'Editing' : 'GST & Plain Billing'}
+          </span>
+        </div>
       </div>
 
       <div>
@@ -649,7 +700,8 @@ export default function GenerateBill({
             <span className="absolute left-3 top-2 text-xs font-black text-slate-400">INV-</span>
             <input
               type="number"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-3 py-2 text-xs font-black focus:outline-none focus:border-sky-500 focus:bg-white shadow-xs"
+              disabled={!!editingBill}
+              className={`w-full border border-slate-200 rounded-xl pl-11 pr-3 py-2 text-xs font-black focus:outline-none focus:border-sky-500 shadow-xs ${editingBill ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'bg-slate-50 focus:bg-white'}`}
               value={customInvoiceNo}
               onChange={e => setCustomInvoiceNo(e.target.value)}
               placeholder="3499"
@@ -837,10 +889,10 @@ export default function GenerateBill({
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
             </svg>
-            <span>Creating Invoice...</span>
+            <span>{editingBill ? 'Updating Invoice...' : 'Creating Invoice...'}</span>
           </>
         ) : (
-          '⚡ Generate & Preview'
+          editingBill ? '💾 Update Invoice' : '⚡ Generate & Preview'
         )}
       </button>
     </div>

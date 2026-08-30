@@ -4,7 +4,7 @@ export const TABS = [
   { id: "dashboard", label: "📊 Dashboard" },
   { id: "batches", label: "📦 Batches & Supply" },
   { id: "payments", label: "💰 Cashflow & Wallet" },
-  { id: "outstandingBills", label: "⏳ Pending Bills" },
+  // { id: "outstandingBills", label: "⏳ Pending Bills" }, // hidden for now - re-add this line to bring the tab back
   { id: "billing", label: "🧾 Generate Bill" },
   { id: "inventory", label: "📦 Inventory & Stock" },
   { id: "expenses", label: "💸 Expenses" },

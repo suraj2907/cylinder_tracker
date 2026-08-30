@@ -26,7 +26,8 @@ function RestaurantsList({
   bills = [],
   legacyLedgerEntries = [],
   deleteBill,
-  removeDeliveryEntries
+  removeDeliveryEntries,
+  onEditBill
 }) {
   const [selectedHotelForPassbook, setSelectedHotelForPassbook] = useState(null);
   const [editingRestaurant, setEditingRestaurant] = useState(null);
@@ -401,6 +402,7 @@ function RestaurantsList({
           deleteBill={deleteBill}
           removeDeliveryEntries={removeDeliveryEntries}
           restaurantProfiles={restaurantProfiles}
+          onEditBill={onEditBill ? (bill) => { setSelectedHotelForPassbook(null); onEditBill(bill); } : undefined}
         />
       )}
 

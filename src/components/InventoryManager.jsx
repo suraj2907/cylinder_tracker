@@ -1170,7 +1170,7 @@ function PurchaseBillModal({ items, purchaseBills = [], onClose, onSavePurchase 
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-[99] p-2 sm:p-4 overflow-y-auto">
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-2xl p-4 sm:p-6 space-y-3.5 animate-fadeIn flex flex-col max-h-[92vh]">
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-2xl p-4 sm:p-6 space-y-3.5 animate-fadeIn flex flex-col max-h-[92vh] overflow-y-auto">
         {/* Header */}
         <div className="flex justify-between items-center border-b border-slate-100 pb-3 shrink-0">
           <h3 className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-1.5">
@@ -1215,8 +1215,9 @@ function PurchaseBillModal({ items, purchaseBills = [], onClose, onSavePurchase 
           </div>
         </div>
 
-        {/* Line Items Table */}
-        <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 max-h-[38vh]">
+        {/* Line Items Table - part of the single form scroll now (not its own nested scroll box),
+            so it can't get squeezed down to a sliver on short mobile viewports. */}
+        <div className="space-y-2.5 shrink-0">
           <div className="flex justify-between items-center flex-wrap gap-1">
             <span className="text-[10px] font-bold text-slate-500 uppercase">Purchase Line Items</span>
             <button
