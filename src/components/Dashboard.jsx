@@ -53,13 +53,13 @@ export default function Dashboard({ restaurants = [], restaurantProfiles = {}, b
       events.push({
         key: `bill-${b.id}`,
         date,
+        createdAt: b.created_at || '',
         txn: b.invoice_no || b.id,
         type: 'Sales Invoice',
         party: b.restaurant_name || '-',
         amount: parseFloat(b.total_amount) || 0,
         sub: balance > 0.5 ? `Rs ${balance.toLocaleString('en-IN')} unpaid` : null,
-        tone: 'sky',
-        typeRank: 3
+        tone: 'sky'
       });
     });
 
@@ -69,13 +69,13 @@ export default function Dashboard({ restaurants = [], restaurantProfiles = {}, b
       events.push({
         key: `pay-${p.id}`,
         date,
+        createdAt: p.created_at || '',
         txn: p.id,
         type: 'Payment In',
         party: p.restaurant_name || '-',
         amount: parseFloat(p.amount) || 0,
         sub: p.payment_mode || null,
-        tone: 'emerald',
-        typeRank: 1
+        tone: 'emerald'
       });
     });
 
@@ -85,23 +85,21 @@ export default function Dashboard({ restaurants = [], restaurantProfiles = {}, b
       events.push({
         key: `pb-${pb.id}`,
         date,
+        createdAt: pb.created_at || '',
         txn: pb.invoice_no || pb.id,
         type: 'Purchase',
         party: pb.supplier_name || '-',
         amount: parseFloat(pb.total_amount) || 0,
         sub: null,
-        tone: 'amber',
-        typeRank: 2
+        tone: 'amber'
       });
     });
 
-    // Newest date first; within the same date, match the Passbook's own convention
-    // (Payment -> Supply/Purchase -> Invoice).
-    return events.sort((a, b) => {
-      const dateCmp = b.date.localeCompare(a.date);
-      if (dateCmp !== 0) return dateCmp;
-      return a.typeRank - b.typeRank;
-    });
+    // Most recently uploaded/entered into the database first - not grouped by transaction date,
+    // so this reflects the actual order things were recorded (e.g. a bulk historical import lands
+    // together, a live entry shows up the moment it's added), rather than the Passbook's own
+    // date+type convention.
+    return events.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   }, [bills, payments, purchaseBills, activityRange, fifoStatuses]);
 
   const toneClasses = {
