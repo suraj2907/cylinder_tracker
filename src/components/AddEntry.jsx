@@ -6,16 +6,15 @@ export default function AddEntry({ newEntry, setNewEntry, handleAdd, restMap, ba
   const [activeForm, setActiveForm] = useState('return'); // Default to Khali Tanki Return (Lena)
   const [weight, setWeight] = useState('19.2kg'); // '19.2kg' | '21kg'
 
-  // Same fix as GenerateBill: this used to be "maxB >= 132 ? 133 : maxB + 1", which always took
-  // the 133 branch since maxB starts at 132 and only grows - silently ignoring the real latest
-  // batch number.
+  // The currently open batch to tag new entries with - the highest batch_num that already exists,
+  // not maxB + 1 (that would be a batch that hasn't been started yet). Same fix as GenerateBill.
   const latestActiveBatch = useMemo(() => {
     let maxB = 132;
     (batches || []).forEach(b => {
       const num = parseInt(b.batch || b.batch_num, 10);
       if (!isNaN(num) && num > maxB) maxB = num;
     });
-    return maxB + 1;
+    return maxB;
   }, [batches]);
 
   // newEntry lives in the parent hook, not local state, so it survives tab navigation - without

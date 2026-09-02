@@ -516,8 +516,8 @@ export default function App() {
                     <div className="space-y-1">
                       {[
                         { id: "billing", label: "🧾 Create New Invoice", desc: "Generate GST & Supply bills" },
-                        { id: "inventory", label: "📦 Stock & Inventory", desc: "Live stock & catalog rates", badge: lowStockItems.length > 0 ? `${lowStockItems.length} Low` : null },
-                        { id: "outstandingBills", label: "⏳ Pending Invoices", desc: "Unpaid customer invoices" }
+                        { id: "inventory", label: "📦 Stock & Inventory", desc: "Live stock & catalog rates", badge: lowStockItems.length > 0 ? `${lowStockItems.length} Low` : null }
+                        // { id: "outstandingBills", label: "⏳ Pending Invoices", desc: "Unpaid customer invoices" }, // hidden alongside the TABS entry in useHashNavigation.js - re-add both together to bring it back
                       ].map(item => (
                         <button
                           key={item.id}

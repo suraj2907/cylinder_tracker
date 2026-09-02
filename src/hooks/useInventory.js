@@ -14,13 +14,15 @@ export function useInventory(currentUser) {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const [resItems, resPurchases, resAdj, resPartyPrices, resBills, resLedger] = await Promise.all([
+      // item_stock_ledger has no backing table in Supabase (confirmed PGRST205 "not found in schema
+      // cache") - fetching it always 500s, so it's left out of the request set entirely and
+      // itemStockLedger just stays on its static ledgerFallback default (set at useState above).
+      const [resItems, resPurchases, resAdj, resPartyPrices, resBills] = await Promise.all([
         fetch('/api/db?table=items&order=name&asc=true', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null),
         fetch('/api/db?table=purchase_bills&order=purchase_date&asc=false', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null),
         fetch('/api/db?table=stock_adjustments&order=created_at&asc=false', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null),
         fetch('/api/db?table=party_item_prices', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null),
-        fetch('/api/db?table=bills', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null),
-        fetch('/api/db?table=item_stock_ledger&order=import_seq&asc=true', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null)
+        fetch('/api/db?table=bills', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null)
       ]);
 
       if (resItems && resPurchases && resAdj && resPartyPrices && resBills) {
@@ -29,7 +31,6 @@ export function useInventory(currentUser) {
         setStockAdjustments(resAdj || []);
         setPartyItemPrices(resPartyPrices || []);
         setBills(resBills || []);
-        if (resLedger && resLedger.length > 0) setItemStockLedger(resLedger);
         return;
       }
 
@@ -38,15 +39,13 @@ export function useInventory(currentUser) {
         { data: purchasesData },
         { data: adjustmentsData },
         { data: partyPricesData },
-        { data: billsData },
-        { data: ledgerData }
+        { data: billsData }
       ] = await Promise.all([
         supabase.from('items').select('*').order('name'),
         supabase.from('purchase_bills').select('*').order('purchase_date', { ascending: false }),
         supabase.from('stock_adjustments').select('*').order('created_at', { ascending: false }),
         supabase.from('party_item_prices').select('*'),
-        supabase.from('bills').select('*'),
-        supabase.from('item_stock_ledger').select('*').order('import_seq', { ascending: true })
+        supabase.from('bills').select('*')
       ]);
 
       setItems(itemsData || []);
@@ -54,7 +53,6 @@ export function useInventory(currentUser) {
       setStockAdjustments(adjustmentsData || []);
       setPartyItemPrices(partyPricesData || []);
       setBills(billsData || []);
-      if (ledgerData && ledgerData.length > 0) setItemStockLedger(ledgerData);
     } catch (e) {
       console.error("Error loading inventory data:", e);
     } finally {

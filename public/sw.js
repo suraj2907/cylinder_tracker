@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cylinder-tracker-v10';
+const CACHE_NAME = 'cylinder-tracker-v11';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -44,6 +44,13 @@ self.addEventListener('fetch', event => {
 
   // Bypass external APIs (e.g., Supabase)
   if (url.origin !== self.location.origin) return;
+
+  // Bypass this app's own dynamic API routes (e.g. /api/db) - these serve live database data
+  // and must never be cached or intercepted. Letting them fall through to the network-first
+  // handler below risked the SPA-fallback HTML (served for any unmatched same-origin path) being
+  // cached under an /api/db?... key and replayed as a "200 OK" response with an HTML body instead
+  // of JSON - this silently broke every hook's data fetch while looking like a success.
+  if (url.pathname.startsWith('/api/')) return;
 
   // Network-First for HTML, Scripts & Styles so installed PWA always has latest code
   event.respondWith(

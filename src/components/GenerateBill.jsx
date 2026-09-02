@@ -90,17 +90,16 @@ export default function GenerateBill({
   const [billDate, setBillDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [customInvoiceNo, setCustomInvoiceNo] = useState('');
 
-  // Compute active batch (e.g. Batch #133 if 132 is the latest existing one). This was previously
-  // "maxB >= 132 ? 133 : maxB + 1" - since maxB starts at 132 and only ever grows, that condition
-  // was always true, so it silently returned a hardcoded 133 no matter how many real batches had
-  // been created since.
+  // The currently open batch to tag new bills with - the highest batch_num that already exists
+  // (a fresh batch row is created via "Start Batch #N" in Batches tab before it shows up here).
+  // This must NOT be maxB + 1: that would tag bills onto a batch that hasn't been started yet.
   const latestActiveBatch = useMemo(() => {
     let maxB = 132;
     (batches || []).forEach(b => {
       const num = parseInt(b.batch || b.batch_num, 10);
       if (!isNaN(num) && num > maxB) maxB = num;
     });
-    return maxB + 1;
+    return maxB;
   }, [batches]);
 
   const [batchNum, setBatchNum] = useState(() => String(latestActiveBatch));
