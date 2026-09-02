@@ -13,13 +13,15 @@ export default function BatchesList({
   const [expandedEntriesBatch, setExpandedEntriesBatch] = useState(null);
   const [showNewBatchModal, setShowNewBatchModal] = useState(false);
 
+  // "maxB >= 132 ? 133 : maxB + 1" always took the 133 branch (maxB starts at 132 and only
+  // grows), silently ignoring the real latest batch number - same bug as GenerateBill/AddEntry.
   const nextSuggestedBatch = useMemo(() => {
     let maxB = 132;
     (batches || []).forEach(b => {
       const num = parseInt(b.batch || b.batch_num, 10);
       if (!isNaN(num) && num > maxB) maxB = num;
     });
-    return maxB >= 132 ? 133 : (maxB + 1);
+    return maxB + 1;
   }, [batches]);
 
   const [newBatchNum, setNewBatchNum] = useState('');

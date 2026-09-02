@@ -6,23 +6,33 @@ export default function AddEntry({ newEntry, setNewEntry, handleAdd, restMap, ba
   const [activeForm, setActiveForm] = useState('return'); // Default to Khali Tanki Return (Lena)
   const [weight, setWeight] = useState('19.2kg'); // '19.2kg' | '21kg'
 
+  // Same fix as GenerateBill: this used to be "maxB >= 132 ? 133 : maxB + 1", which always took
+  // the 133 branch since maxB starts at 132 and only grows - silently ignoring the real latest
+  // batch number.
   const latestActiveBatch = useMemo(() => {
     let maxB = 132;
     (batches || []).forEach(b => {
       const num = parseInt(b.batch || b.batch_num, 10);
       if (!isNaN(num) && num > maxB) maxB = num;
     });
-    return maxB >= 132 ? 133 : (maxB + 1);
+    return maxB + 1;
   }, [batches]);
+
+  // newEntry lives in the parent hook, not local state, so it survives tab navigation - without
+  // always re-syncing to the current active batch, it would keep showing whatever batch was last
+  // typed/active on a previous visit instead of today's. Mirrors how GenerateBill keeps its own
+  // batch field in sync.
+  useEffect(() => {
+    setNewEntry(p => ({ ...p, batchNum: String(latestActiveBatch) }));
+  }, [latestActiveBatch, setNewEntry]);
 
   useEffect(() => {
     setNewEntry(p => ({
       ...p,
-      batchNum: p.batchNum || String(latestActiveBatch),
       type: `${weight}-${activeForm}`,
       date: p.date || new Date().toISOString().split('T')[0]
     }));
-  }, [activeForm, weight, setNewEntry, latestActiveBatch]);
+  }, [activeForm, weight, setNewEntry]);
 
   return (
     <div className="space-y-6 fade">
