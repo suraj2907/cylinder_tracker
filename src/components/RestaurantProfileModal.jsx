@@ -9,9 +9,19 @@ export default function RestaurantProfileModal({ restaurantName = '', existingPr
   const [prevBal, setPrevBal] = useState(existingProfile?.previous_balance !== undefined ? existingProfile.previous_balance : '');
   const [saving, setSaving] = useState(false);
 
+  // A GST-registered party's name always stays in FULL CAPS (matches what goes on record for
+  // GST filing / the CA) - applied live so what's shown here is exactly what gets saved.
+  const hasGst = gstNum.trim().length > 0;
+  const handleNameChange = (val) => setName(hasGst ? val.toUpperCase() : val);
+  const handleGstChange = (val) => {
+    const upper = val.toUpperCase();
+    setGstNum(upper);
+    if (upper.trim() && !hasGst) setName(prev => prev.toUpperCase());
+  };
+
   const handleSave = async (e) => {
     if (e) e.preventDefault();
-    const finalName = name.trim();
+    const finalName = (hasGst ? name.trim().toUpperCase() : name.trim());
     if (!finalName) {
       alert('Kripya Restaurant / Customer ka naam enter kijiye.');
       return;
@@ -77,9 +87,12 @@ export default function RestaurantProfileModal({ restaurantName = '', existingPr
               autoFocus
               className="mt-1 w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-extrabold text-slate-900 focus:outline-none focus:border-sky-500 focus:bg-white shadow-xs transition-all"
               value={name}
-              onChange={e => setName(e.target.value)}
+              onChange={e => handleNameChange(e.target.value)}
               placeholder="e.g. Hotel Radhika, Suraj Dhaba, etc."
             />
+            {hasGst && (
+              <span className="text-[10px] text-sky-600 font-bold mt-0.5 block">GST registered - naam hamesha CAPITAL mein save hoga.</span>
+            )}
           </div>
 
           {/* Phone / Mobile */}
@@ -104,7 +117,7 @@ export default function RestaurantProfileModal({ restaurantName = '', existingPr
             <input
               className="mt-1 w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-black text-slate-900 uppercase focus:outline-none focus:border-sky-500 focus:bg-white shadow-xs transition-all tracking-wider"
               value={gstNum}
-              onChange={e => setGstNum(e.target.value.toUpperCase())}
+              onChange={e => handleGstChange(e.target.value)}
               placeholder="e.g. 22AAAAA0000A1Z5"
             />
             <span className="text-[10px] text-slate-400 font-semibold mt-0.5 block">Agar GST registered nahi hai to khali chhod dein.</span>
