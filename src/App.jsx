@@ -44,9 +44,7 @@ const InventoryManager = lazyWithRetry(() => import('./components/InventoryManag
 const ExpenseTracker = lazyWithRetry(() => import('./components/ExpenseTracker'));
 const SalesSummaryDashboard = lazyWithRetry(() => import('./components/SalesSummaryDashboard'));
 const ProfitLossReport = lazyWithRetry(() => import('./components/ProfitLossReport'));
-const Gstr3bReport = lazyWithRetry(() => import('./components/Gstr3bReport'));
-const Gstr1Report = lazyWithRetry(() => import('./components/Gstr1Report'));
-const GstPurchaseReport = lazyWithRetry(() => import('./components/GstPurchaseReport'));
+const GstReportsHub = lazyWithRetry(() => import('./components/GstReportsHub'));
 const OutstandingBills = lazyWithRetry(() => import('./components/OutstandingBills'));
 
 export default function App() {
@@ -391,9 +389,7 @@ export default function App() {
             {tab === "expenses" && <ExpenseTracker categories={expenseCategories} expenseItems={expenseItems} expenses={expenses} saveCategory={saveCategory} deleteCategory={deleteCategory} saveExpenseItem={saveExpenseItem} deleteExpenseItem={deleteExpenseItem} saveExpense={saveExpense} deleteExpense={deleteExpense} />}
             {tab === "salesReport" && <SalesSummaryDashboard bills={bills} restaurants={restaurants} deleteBill={deleteBill} />}
             {tab === "profitLoss" && <ProfitLossReport items={itemsCatalog} purchaseBills={purchaseBills} stockAdjustments={stockAdjustments} bills={bills} expenses={expenses} itemStockLedger={itemStockLedger} />}
-            {tab === "gstReport" && <Gstr3bReport items={itemsCatalog} purchaseBills={purchaseBills} bills={bills} />}
-            {tab === "gstr1" && <Gstr1Report bills={bills} restaurantProfiles={restaurantProfiles} />}
-            {tab === "gstPurchase" && <GstPurchaseReport purchaseBills={purchaseBills} items={itemsCatalog} />}
+            {tab === "gstReport" && <GstReportsHub bills={bills} restaurantProfiles={restaurantProfiles} purchaseBills={purchaseBills} items={itemsCatalog} />}
             {tab === "payments" && <PaymentLedger payments={payments} onAddPayment={handleAddPayment} onDeletePayment={handleDeletePayment} batches={batches} onUpdateBatchCost={handleUpdateBatchCost} restMap={restMap} expenses={expenses} />}
             {tab === "calendar" && <CalendarView dateMap={dateMap} selectedDate={selectedDate} setSelectedDate={setSelectedDate} handleDeleteEntry={handleDeleteEntry} payments={payments} batches={batches} bills={bills} deleteBill={deleteBill} removeDeliveryEntries={removeDeliveryEntries} restaurantProfiles={restaurantProfiles} onDeletePayment={handleDeletePayment} />}
             {tab === "batches" && <BatchesList filteredBatches={filteredBatches} batchSearch={batchSearch} setBatchSearch={setBatchSearch} handleDeleteBatch={handleDeleteBatch} handleUpdateBatchCost={handleUpdateBatchCost} handleAdd={handleAdd} batches={batches} />}
@@ -558,9 +554,7 @@ export default function App() {
                         { id: "payments", label: "💰 Cashflow & Wallet", desc: "Daily payment collections log" },
                         { id: "salesReport", label: "📈 Reports & Analytics", desc: "Sales volume & party trends" },
                         { id: "profitLoss", label: "📊 Profit & Loss", desc: "P&L statements & gross margin" },
-                        { id: "gstr1", label: "🧾 GSTR-1 (Sales)", desc: "Every GST invoice, CA-ready" },
-                        { id: "gstPurchase", label: "🚚 GST Purchase", desc: "Line-item purchase HSN report" },
-                        { id: "gstReport", label: "📋 GSTR-3B Report", desc: "Monthly tax liability & ITC" }
+                        { id: "gstReport", label: "🧾 GST Reports", desc: "GSTR-1, Purchase & GSTR-3B" }
                       ].map(item => (
                         <button
                           key={item.id}
