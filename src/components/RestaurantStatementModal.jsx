@@ -913,44 +913,42 @@ function RestaurantStatementModal({
                           </span>
                         </div>
 
-                        <div className="flex items-center justify-between pt-0.5">
-                          <div>
-                            <span className="text-[10px] text-slate-400 font-bold block uppercase">Invoice Total</span>
-                            <span className="text-sm font-black text-slate-900">
-                              ₹{Number(b.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                            </span>
-                          </div>
+                        <div className="pt-0.5">
+                          <span className="text-[10px] text-slate-400 font-bold block uppercase">Invoice Total</span>
+                          <span className="text-sm font-black text-slate-900">
+                            ₹{Number(b.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
 
-                          <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="flex items-center flex-wrap gap-1.5">
+                          <button
+                            onClick={() => handleShareBillOnWhatsApp(b)}
+                            className="px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white text-[11px] font-black hover:bg-emerald-700 shadow-xs flex items-center gap-1 cursor-pointer"
+                          >
+                            <span>📤</span> WhatsApp
+                          </button>
+                          <button
+                            onClick={() => setSelectedBillForPrint(b)}
+                            className="px-2.5 py-1.5 rounded-lg bg-sky-600 text-white text-[11px] font-black hover:bg-sky-700 shadow-xs flex items-center gap-1 cursor-pointer"
+                          >
+                            <span>👁️</span> View
+                          </button>
+                          {onEditBill && (
                             <button
-                              onClick={() => handleShareBillOnWhatsApp(b)}
-                              className="px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white text-[11px] font-black hover:bg-emerald-700 shadow-xs flex items-center gap-1 cursor-pointer"
+                              onClick={() => onEditBill(b)}
+                              className="w-7 h-7 rounded-lg bg-sky-50 border border-sky-200 text-sky-700 text-xs font-bold flex items-center justify-center cursor-pointer shrink-0"
+                              title="Edit Invoice"
                             >
-                              <span>📤</span> WhatsApp
+                              ✏️
                             </button>
-                            <button
-                              onClick={() => setSelectedBillForPrint(b)}
-                              className="px-2.5 py-1.5 rounded-lg bg-sky-600 text-white text-[11px] font-black hover:bg-sky-700 shadow-xs flex items-center gap-1 cursor-pointer"
-                            >
-                              <span>👁️</span> View
-                            </button>
-                            {onEditBill && (
-                              <button
-                                onClick={() => onEditBill(b)}
-                                className="w-7 h-7 rounded-lg bg-sky-50 border border-sky-200 text-sky-700 text-xs font-bold flex items-center justify-center cursor-pointer"
-                                title="Edit Invoice"
-                              >
-                                ✏️
-                              </button>
-                            )}
-                            <button
-                              onClick={() => performDeleteBill({ rawBillObj: b, invoiceLabel: getInvoiceLabel(b) })}
-                              className="w-7 h-7 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center justify-center cursor-pointer"
-                              title="Delete Invoice"
-                            >
-                              🗑️
-                            </button>
-                          </div>
+                          )}
+                          <button
+                            onClick={() => performDeleteBill({ rawBillObj: b, invoiceLabel: getInvoiceLabel(b) })}
+                            className="w-7 h-7 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center justify-center cursor-pointer shrink-0"
+                            title="Delete Invoice"
+                          >
+                            🗑️
+                          </button>
                         </div>
                       </div>
                     ))}
