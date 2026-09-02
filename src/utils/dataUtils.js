@@ -1,12 +1,28 @@
 
 // --- FUZZY NAME NORMALIZER ---
 export const ALIASES = {
+  // GST-registered parties keep their registered name in FULL CAPS everywhere (bills included,
+  // to match what goes on record for GST filing / the CA). norm()'s fallback only Title-Cases
+  // unknown input, so every all-caps canonical needs an explicit self-mapping entry here or it
+  // gets silently Title-Cased back down the moment it passes through norm().
+  "Grandvista Ventures Private Limited": "GRANDVISTA VENTURES PRIVATE LIMITED",
+  "Annapurna Dairy": "ANNAPURNA DAIRY",
+  "Hotel Amora": "M/S HOTEL AMORA",
+  "M/S Hotel Amora": "M/S HOTEL AMORA",
+  "Hotel Arena": "HOTEL ARENA",
+  "Hotel Railies": "HOTEL RAILIES",
+  "Magnaura Flavours And Co": "MAGNAURA FLAVOURS AND CO",
+  "Simran Restaurant": "SIMRAN SWEETS",
+  "Simran Sweets": "SIMRAN SWEETS",
+  "Sharma Bakery": "SHARMA BAKERY",
+  "Shri Jalaram Fastfood": "SHRI JALARAM FASTFOOD",
+  "Gurudev Rice Mill": "SHRI GURUDEV AGRO INDIA PRIVATE LIMITED",
+  "Shri Gurudev Agro India Private Limited": "SHRI GURUDEV AGRO INDIA PRIVATE LIMITED",
+
   // Historical CSV normalizations
   "Rahul Panchmukhi Paratha": "Punchmukhi Paratha",
   "Karnail Singh Bhatia": "Jasbeer Kaur Bhatia",
-  "SIMRAN SWEETS": "Simran Restaurant",
   "Parvez Bhiya Kalp": "Kalp",
-  "M/S HOTEL AMORA": "Hotel Amora",
   "Chandu Chai And Cafe": "Chandu Chai",
   "Monu M@ggi": "Monu Maggie",
   "Maggie Center": "Monu Maggie",
@@ -14,7 +30,7 @@ export const ALIASES = {
   "Maggi Center": "Monu Maggie",
   "Maggi Centre": "Monu Maggie",
   "Maa Patal Bhairvi Hotel": "Maa Patal Bhairvi",
-  "Jalaram Namkeen": "Shri Jalaram Fastfood",
+  "Jalaram Namkeen": "SHRI JALARAM FASTFOOD",
   "Route 66 Cafe Pendri": "Route 66",
   "Moti Sweets G-E Road": "Moti sweets GE Road",
   "Rasoi Resturant": "Rasoi Restaurant",
@@ -30,10 +46,9 @@ export const ALIASES = {
   "Amrit The Cafe": "Amrit the Cafe",
   "Herbal Tea Bhadoriya Chowk": "Herbal Tea",
   "Dudh Sagar": "Doodh Sagar",
-  "Mangaura": "Magnaura",
+  "Mangaura": "MAGNAURA FLAVOURS AND CO",
   "Shivam": "Suryakant Sahu",
   "Vijay": "Vijay Laxmi Project",
-  "Shri Gurudev Agro India Private Limited": "Gurudev Rice Mill",
 
   // Samrat Bakery
   "Samrat Bamery": "Samrat Bakery",
@@ -141,9 +156,9 @@ export const ALIASES = {
   "Khalsa gurudwara": "Khalsa Hotel",
   "Khalsa hotel": "Khalsa Hotel",
   // Hotel Arena
-  "Arena": "Hotel Arena",
-  "Hotel arena -": "Hotel Arena",
-  "Hotel arena": "Hotel Arena",
+  "Arena": "HOTEL ARENA",
+  "Hotel arena -": "HOTEL ARENA",
+  "Hotel arena": "HOTEL ARENA",
   // Sher-e-punjab
   "Sher e punjab": "Sher-e-punjab",
   "Sher -e-punjab": "Sher-e-punjab",
@@ -201,9 +216,10 @@ export const ALIASES = {
   // Apna ghar
   "Apna ghr": "Apna Ghar Manki",
   "Apna ghar": "Apna Ghar Manki",
-  // Ashwini
+  // Ashwini and Ashwini Amritulaya are two separate real parties (confirmed via their own
+  // mybillbook ledgers - different phone numbers, different sales history), not aliases of
+  // each other.
   "Ashwini amritulaya-": "Ashwini Amritulaya",
-  "Ashwini": "Ashwini Amritulaya",
   // Ravi
   "Ravi bhiya": "Ravi Bhaiya",
   // King's
@@ -212,11 +228,11 @@ export const ALIASES = {
   "Grill in": "Gril Inn",
   "Grill inn": "Gril Inn",
   // Simran
-  "Simran restaurant -; 1  14": "Simran Restaurant",
-  "Simran restaurant -; 1 14": "Simran Restaurant",
-  "Simran": "Simran Restaurant",
-  "Simran hotel": "Simran Restaurant",
-  "Simran restaurant": "Simran Restaurant",
+  "Simran restaurant -; 1  14": "SIMRAN SWEETS",
+  "Simran restaurant -; 1 14": "SIMRAN SWEETS",
+  "Simran": "SIMRAN SWEETS",
+  "Simran hotel": "SIMRAN SWEETS",
+  "Simran restaurant": "SIMRAN SWEETS",
   // Route 66
   "Route-66": "Route 66",
   "Route": "Route 66",
@@ -229,10 +245,10 @@ export const ALIASES = {
   // Gwalior
   "Gwalior chat corner": "Gwalior Chaat Corner",
   // Hotel Railies
-  "Railies": "Hotel Railies",
-  "railies": "Hotel Railies",
-  "Hotel railies": "Hotel Railies",
-  "hotel railies": "Hotel Railies",
+  "Railies": "HOTEL RAILIES",
+  "railies": "HOTEL RAILIES",
+  "Hotel railies": "HOTEL RAILIES",
+  "hotel railies": "HOTEL RAILIES",
   // Coffee Toffee
   "Coffe toffee": "Coffee Toffee",
   "Coffee toffee": "Coffee Toffee"
@@ -243,8 +259,9 @@ export const VALID_RESTAURANTS = [
   "Amrit the Cafe",
   "Amrit Veg Dhaba",
   "Amritsari Dhaba",
-  "Annapurna Dairy",
+  "ANNAPURNA DAIRY",
   "Apna Ghar Manki",
+  "Ashwini",
   "Ashwini Amritulaya",
   "Bajrang Hotel",
   "Bajrang Tadka Point",
@@ -258,13 +275,14 @@ export const VALID_RESTAURANTS = [
   "Doodh Sagar",
   "Embassy",
   "Gagan Engineering",
+  "GRANDVISTA VENTURES PRIVATE LIMITED",
   "Gril Inn",
   "Gwalior Chaat Corner",
   "Herbal Tea",
   "Highway Dhaba",
-  "Hotel Arena",
+  "HOTEL ARENA",
   "Hotel Ark",
-  "Hotel Railies",
+  "HOTEL RAILIES",
   "Hotel Swagatam",
   "Hydrabadi Biryani",
   "Jalaram Cafe",
@@ -272,10 +290,10 @@ export const VALID_RESTAURANTS = [
   "Khalsa Hotel",
   "Khandelwal Hotel",
   "Krishna Cafe And Hotel",
-  "Hotel Amora",
+  "M/S HOTEL AMORA",
   "Maa Patal Bhairvi",
   "Manav Mandir",
-  "Magnaura",
+  "MAGNAURA FLAVOURS AND CO",
   "Mini Punjab Dhaba",
   "Mitra Da Dhaba",
   "Monu Maggie",
@@ -300,14 +318,14 @@ export const VALID_RESTAURANTS = [
   "Sahu Hotel",
   "Suryakant Sahu",
   "Samrat Bakery",
-  "Sharma Bakery",
+  "SHARMA BAKERY",
   "Sher-e-punjab",
-  "Gurudev Rice Mill",
-  "Shri Jalaram Fastfood",
+  "SHRI GURUDEV AGRO INDIA PRIVATE LIMITED",
+  "SHRI JALARAM FASTFOOD",
   "Shri Venkatesh Fast Food",
   "Shivam",
   "Silver Spoon",
-  "Simran Restaurant",
+  "SIMRAN SWEETS",
   "Singh's Restaurant",
   "South Express",
   "Spice Delight",
