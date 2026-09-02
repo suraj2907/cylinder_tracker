@@ -1061,7 +1061,7 @@ function PurchaseBillModal({ items, purchaseBills = [], onClose, onSavePurchase 
     return maxNo > 0 ? String(maxNo + 1) : '148';
   }, [purchaseBills]);
 
-  const [supplierName, setSupplierName] = useState('Gaspoint Petroleum (India) Limited');
+  const [supplierName, setSupplierName] = useState('GASPOINT PETROLEUM (INDIA) LIMITED');
   const [invoiceNo, setInvoiceNo] = useState(nextPurchaseInvoiceNo);
   const [purchaseDate, setPurchaseDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [purchaseNote, setPurchaseNote] = useState('');

@@ -41,9 +41,17 @@ export default function Gstr3bReport({
     bills.forEach(b => {
       if (b.bill_date >= startDate && b.bill_date <= endDate) {
         if (b.gst_mode === 'gst') {
-          outwardTaxableVal += parseFloat(b.taxable_amount) || 0;
-          outwardCgst += parseFloat(b.cgst) || 0;
-          outwardSgst += parseFloat(b.sgst) || 0;
+          const taxableAmt = parseFloat(b.taxable_amount) || 0;
+          const cgstAmt = parseFloat(b.cgst) || 0;
+          const sgstAmt = parseFloat(b.sgst) || 0;
+          const totalAmt = parseFloat(b.total_amount) || 0;
+          outwardTaxableVal += taxableAmt;
+          outwardCgst += cgstAmt;
+          outwardSgst += sgstAmt;
+          // A GST-mode bill can still carry a nil-rated line item (Empty Cylinder etc) mixed in
+          // with taxed ones - whatever's left after subtracting the taxed portion is that.
+          const nilRatedInBill = totalAmt - taxableAmt - cgstAmt - sgstAmt;
+          if (nilRatedInBill > 0.01) outwardNilRatedVal += nilRatedInBill;
         } else {
           outwardNilRatedVal += parseFloat(b.total_amount) || 0;
         }

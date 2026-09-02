@@ -228,10 +228,14 @@ export default function GenerateBill({
   const addItem = () => setItems(prev => [...prev, emptyItem()]);
   const removeItem = (idx) => setItems(prev => prev.filter((_, i) => i !== idx));
 
-  // Compute GST based on individual line items
+  // Compute GST based on individual line items. Nil-rated lines (Empty Cylinder etc, 0% GST)
+  // are tracked separately from `taxable` - they must NOT be folded into it, or GSTR-1/GSTR-3B
+  // would report them as taxable sales instead of nil-rated ones (this exact bug produced a real
+  // ~Rs.93k reporting gap in historical data, traced and fixed on 2026-09-02).
   const totals = useMemo(() => {
     let subtotal = 0;
     let taxable = 0;
+    let nilRated = 0;
     let cgst = 0;
     let sgst = 0;
 
@@ -243,16 +247,16 @@ export default function GenerateBill({
         taxable += lineTotal;
       } else {
         const itemObj = itemsCatalog.find(cat => cat.id === it.item_id);
-        const isGstFree = (itemObj && (itemObj.gst_applicable === false || 
-                                       itemObj.name.toLowerCase().includes('empty') || 
+        const isGstFree = (itemObj && (itemObj.gst_applicable === false ||
+                                       itemObj.name.toLowerCase().includes('empty') ||
                                        itemObj.name.toLowerCase().includes('khali'))) ||
-                           (it.description && (it.description.toLowerCase().includes('empty') || 
+                           (it.description && (it.description.toLowerCase().includes('empty') ||
                                                it.description.toLowerCase().includes('khali')));
-        
+
         const lineGstRate = isGstFree ? 0 : (parseFloat(it.gst_rate) || 18);
 
         if (lineGstRate === 0) {
-          taxable += lineTotal;
+          nilRated += lineTotal;
         } else {
           const lineTaxable = lineTotal / (1 + lineGstRate / 100);
           const lineTax = lineTotal - lineTaxable;
@@ -266,6 +270,7 @@ export default function GenerateBill({
     return {
       subtotal: Number(subtotal.toFixed(2)),
       taxable: Number(taxable.toFixed(2)),
+      nilRated: Number(nilRated.toFixed(2)),
       cgst: Number(cgst.toFixed(2)),
       sgst: Number(sgst.toFixed(2)),
       total: Number(subtotal.toFixed(2))

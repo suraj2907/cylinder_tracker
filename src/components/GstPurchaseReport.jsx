@@ -43,7 +43,7 @@ export default function GstPurchaseReport({ purchaseBills = [], items = [] }) {
             date: p.purchase_date,
             invoiceNo: p.invoice_no || `#${p.id}`,
             supplierGstin: SUPPLIER_GSTIN,
-            supplierName: 'Gaspoint Petroleum (India) Limited',
+            supplierName: 'GASPOINT PETROLEUM (INDIA) LIMITED',
             itemName: line.item_name || line.description || itemObj?.name || 'Item',
             hsn: line.hsn || itemObj?.hsn_code || '-',
             qty,
