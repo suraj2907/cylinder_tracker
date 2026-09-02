@@ -13,11 +13,10 @@ function PaymentLedgerComponent({
 }) {
   const { currentUser } = useUser();
   const latestBatchNum = useMemo(() => {
-    if (batches && batches.length > 0) {
-      const sorted = [...batches].sort((a, b) => Number(b.batch) - Number(a.batch));
-      return Number(sorted[0]?.batch) || 133;
-    }
-    return 133;
+    const nums = (batches || []).map(b => Number(b.batch)).filter(n => !isNaN(n));
+    // 128 matches this file's own "tracked batches start at #128" convention below - only used
+    // on the split-second before real batch data has loaded, never a real current batch number.
+    return nums.length ? Math.max(...nums) : 128;
   }, [batches]);
 
   const [showAddModal, setShowAddModal] = useState(false);

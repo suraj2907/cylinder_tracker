@@ -16,11 +16,10 @@ export default function ReceivePaymentModal({
 }) {
   const { currentUser } = useUser();
   const activeBatchNum = useMemo(() => {
-    if (batches && batches.length > 0) {
-      const sorted = [...batches].sort((a, b) => Number(b.batch) - Number(a.batch));
-      return Number(sorted[0]?.batch) || 133;
-    }
-    return 133;
+    const nums = (batches || []).map(b => Number(b.batch)).filter(n => !isNaN(n));
+    // 128 matches the Cashflow tab's own "tracked batches start at #128" convention - only used
+    // on the split-second before real batch data has loaded, never a real current batch number.
+    return nums.length ? Math.max(...nums) : 128;
   }, [batches]);
 
   const [targetBatchNum, setTargetBatchNum] = useState(activeBatchNum);
@@ -323,11 +322,7 @@ export default function ReceivePaymentModal({
                   </option>
                 ))
               ) : (
-                <>
-                  <option value={133}>Batch #133 (Active Current Batch)</option>
-                  <option value={132}>Batch #132</option>
-                  <option value={131}>Batch #131</option>
-                </>
+                <option value={activeBatchNum}>Batch #{activeBatchNum} (Active Current Batch)</option>
               )}
             </select>
             <p className="text-[10.5px] text-emerald-700 font-medium">
