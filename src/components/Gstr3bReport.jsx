@@ -216,7 +216,37 @@ Non GST supply,0.0,0.0
               3.1 Details of Outward supplies and Inward supplies liable to reverse charge
             </h3>
           </div>
-          <div className="overflow-x-auto">
+
+          {/* MOBILE CARDS */}
+          <div className="block lg:hidden divide-y divide-slate-100">
+            <div className="p-4 space-y-1.5">
+              <span className="text-xs font-black text-slate-800 block">Outward taxable supplies</span>
+              <span className="text-[10px] text-slate-400 font-semibold block">(Other than zero rated, nil rated and exempted)</span>
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Taxable Value</span>
+                <span className="text-sm font-black text-slate-900">₹{reportData.outwardTaxableVal.toFixed(2)}</span>
+              </div>
+              <div className="flex items-center gap-3 text-[10px] text-slate-500 font-bold">
+                <span>CGST ₹{reportData.outwardCgst.toFixed(2)}</span>
+                <span>SGST ₹{reportData.outwardSgst.toFixed(2)}</span>
+              </div>
+            </div>
+            <div className="p-4 space-y-1.5">
+              <span className="text-xs font-black text-slate-800 block">Outward taxable supplies</span>
+              <span className="text-[10px] text-slate-400 font-semibold block">(Nil rated and exempted)</span>
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-[10px] font-bold text-slate-500 uppercase">Value</span>
+                <span className="text-sm font-black text-slate-900">₹{reportData.outwardNilRatedVal.toFixed(2)}</span>
+              </div>
+            </div>
+            <div className="p-4">
+              <span className="text-xs font-bold text-slate-400 block">Inward supplies (Liable to reverse charge)</span>
+              <span className="text-sm font-black text-slate-400">₹0.00</span>
+            </div>
+          </div>
+
+          {/* DESKTOP TABLE */}
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-xs text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-[10px] uppercase font-bold text-slate-400">
@@ -265,7 +295,24 @@ Non GST supply,0.0,0.0
               4. Details of Eligible Input Tax Credit (ITC)
             </h3>
           </div>
-          <div className="overflow-x-auto">
+
+          {/* MOBILE CARDS */}
+          <div className="block lg:hidden divide-y divide-slate-100">
+            <div className="p-4 space-y-1.5">
+              <span className="text-xs font-black text-slate-800 block">(A) ITC Available - All other ITC</span>
+              <div className="flex items-center gap-3 text-[11px] text-slate-700 font-bold pt-1">
+                <span>CGST ₹{reportData.itcCgst.toFixed(2)}</span>
+                <span>SGST ₹{reportData.itcSgst.toFixed(2)}</span>
+              </div>
+            </div>
+            <div className="p-4">
+              <span className="text-xs font-bold text-slate-400 block">(D) Ineligible ITC - As per section 17(5)</span>
+              <span className="text-sm font-black text-slate-400">₹0.00</span>
+            </div>
+          </div>
+
+          {/* DESKTOP TABLE */}
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-xs text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-[10px] uppercase font-bold text-slate-400">
@@ -303,7 +350,21 @@ Non GST supply,0.0,0.0
               5. Details of exempt, nil-rated and non-GST inward supplies
             </h3>
           </div>
-          <div className="overflow-x-auto">
+
+          {/* MOBILE CARDS */}
+          <div className="block lg:hidden divide-y divide-slate-100">
+            <div className="p-4 space-y-1">
+              <span className="text-xs font-black text-slate-800 block">From a supplier under composition scheme, Exempt and Nil rated supply</span>
+              <span className="text-sm font-black text-slate-700">₹{reportData.exemptPurchaseVal.toFixed(2)} <span className="text-[10px] font-bold text-slate-400 uppercase">Intra-State</span></span>
+            </div>
+            <div className="p-4">
+              <span className="text-xs font-bold text-slate-400 block">Non-GST supply</span>
+              <span className="text-sm font-black text-slate-400">₹0.00</span>
+            </div>
+          </div>
+
+          {/* DESKTOP TABLE */}
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-xs text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-[10px] uppercase font-bold text-slate-400">

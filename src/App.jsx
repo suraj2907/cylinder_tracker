@@ -45,6 +45,8 @@ const ExpenseTracker = lazyWithRetry(() => import('./components/ExpenseTracker')
 const SalesSummaryDashboard = lazyWithRetry(() => import('./components/SalesSummaryDashboard'));
 const ProfitLossReport = lazyWithRetry(() => import('./components/ProfitLossReport'));
 const Gstr3bReport = lazyWithRetry(() => import('./components/Gstr3bReport'));
+const Gstr1Report = lazyWithRetry(() => import('./components/Gstr1Report'));
+const GstPurchaseReport = lazyWithRetry(() => import('./components/GstPurchaseReport'));
 const OutstandingBills = lazyWithRetry(() => import('./components/OutstandingBills'));
 
 export default function App() {
@@ -390,6 +392,8 @@ export default function App() {
             {tab === "salesReport" && <SalesSummaryDashboard bills={bills} restaurants={restaurants} deleteBill={deleteBill} />}
             {tab === "profitLoss" && <ProfitLossReport items={itemsCatalog} purchaseBills={purchaseBills} stockAdjustments={stockAdjustments} bills={bills} expenses={expenses} itemStockLedger={itemStockLedger} />}
             {tab === "gstReport" && <Gstr3bReport items={itemsCatalog} purchaseBills={purchaseBills} bills={bills} />}
+            {tab === "gstr1" && <Gstr1Report bills={bills} restaurantProfiles={restaurantProfiles} />}
+            {tab === "gstPurchase" && <GstPurchaseReport purchaseBills={purchaseBills} items={itemsCatalog} />}
             {tab === "payments" && <PaymentLedger payments={payments} onAddPayment={handleAddPayment} onDeletePayment={handleDeletePayment} batches={batches} onUpdateBatchCost={handleUpdateBatchCost} restMap={restMap} expenses={expenses} />}
             {tab === "calendar" && <CalendarView dateMap={dateMap} selectedDate={selectedDate} setSelectedDate={setSelectedDate} handleDeleteEntry={handleDeleteEntry} payments={payments} batches={batches} bills={bills} deleteBill={deleteBill} removeDeliveryEntries={removeDeliveryEntries} restaurantProfiles={restaurantProfiles} onDeletePayment={handleDeletePayment} />}
             {tab === "batches" && <BatchesList filteredBatches={filteredBatches} batchSearch={batchSearch} setBatchSearch={setBatchSearch} handleDeleteBatch={handleDeleteBatch} handleUpdateBatchCost={handleUpdateBatchCost} handleAdd={handleAdd} batches={batches} />}
@@ -554,7 +558,9 @@ export default function App() {
                         { id: "payments", label: "💰 Cashflow & Wallet", desc: "Daily payment collections log" },
                         { id: "salesReport", label: "📈 Reports & Analytics", desc: "Sales volume & party trends" },
                         { id: "profitLoss", label: "📊 Profit & Loss", desc: "P&L statements & gross margin" },
-                        { id: "gstReport", label: "🧾 GSTR-3B Report", desc: "Monthly tax liability & ITC" }
+                        { id: "gstr1", label: "🧾 GSTR-1 (Sales)", desc: "Every GST invoice, CA-ready" },
+                        { id: "gstPurchase", label: "🚚 GST Purchase", desc: "Line-item purchase HSN report" },
+                        { id: "gstReport", label: "📋 GSTR-3B Report", desc: "Monthly tax liability & ITC" }
                       ].map(item => (
                         <button
                           key={item.id}
