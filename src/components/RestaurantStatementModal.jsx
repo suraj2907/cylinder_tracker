@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, memo } from 'react';
-import { formatIsoDate, normType, getInvoiceLabel, norm, isNewPayment, isNewBill, ZERO_BALANCE_PARTIES, getPartyBalanceAroundBill } from '../utils/dataUtils';
+import { formatIsoDate, normType, getInvoiceLabel, norm, isNewPayment, isNewBill, ZERO_BALANCE_PARTIES, getPartyBalanceAroundBill, getPartyCurrentBalance } from '../utils/dataUtils';
 import { exportPartyLedgerPDF, exportPartyLedgerExcel, shareInvoicePDFOnWhatsApp, exportBillPDF } from '../utils/exportUtils';
 import { supabase } from '../utils/supabaseClient';
 
@@ -355,13 +355,14 @@ function RestaurantStatementModal({
   }, [allRestaurantActivities, currentMonthStr]);
 
 
-  // Live computed net balance of this party from all activities
+  // Live computed net balance of this party - must be the same canonical isNewBill/isNewPayment
+  // total the Directory and Dashboard show. allRestaurantActivities[0].runningBalance looked like
+  // the natural source (it's the newest row's running balance) but it replays raw legacy
+  // ledgerRows on a different model, so for a party with any official ledger history it silently
+  // disagreed with the live total shown everywhere else in the app.
   const netPartyOutstanding = useMemo(() => {
-    if (allRestaurantActivities && allRestaurantActivities.length > 0) {
-      return allRestaurantActivities[0]?.runningBalance ?? openingBalance;
-    }
-    return openingBalance;
-  }, [allRestaurantActivities, openingBalance]);
+    return getPartyCurrentBalance(restaurantName, restaurantProfiles, bills, payments);
+  }, [restaurantName, restaurantProfiles, bills, payments]);
 
   const closingBalance = netPartyOutstanding;
 
@@ -401,12 +402,16 @@ function RestaurantStatementModal({
   const getBillProfile = (rName, bill) => {
     const rawProf = (restaurantProfiles && (restaurantProfiles[rName] || restaurantProfiles[norm(rName)])) || profile || {};
     let prevBalForBill = parseFloat(rawProf.previous_balance !== undefined ? rawProf.previous_balance : openingBalance);
+    let currentBalForBill;
     if (bill) {
-      prevBalForBill = getPartyBalanceAroundBill(bill, restaurantProfiles, bills, payments).prevBal;
+      const around = getPartyBalanceAroundBill(bill, restaurantProfiles, bills, payments);
+      prevBalForBill = around.prevBal;
+      currentBalForBill = around.currentBal;
     }
     return {
       ...rawProf,
-      previous_balance: prevBalForBill
+      previous_balance: prevBalForBill,
+      ...(currentBalForBill !== undefined ? { current_balance: currentBalForBill } : {})
     };
   };
 
@@ -1203,13 +1208,17 @@ function RestaurantStatementModal({
                 const totAmt = Number(selectedBillForPrint.total_amount || selectedBillForPrint.amount || selectedBillForPrint.debit || 0);
                 const paidAmt = Number(selectedBillForPrint.amount_paid || (selectedBillForPrint.payment_status === 'paid' ? totAmt : 0));
                 const bName = selectedBillForPrint.restaurant_name || selectedBillForPrint.restaurantName || restaurantName || '';
-                // Same source as the PDF/WhatsApp share (getBillProfile's allRestaurantActivities
-                // lookup) so the on-screen preview always matches what actually gets sent. The
-                // previous version filtered `otherBills` to before this invoice but passed
-                // `payments` unfiltered - any payment dated on/after this bill (almost always true
-                // for an active party) got summed in anyway and silently zeroed the balance.
-                const prevBal = getBillProfile(bName, selectedBillForPrint).previous_balance;
-                const currentBal = prevBal + totAmt - paidAmt;
+                // Same source as the PDF/WhatsApp share (getPartyBalanceAroundBill) so the
+                // on-screen preview always matches what actually gets sent. currentBal is the
+                // party's TRUE balance right now, not "previous + this bill's own amount_paid" -
+                // a payment recorded separately against the party's account (the normal case for
+                // "Receive Payment", even same-day) would otherwise never reduce what the invoice
+                // claims is still due.
+                const billProfileForPrint = getBillProfile(bName, selectedBillForPrint);
+                const prevBal = billProfileForPrint.previous_balance;
+                const currentBal = billProfileForPrint.current_balance !== undefined
+                  ? billProfileForPrint.current_balance
+                  : prevBal + totAmt - paidAmt;
 
                 return (
                   <div className="space-y-3">

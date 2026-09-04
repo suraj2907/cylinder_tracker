@@ -565,13 +565,15 @@ export function getPartyCurrentBalance(partyName, restaurantProfiles = {}, bills
   return map[normP] || 0;
 }
 
-// A party's outstanding balance immediately before, and immediately after, one specific bill was
-// posted - what an invoice PDF/WhatsApp share must show as "Previous Balance" / "Total Balance
-// Due". Reuses the exact same base-balance + isNewBill/isNewPayment chronological replay as
-// getAllPartiesCurrentBalances (so it always agrees with the Directory/Dashboard's live totals),
-// but stops the replay right before the target bill instead of summing every bill/payment the
-// party has ever had - a bill's own total_amount minus today's live balance is only the correct
-// "previous balance" when that bill happens to be the party's single most recent transaction.
+// What an invoice PDF/WhatsApp share must show as "Previous Balance" (the party's balance
+// immediately before this specific bill - historically accurate, unaffected by anything since)
+// and "Total Balance Due" (the party's TRUE outstanding balance right now, matching what the
+// Directory/Dashboard show). These are deliberately not "previous + this bill's own amount_paid":
+// a "Receive Payment" is recorded against the party's account, not tied to one invoice, so a
+// same-day (or later) payment that fully covers this exact bill would otherwise never show up -
+// re-sending an invoice after the customer already paid would still claim the full amount is due.
+// Reuses the same base-balance + isNewBill/isNewPayment chronological replay as
+// getAllPartiesCurrentBalances so both numbers always agree with the party's live total.
 export function getPartyBalanceAroundBill(targetBill, restaurantProfiles = {}, bills = [], payments = []) {
   if (!targetBill) return { prevBal: 0, currentBal: 0 };
   const normP = norm(targetBill.restaurant_name);
@@ -604,23 +606,21 @@ export function getPartyBalanceAroundBill(targetBill, restaurantProfiles = {}, b
 
   let bal = base;
   let prevBal = base;
-  let currentBal = base;
   let found = false;
   events.forEach(e => {
     if (e.isTarget) { prevBal = bal; found = true; }
     if (e.debit > 0) bal += e.debit;
     if (e.credit > 0) bal = Math.max(0, bal - e.credit);
-    if (e.isTarget) currentBal = bal;
   });
+  // `bal` after the full replay is the party's true balance right now, not just after the target
+  // bill - any payment dated after it (same-day or later) is already folded in.
+  let currentBal = bal;
 
   if (!found) {
     // Target bill isn't a tracked "new" bill (legacy/pre-cutoff import) - its own amount is
     // already folded into the static previous_balance snapshot, so there's no reliable way to
     // reconstruct a true pre-bill balance here. Fall back to the bill's own stored field, if any.
-    const amt = parseFloat(targetBill.total_amount) || 0;
-    const paid = parseFloat(targetBill.amount_paid) || (targetBill.payment_status === 'paid' ? amt : 0);
     prevBal = Math.max(0, parseFloat(targetBill.previous_balance || 0));
-    currentBal = prevBal + amt - paid;
   }
 
   return { prevBal: Math.max(0, prevBal), currentBal: Math.max(0, currentBal) };
