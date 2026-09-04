@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, memo } from 'react';
-import { formatIsoDate, normType, getInvoiceLabel, getPartyCurrentBalance, norm, isNewPayment, isNewBill, ZERO_BALANCE_PARTIES } from '../utils/dataUtils';
+import { formatIsoDate, normType, getInvoiceLabel, norm, isNewPayment, isNewBill, ZERO_BALANCE_PARTIES, getPartyBalanceAroundBill } from '../utils/dataUtils';
 import { exportPartyLedgerPDF, exportPartyLedgerExcel, shareInvoicePDFOnWhatsApp, exportBillPDF } from '../utils/exportUtils';
 import { supabase } from '../utils/supabaseClient';
 
@@ -385,16 +385,28 @@ function RestaurantStatementModal({
 
   const handleShareBillOnWhatsApp = async (bill) => {
     if (!bill) return;
-    const bProf = getBillProfile(bill.restaurant_name);
+    const bProf = getBillProfile(bill.restaurant_name, bill);
     await shareInvoicePDFOnWhatsApp(bill, bProf);
   };
 
-  const getBillProfile = (rName) => {
+  // rName-only calls (address/mobile/GSTIN display) get the party's live snapshot, which is fine
+  // since balance isn't used there. Pass `bill` when the profile feeds an invoice PDF/WhatsApp
+  // share - "Previous Balance" on that invoice must be the party's balance immediately before
+  // THIS bill, not today's live total (only the same thing for the single most recent bill; for
+  // any older one, or one with activity after it, that's wrong). getPartyBalanceAroundBill
+  // replays the same isNewBill/isNewPayment timeline the Directory/Dashboard use, stopping right
+  // before this bill - NOT allRestaurantActivities' runningBalance, which folds in raw legacy
+  // ledger rows on a different balance model and disagrees with the party's live total shown
+  // everywhere else in the app.
+  const getBillProfile = (rName, bill) => {
     const rawProf = (restaurantProfiles && (restaurantProfiles[rName] || restaurantProfiles[norm(rName)])) || profile || {};
+    let prevBalForBill = parseFloat(rawProf.previous_balance !== undefined ? rawProf.previous_balance : openingBalance);
+    if (bill) {
+      prevBalForBill = getPartyBalanceAroundBill(bill, restaurantProfiles, bills, payments).prevBal;
+    }
     return {
       ...rawProf,
-      current_balance: netPartyOutstanding,
-      previous_balance: parseFloat(rawProf.previous_balance !== undefined ? rawProf.previous_balance : openingBalance)
+      previous_balance: prevBalForBill
     };
   };
 
@@ -1075,7 +1087,7 @@ function RestaurantStatementModal({
                 <span className="truncate">Share PDF</span>
               </button>
               <button
-                onClick={() => exportBillPDF(selectedBillForPrint, getBillProfile(selectedBillForPrint.restaurant_name))}
+                onClick={() => exportBillPDF(selectedBillForPrint, getBillProfile(selectedBillForPrint.restaurant_name, selectedBillForPrint))}
                 className="py-2.5 px-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black transition-all shadow-sm cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 text-center"
               >
                 <span className="text-sm">📄</span>
@@ -1191,10 +1203,12 @@ function RestaurantStatementModal({
                 const totAmt = Number(selectedBillForPrint.total_amount || selectedBillForPrint.amount || selectedBillForPrint.debit || 0);
                 const paidAmt = Number(selectedBillForPrint.amount_paid || (selectedBillForPrint.payment_status === 'paid' ? totAmt : 0));
                 const bName = selectedBillForPrint.restaurant_name || selectedBillForPrint.restaurantName || restaurantName || '';
-                const selDate = selectedBillForPrint.bill_date || selectedBillForPrint.entry_date || selectedBillForPrint.date || '';
-                const selNo = parseInt(selectedBillForPrint.invoice_no || selectedBillForPrint.sr_no || selectedBillForPrint.srNo, 10) || 0;
-                const otherBills = (bills || []).filter(b => b && b.id !== selectedBillForPrint.id && (b.bill_date < selDate || (b.bill_date === selDate && (parseInt(b.invoice_no, 10) || 0) < selNo)));
-                const prevBal = getPartyCurrentBalance(bName, restaurantProfiles, otherBills, payments);
+                // Same source as the PDF/WhatsApp share (getBillProfile's allRestaurantActivities
+                // lookup) so the on-screen preview always matches what actually gets sent. The
+                // previous version filtered `otherBills` to before this invoice but passed
+                // `payments` unfiltered - any payment dated on/after this bill (almost always true
+                // for an active party) got summed in anyway and silently zeroed the balance.
+                const prevBal = getBillProfile(bName, selectedBillForPrint).previous_balance;
                 const currentBal = prevBal + totAmt - paidAmt;
 
                 return (

@@ -565,6 +565,67 @@ export function getPartyCurrentBalance(partyName, restaurantProfiles = {}, bills
   return map[normP] || 0;
 }
 
+// A party's outstanding balance immediately before, and immediately after, one specific bill was
+// posted - what an invoice PDF/WhatsApp share must show as "Previous Balance" / "Total Balance
+// Due". Reuses the exact same base-balance + isNewBill/isNewPayment chronological replay as
+// getAllPartiesCurrentBalances (so it always agrees with the Directory/Dashboard's live totals),
+// but stops the replay right before the target bill instead of summing every bill/payment the
+// party has ever had - a bill's own total_amount minus today's live balance is only the correct
+// "previous balance" when that bill happens to be the party's single most recent transaction.
+export function getPartyBalanceAroundBill(targetBill, restaurantProfiles = {}, bills = [], payments = []) {
+  if (!targetBill) return { prevBal: 0, currentBal: 0 };
+  const normP = norm(targetBill.restaurant_name);
+  const isZero = ZERO_BALANCE_PARTIES.some(h => norm(h) === normP);
+  const profile = Object.values(restaurantProfiles || {}).find(p => norm(p.name) === normP);
+  const base = isZero ? 0 : Math.max(0, parseFloat(profile?.previous_balance || 0));
+
+  const events = [];
+  (payments || []).forEach(p => {
+    if (isNewPayment(p) && norm(p.restaurant_name || p.restaurantName) === normP) {
+      events.push({ date: p.date || p.created_at || '2026-08-21', kindRank: 1, invNo: 0, debit: 0, credit: parseFloat(p.amount) || 0, isTarget: false });
+    }
+  });
+  (bills || []).forEach(b => {
+    if (isNewBill(b) && norm(b.restaurant_name) === normP) {
+      const amt = parseFloat(b.total_amount) || 0;
+      if (amt > 0.05) {
+        const paid = parseFloat(b.amount_paid) || (b.payment_status === 'paid' ? amt : 0);
+        events.push({ date: b.bill_date || b.created_at || '2026-08-25', kindRank: 0, invNo: parseInt(b.invoice_no, 10) || 0, debit: amt, credit: paid, isTarget: b.id === targetBill.id });
+      }
+    }
+  });
+
+  events.sort((a, b) => {
+    const dateCmp = (a.date || '').localeCompare(b.date || '');
+    if (dateCmp !== 0) return dateCmp;
+    if (a.kindRank !== b.kindRank) return a.kindRank - b.kindRank; // bills before payments, same day
+    return a.invNo - b.invNo;
+  });
+
+  let bal = base;
+  let prevBal = base;
+  let currentBal = base;
+  let found = false;
+  events.forEach(e => {
+    if (e.isTarget) { prevBal = bal; found = true; }
+    if (e.debit > 0) bal += e.debit;
+    if (e.credit > 0) bal = Math.max(0, bal - e.credit);
+    if (e.isTarget) currentBal = bal;
+  });
+
+  if (!found) {
+    // Target bill isn't a tracked "new" bill (legacy/pre-cutoff import) - its own amount is
+    // already folded into the static previous_balance snapshot, so there's no reliable way to
+    // reconstruct a true pre-bill balance here. Fall back to the bill's own stored field, if any.
+    const amt = parseFloat(targetBill.total_amount) || 0;
+    const paid = parseFloat(targetBill.amount_paid) || (targetBill.payment_status === 'paid' ? amt : 0);
+    prevBal = Math.max(0, parseFloat(targetBill.previous_balance || 0));
+    currentBal = prevBal + amt - paid;
+  }
+
+  return { prevBal: Math.max(0, prevBal), currentBal: Math.max(0, currentBal) };
+}
+
 // FIFO payment allocation per party, for DISPLAY only (does not touch bill.amount_paid in the
 // DB). A generic "Receive Payment" isn't tied to one invoice, so a bill's own amount_paid field
 // can stay stale/unpaid even after the party has paid enough overall to cover it. This mirrors

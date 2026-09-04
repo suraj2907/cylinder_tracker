@@ -358,7 +358,7 @@ export default function GenerateBill({
       invoice_no: savedBill.invoice_no || customInvoiceNo,
       gst_num: currentProf.gst_num || ''
     };
-    await shareInvoicePDFOnWhatsApp(billObj, currentProf);
+    await shareInvoicePDFOnWhatsApp(billObj, { ...currentProf, previous_balance: previousBalance });
   };
 
   const invoiceLabel = savedBill ? getInvoiceLabel(savedBill) : null;
@@ -410,7 +410,7 @@ export default function GenerateBill({
                   invoice_no: savedBill.invoice_no || customInvoiceNo,
                   gst_num: billProfile.gst_num || ''
                 };
-                exportBillPDF(billObj, billProfile);
+                exportBillPDF(billObj, { ...billProfile, previous_balance: previousBalance });
               }}
               className="px-3.5 py-2 rounded-xl bg-slate-900 text-white text-xs font-black hover:bg-slate-800 cursor-pointer flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
             >

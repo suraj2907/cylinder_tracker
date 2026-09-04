@@ -383,15 +383,15 @@ export const generateInvoicePDFDoc = (bill, profile = {}) => {
   const cgst = Number(bill.cgst || 0);
   const sgst = Number(bill.sgst || 0);
   const paidAmt = Number(bill.amount_paid || (bill.payment_status === 'paid' ? totAmt : 0));
-  
-  let currentBal, prevBal;
-  if (profile.current_balance !== undefined) {
-    currentBal = Math.max(0, parseFloat(profile.current_balance));
-    prevBal = Math.max(0, currentBal - (totAmt - paidAmt));
-  } else {
-    prevBal = parseFloat(profile.previous_balance || bill.previous_balance || 0);
-    currentBal = prevBal + totAmt - paidAmt;
-  }
+
+  // previous_balance must be the party's balance immediately before THIS bill - the caller is
+  // responsible for computing that correctly (e.g. by replaying the party's ledger up to this
+  // bill's own position, not today's live total). Deriving it here from a live "current_balance"
+  // by subtracting just this bill's amount only happens to be right when the bill being shown is
+  // the party's single most recent transaction; for any older bill, or one with activity after it,
+  // that back-calculation is wrong. See getPartyBalanceAroundBill in dataUtils.js.
+  const prevBal = Math.max(0, parseFloat(profile.previous_balance ?? bill.previous_balance ?? 0));
+  const currentBal = prevBal + totAmt - paidAmt;
 
   // Bank details Box (Left)
   doc.setFillColor(248, 250, 252);
@@ -524,15 +524,15 @@ export const shareInvoicePDFOnWhatsApp = async (bill, profile = {}) => {
 
   const totAmt = Number(bill.total_amount || 0);
   const paidAmt = Number(bill.amount_paid || (bill.payment_status === 'paid' ? totAmt : 0));
-  
-  let currentBal, prevBal;
-  if (profile.current_balance !== undefined) {
-    currentBal = Math.max(0, parseFloat(profile.current_balance));
-    prevBal = Math.max(0, currentBal - (totAmt - paidAmt));
-  } else {
-    prevBal = parseFloat(profile.previous_balance || bill.previous_balance || 0);
-    currentBal = prevBal + totAmt - paidAmt;
-  }
+
+  // previous_balance must be the party's balance immediately before THIS bill - the caller is
+  // responsible for computing that correctly (e.g. by replaying the party's ledger up to this
+  // bill's own position, not today's live total). Deriving it here from a live "current_balance"
+  // by subtracting just this bill's amount only happens to be right when the bill being shown is
+  // the party's single most recent transaction; for any older bill, or one with activity after it,
+  // that back-calculation is wrong. See getPartyBalanceAroundBill in dataUtils.js.
+  const prevBal = Math.max(0, parseFloat(profile.previous_balance ?? bill.previous_balance ?? 0));
+  const currentBal = prevBal + totAmt - paidAmt;
   const partyName = bill.restaurant_name || profile.name || '';
   const onlineLink = bill.invoice_link || (typeof window !== 'undefined' ? `${window.location.origin}/?ledger=${encodeURIComponent(partyName)}` : `https://cylinder-tracker.vercel.app/?ledger=${encodeURIComponent(partyName)}`);
 
