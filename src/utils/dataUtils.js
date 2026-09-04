@@ -565,65 +565,67 @@ export function getPartyCurrentBalance(partyName, restaurantProfiles = {}, bills
   return map[normP] || 0;
 }
 
-// What an invoice PDF/WhatsApp share must show as "Previous Balance" (the party's balance
-// immediately before this specific bill - historically accurate, unaffected by anything since)
-// and "Total Balance Due" (the party's TRUE outstanding balance right now, matching what the
-// Directory/Dashboard show). These are deliberately not "previous + this bill's own amount_paid":
-// a "Receive Payment" is recorded against the party's account, not tied to one invoice, so a
-// same-day (or later) payment that fully covers this exact bill would otherwise never show up -
-// re-sending an invoice after the customer already paid would still claim the full amount is due.
-// Reuses the same base-balance + isNewBill/isNewPayment chronological replay as
-// getAllPartiesCurrentBalances so both numbers always agree with the party's live total.
+// What an invoice PDF/WhatsApp share must show as "Previous Balance", "Received Amount" and
+// "Total Balance Due" for one specific bill - all three arithmetically consistent
+// (prevBal + thisBillTotal - received === currentBal), which a simple "previous total minus this
+// bill's own amount_paid" is NOT once any activity (an older unpaid bill, a payment that landed
+// on a different invoice) sits between them. Applies the party's ENTIRE payment pool FIFO against
+// their bills oldest-first - same model as getFifoInvoiceStatuses - so this is really "how much of
+// what you've paid overall has reached this bill in invoice order," not just this bill's own
+// isolated paid flag. previous_balance is paid down by the pool first; only what's left over
+// covers new bills, oldest first.
 export function getPartyBalanceAroundBill(targetBill, restaurantProfiles = {}, bills = [], payments = []) {
-  if (!targetBill) return { prevBal: 0, currentBal: 0 };
+  if (!targetBill) return { prevBal: 0, currentBal: 0, receivedForThisBill: 0 };
   const normP = norm(targetBill.restaurant_name);
   const isZero = ZERO_BALANCE_PARTIES.some(h => norm(h) === normP);
   const profile = Object.values(restaurantProfiles || {}).find(p => norm(p.name) === normP);
-  const base = isZero ? 0 : Math.max(0, parseFloat(profile?.previous_balance || 0));
+  const previousBalance = isZero ? 0 : Math.max(0, parseFloat(profile?.previous_balance || 0));
 
-  const events = [];
-  (payments || []).forEach(p => {
-    if (isNewPayment(p) && norm(p.restaurant_name || p.restaurantName) === normP) {
-      events.push({ date: p.date || p.created_at || '2026-08-21', kindRank: 1, invNo: 0, debit: 0, credit: parseFloat(p.amount) || 0, isTarget: false });
-    }
-  });
-  (bills || []).forEach(b => {
-    if (isNewBill(b) && norm(b.restaurant_name) === normP) {
-      const amt = parseFloat(b.total_amount) || 0;
-      if (amt > 0.05) {
-        const paid = parseFloat(b.amount_paid) || (b.payment_status === 'paid' ? amt : 0);
-        events.push({ date: b.bill_date || b.created_at || '2026-08-25', kindRank: 0, invNo: parseInt(b.invoice_no, 10) || 0, debit: amt, credit: paid, isTarget: b.id === targetBill.id });
-      }
-    }
-  });
+  const partyBills = (bills || []).filter(b => isNewBill(b) && norm(b.restaurant_name) === normP && (parseFloat(b.total_amount) || 0) > 0.05);
+  const totalPaid = (payments || [])
+    .filter(p => isNewPayment(p) && norm(p.restaurant_name || p.restaurantName) === normP)
+    .reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
 
-  events.sort((a, b) => {
-    const dateCmp = (a.date || '').localeCompare(b.date || '');
+  const sorted = [...partyBills].sort((a, b) => {
+    const dateCmp = (a.bill_date || '').localeCompare(b.bill_date || '');
     if (dateCmp !== 0) return dateCmp;
-    if (a.kindRank !== b.kindRank) return a.kindRank - b.kindRank; // bills before payments, same day
-    return a.invNo - b.invNo;
+    return (parseInt(a.invoice_no, 10) || 0) - (parseInt(b.invoice_no, 10) || 0);
   });
 
-  let bal = base;
-  let prevBal = base;
+  let remainingPool = Math.max(0, totalPaid - previousBalance);
+  let cumulativeBalance = Math.max(0, previousBalance - totalPaid); // unpaid legacy portion, if any
+  let prevBal = cumulativeBalance;
+  let receivedForThisBill = 0;
+  let currentBal = cumulativeBalance;
   let found = false;
-  events.forEach(e => {
-    if (e.isTarget) { prevBal = bal; found = true; }
-    if (e.debit > 0) bal += e.debit;
-    if (e.credit > 0) bal = Math.max(0, bal - e.credit);
-  });
-  // `bal` after the full replay is the party's true balance right now, not just after the target
-  // bill - any payment dated after it (same-day or later) is already folded in.
-  let currentBal = bal;
+
+  for (const b of sorted) {
+    const total = parseFloat(b.total_amount) || 0;
+    const applied = Math.max(0, Math.min(total, remainingPool));
+    remainingPool -= applied;
+    const balance = total - applied;
+    if (b.id === targetBill.id) {
+      prevBal = cumulativeBalance;
+      receivedForThisBill = applied;
+      currentBal = cumulativeBalance + balance;
+      found = true;
+      break;
+    }
+    cumulativeBalance += balance;
+  }
 
   if (!found) {
     // Target bill isn't a tracked "new" bill (legacy/pre-cutoff import) - its own amount is
     // already folded into the static previous_balance snapshot, so there's no reliable way to
     // reconstruct a true pre-bill balance here. Fall back to the bill's own stored field, if any.
+    const amt = parseFloat(targetBill.total_amount) || 0;
+    const paid = parseFloat(targetBill.amount_paid) || (targetBill.payment_status === 'paid' ? amt : 0);
     prevBal = Math.max(0, parseFloat(targetBill.previous_balance || 0));
+    receivedForThisBill = paid;
+    currentBal = prevBal + amt - paid;
   }
 
-  return { prevBal: Math.max(0, prevBal), currentBal: Math.max(0, currentBal) };
+  return { prevBal: Math.max(0, prevBal), currentBal: Math.max(0, currentBal), receivedForThisBill: Math.max(0, receivedForThisBill) };
 }
 
 // FIFO payment allocation per party, for DISPLAY only (does not touch bill.amount_paid in the

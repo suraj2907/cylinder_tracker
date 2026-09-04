@@ -382,15 +382,18 @@ export const generateInvoicePDFDoc = (bill, profile = {}) => {
   const taxable = Number(bill.taxable_amount || 0);
   const cgst = Number(bill.cgst || 0);
   const sgst = Number(bill.sgst || 0);
-  const paidAmt = Number(bill.amount_paid || (bill.payment_status === 'paid' ? totAmt : 0));
-
-  // previous_balance/current_balance must come from the caller, computed via
-  // getPartyBalanceAroundBill (dataUtils.js) - previous_balance is the party's balance
-  // immediately before THIS bill, and current_balance is their TRUE outstanding balance right
-  // now (which already accounts for any payment made against this bill separately, even a
-  // same-day one - a bare "previous + this bill's amount" would still claim the full amount due
-  // on a bill the customer already paid).
+  // previous_balance/received_amount/current_balance should all come from the caller, computed
+  // together via getPartyBalanceAroundBill (dataUtils.js) so the three numbers printed on the
+  // invoice always add up (previous + this bill's total - received === current). A "Receive
+  // Payment" isn't tied to one invoice, so this bill's own amount_paid field can be stale even
+  // after the party has paid enough overall to cover it (or can look "paid" while a payment that
+  // size actually went to an older unpaid bill first) - getPartyBalanceAroundBill applies the
+  // party's full payment pool FIFO, oldest bill first, to get a received figure that's honest
+  // about which bill the money actually reached.
   const prevBal = Math.max(0, parseFloat(profile.previous_balance ?? bill.previous_balance ?? 0));
+  const paidAmt = profile.received_amount !== undefined
+    ? Math.max(0, parseFloat(profile.received_amount))
+    : Number(bill.amount_paid || (bill.payment_status === 'paid' ? totAmt : 0));
   const currentBal = profile.current_balance !== undefined
     ? Math.max(0, parseFloat(profile.current_balance))
     : prevBal + totAmt - paidAmt;
@@ -525,15 +528,18 @@ export const shareInvoicePDFOnWhatsApp = async (bill, profile = {}) => {
   const recipient = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
 
   const totAmt = Number(bill.total_amount || 0);
-  const paidAmt = Number(bill.amount_paid || (bill.payment_status === 'paid' ? totAmt : 0));
-
-  // previous_balance/current_balance must come from the caller, computed via
-  // getPartyBalanceAroundBill (dataUtils.js) - previous_balance is the party's balance
-  // immediately before THIS bill, and current_balance is their TRUE outstanding balance right
-  // now (which already accounts for any payment made against this bill separately, even a
-  // same-day one - a bare "previous + this bill's amount" would still claim the full amount due
-  // on a bill the customer already paid).
+  // previous_balance/received_amount/current_balance should all come from the caller, computed
+  // together via getPartyBalanceAroundBill (dataUtils.js) so the three numbers printed on the
+  // invoice always add up (previous + this bill's total - received === current). A "Receive
+  // Payment" isn't tied to one invoice, so this bill's own amount_paid field can be stale even
+  // after the party has paid enough overall to cover it (or can look "paid" while a payment that
+  // size actually went to an older unpaid bill first) - getPartyBalanceAroundBill applies the
+  // party's full payment pool FIFO, oldest bill first, to get a received figure that's honest
+  // about which bill the money actually reached.
   const prevBal = Math.max(0, parseFloat(profile.previous_balance ?? bill.previous_balance ?? 0));
+  const paidAmt = profile.received_amount !== undefined
+    ? Math.max(0, parseFloat(profile.received_amount))
+    : Number(bill.amount_paid || (bill.payment_status === 'paid' ? totAmt : 0));
   const currentBal = profile.current_balance !== undefined
     ? Math.max(0, parseFloat(profile.current_balance))
     : prevBal + totAmt - paidAmt;

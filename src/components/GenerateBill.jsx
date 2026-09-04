@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { getInvoiceLabel, norm, getPartyCurrentBalance } from '../utils/dataUtils';
+import { getInvoiceLabel, norm, getPartyCurrentBalance, getPartyBalanceAroundBill } from '../utils/dataUtils';
 import { shareInvoicePDFOnWhatsApp, exportBillPDF } from '../utils/exportUtils';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -358,12 +358,17 @@ export default function GenerateBill({
       invoice_no: savedBill.invoice_no || customInvoiceNo,
       gst_num: currentProf.gst_num || ''
     };
-    await shareInvoicePDFOnWhatsApp(billObj, { ...currentProf, previous_balance: previousBalance });
+    const around = getPartyBalanceAroundBill(savedBill, restaurantProfiles, bills, payments);
+    await shareInvoicePDFOnWhatsApp(billObj, { ...currentProf, previous_balance: around.prevBal, current_balance: around.currentBal, received_amount: around.receivedForThisBill });
   };
 
   const invoiceLabel = savedBill ? getInvoiceLabel(savedBill) : null;
-  const currentBalance = previousBalance + totals.total;
-  const savedAmountPaid = Number(savedBill?.amount_paid || 0);
+  // FIFO-consistent numbers (same source as the PDF/WhatsApp share) so previous + this bill's
+  // total - received === current always holds on screen too - this bill's own amount_paid isn't
+  // reliable alone if the party has an older unpaid bill the payment pool covers first.
+  const billAround = savedBill ? getPartyBalanceAroundBill(savedBill, restaurantProfiles, bills, payments) : null;
+  const currentBalance = billAround ? billAround.currentBal : previousBalance + totals.total;
+  const savedAmountPaid = billAround ? billAround.receivedForThisBill : Number(savedBill?.amount_paid || 0);
   const savedBalance = Math.max(0, Number(savedBill?.total_amount || totals.total) - savedAmountPaid);
 
   if (savedBill) {
@@ -410,7 +415,8 @@ export default function GenerateBill({
                   invoice_no: savedBill.invoice_no || customInvoiceNo,
                   gst_num: billProfile.gst_num || ''
                 };
-                exportBillPDF(billObj, { ...billProfile, previous_balance: previousBalance });
+                const around = getPartyBalanceAroundBill(savedBill, restaurantProfiles, bills, payments);
+                exportBillPDF(billObj, { ...billProfile, previous_balance: around.prevBal, current_balance: around.currentBal, received_amount: around.receivedForThisBill });
               }}
               className="px-3.5 py-2 rounded-xl bg-slate-900 text-white text-xs font-black hover:bg-slate-800 cursor-pointer flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
             >
@@ -614,18 +620,18 @@ export default function GenerateBill({
                 </div>
                 <div className="flex justify-between items-center text-slate-500 font-semibold">
                   <span>Previous Balance</span>
-                  <span className="text-slate-700 font-bold">₹{previousBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="text-slate-700 font-bold">₹{(billAround ? billAround.prevBal : previousBalance).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between items-center pt-1 border-t border-slate-200/60">
                   <span className="font-black text-rose-700 text-xs uppercase">Current Balance</span>
-                  <span className="font-black text-rose-700 text-sm">₹{(previousBalance + totals.total - savedAmountPaid).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="font-black text-rose-700 text-sm">₹{currentBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               </div>
 
               <div className="pt-1">
                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Balance (in words)</span>
                 <span className="text-xs font-black text-slate-800 capitalize mt-0.5 block">
-                  {numberToWords(Math.round(previousBalance + totals.total - savedAmountPaid > 0 ? previousBalance + totals.total - savedAmountPaid : totals.total))}
+                  {numberToWords(Math.round(currentBalance > 0 ? currentBalance : totals.total))}
                 </span>
               </div>
             </div>

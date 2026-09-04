@@ -403,15 +403,18 @@ function RestaurantStatementModal({
     const rawProf = (restaurantProfiles && (restaurantProfiles[rName] || restaurantProfiles[norm(rName)])) || profile || {};
     let prevBalForBill = parseFloat(rawProf.previous_balance !== undefined ? rawProf.previous_balance : openingBalance);
     let currentBalForBill;
+    let receivedForBill;
     if (bill) {
       const around = getPartyBalanceAroundBill(bill, restaurantProfiles, bills, payments);
       prevBalForBill = around.prevBal;
       currentBalForBill = around.currentBal;
+      receivedForBill = around.receivedForThisBill;
     }
     return {
       ...rawProf,
       previous_balance: prevBalForBill,
-      ...(currentBalForBill !== undefined ? { current_balance: currentBalForBill } : {})
+      ...(currentBalForBill !== undefined ? { current_balance: currentBalForBill } : {}),
+      ...(receivedForBill !== undefined ? { received_amount: receivedForBill } : {})
     };
   };
 
@@ -1206,16 +1209,19 @@ function RestaurantStatementModal({
               {/* Subtotals & Bank details Footer Grid */}
               {(() => {
                 const totAmt = Number(selectedBillForPrint.total_amount || selectedBillForPrint.amount || selectedBillForPrint.debit || 0);
-                const paidAmt = Number(selectedBillForPrint.amount_paid || (selectedBillForPrint.payment_status === 'paid' ? totAmt : 0));
                 const bName = selectedBillForPrint.restaurant_name || selectedBillForPrint.restaurantName || restaurantName || '';
                 // Same source as the PDF/WhatsApp share (getPartyBalanceAroundBill) so the
-                // on-screen preview always matches what actually gets sent. currentBal is the
-                // party's TRUE balance right now, not "previous + this bill's own amount_paid" -
-                // a payment recorded separately against the party's account (the normal case for
-                // "Receive Payment", even same-day) would otherwise never reduce what the invoice
-                // claims is still due.
+                // on-screen preview always matches what actually gets sent, and all three numbers
+                // add up: previous + this bill's total - received === current. This bill's own
+                // amount_paid field isn't reliable on its own - a "Receive Payment" isn't tied to
+                // one invoice, so it can miss a payment that covers this bill, or (this bill's
+                // received figure here) count money that actually paid off an older unpaid bill
+                // first via FIFO.
                 const billProfileForPrint = getBillProfile(bName, selectedBillForPrint);
                 const prevBal = billProfileForPrint.previous_balance;
+                const paidAmt = billProfileForPrint.received_amount !== undefined
+                  ? billProfileForPrint.received_amount
+                  : Number(selectedBillForPrint.amount_paid || (selectedBillForPrint.payment_status === 'paid' ? totAmt : 0));
                 const currentBal = billProfileForPrint.current_balance !== undefined
                   ? billProfileForPrint.current_balance
                   : prevBal + totAmt - paidAmt;
