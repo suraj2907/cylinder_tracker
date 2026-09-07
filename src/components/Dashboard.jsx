@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { FileText, TrendingUp, Package, Percent, Receipt } from 'lucide-react';
 import { getAllPartiesCurrentBalances, getFifoInvoiceStatuses } from '../utils/dataUtils';
 import DateRangePicker, { PRESETS } from './DateRangePicker';
+import { SkeletonBar } from './Skeleton';
 
 function formatLocalYMD(d) {
   const y = d.getFullYear();
@@ -10,7 +11,7 @@ function formatLocalYMD(d) {
   return `${y}-${m}-${day}`;
 }
 
-export default function Dashboard({ restaurants = [], restaurantProfiles = {}, bills = [], payments = [], purchaseBills = [], legacyLedgerEntries = [], setTab }) {
+export default function Dashboard({ restaurants = [], restaurantProfiles = {}, bills = [], payments = [], purchaseBills = [], legacyLedgerEntries = [], setTab, loading = false }) {
 
   // Single-pass accurate party balance calculation
   const partyBalanceMap = useMemo(() => {
@@ -116,12 +117,21 @@ export default function Dashboard({ restaurants = [], restaurantProfiles = {}, b
         <h1 className="text-xs font-bold text-[#737373] uppercase tracking-widest mb-1.5">
           AGENCY DASHBOARD • TOTAL MONEY PENDING
         </h1>
-        <div className="text-3xl sm:text-5xl font-light text-[#1A1A1A] tracking-tight my-2">
-          ₹ {totalToCollect.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </div>
-        <p className="text-[11px] text-[#999999] font-medium">
-          Live aggregate outstanding from {restaurants.length} active customer accounts
-        </p>
+        {loading ? (
+          <>
+            <SkeletonBar className="h-10 sm:h-14 w-56 sm:w-72 mx-auto my-2" />
+            <SkeletonBar className="h-3 w-64 mx-auto mt-2" />
+          </>
+        ) : (
+          <>
+            <div className="text-3xl sm:text-5xl font-light text-[#1A1A1A] tracking-tight my-2">
+              ₹ {totalToCollect.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+            <p className="text-[11px] text-[#999999] font-medium">
+              Live aggregate outstanding from {restaurants.length} active customer accounts
+            </p>
+          </>
+        )}
       </div>
 
       {/* 4 Action Grid Cards */}

@@ -125,6 +125,7 @@ export default function App() {
     restaurantProfiles,
     bills,
     legacyLedgerEntries,
+    loadingBilling,
     nextSuggestedInvoiceNo,
     saveRestaurantProfile,
     createBill,
@@ -393,7 +394,7 @@ export default function App() {
         {/* ACTIVE TAB CONTENT */}
         <Suspense fallback={<TabLoadingSkeleton variant={TAB_SKELETON_VARIANT[tab]} />}>
           <div key={tab} className="animate-fadeIn">
-            {tab === "dashboard" && <Dashboard restaurants={restaurants} batchStats={batchStats} restMap={restMap} totAll={totAll} tot21={tot21} tot192={tot192} totEmpty={totEmpty} totOutstanding={totOutstanding} restaurantProfiles={restaurantProfiles} bills={bills} payments={payments} purchaseBills={purchaseBills} legacyLedgerEntries={legacyLedgerEntries} setTab={setTab} />}
+            {tab === "dashboard" && <Dashboard restaurants={restaurants} batchStats={batchStats} restMap={restMap} totAll={totAll} tot21={tot21} tot192={tot192} totEmpty={totEmpty} totOutstanding={totOutstanding} restaurantProfiles={restaurantProfiles} bills={bills} payments={payments} purchaseBills={purchaseBills} legacyLedgerEntries={legacyLedgerEntries} setTab={setTab} loading={loading || loadingBilling} />}
             {tab === "restaurants" && <RestaurantsList restaurants={restaurants} tot21={tot21} tot192={tot192} totEmpty={totEmpty} totEmpty21={totEmpty21} totEmpty192={totEmpty192} totAll={totAll} totOutstanding={totOutstanding} search={search} setSearch={setSearch} sortBy={sortBy} setSortBy={setSortBy} batches={batches} payments={payments} handleDeleteEntry={handleDeleteEntry} onDeletePayment={handleDeletePayment} restaurantProfiles={restaurantProfiles} onSaveRestaurantProfile={saveRestaurantProfile} bills={bills} legacyLedgerEntries={legacyLedgerEntries} deleteBill={deleteBill} removeDeliveryEntries={removeDeliveryEntries} onEditBill={startEditBill} />}
             {tab === "billing" && <GenerateBill restaurants={restaurants} restaurantProfiles={restaurantProfiles} createBill={createBill} updateBill={updateBill} editingBill={editingBill} onDoneEditing={stopEditBill} itemsCatalog={itemsCatalog} partyItemPrices={partyItemPrices} bills={bills} payments={payments} nextSuggestedInvoiceNo={nextSuggestedInvoiceNo} batches={batches} legacyLedgerEntries={legacyLedgerEntries} />}
             {tab === "outstandingBills" && <OutstandingBills bills={bills} recordBillPayment={recordBillPayment} />}
