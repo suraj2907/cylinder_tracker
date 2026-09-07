@@ -502,57 +502,51 @@ export function getAllPartiesCurrentBalances(restaurantProfiles = {}, bills = []
     }
   });
 
-  // 2. Group all new events (bills & payments) chronologically per party
-  const partyEvents = {};
-
-  (payments || []).forEach(p => {
-    if (isNewPayment(p)) {
-      const normP = norm(p.restaurant_name || p.restaurantName);
-      if (!partyEvents[normP]) partyEvents[normP] = [];
-      partyEvents[normP].push({
-        date: p.date || p.created_at || '2026-08-21',
-        debit: 0,
-        credit: parseFloat(p.amount) || 0
-      });
-    }
-  });
-
+  // 2. Group new bills & new payments per party - same FIFO-pool approach as
+  // getFifoInvoiceStatuses/getPartyBalanceAroundBill: apply the party's total real payment pool
+  // against their bills oldest-first. This deliberately ignores each bill's own amount_paid/
+  // payment_status flag - that flag is often just a status marker for the SAME cash that also
+  // shows up as its own row in `payments` (e.g. a backdated bill marked "already paid" from
+  // memory once the real payment arrived days later), so crediting both double-counts one payment.
+  const byParty = {};
   (bills || []).forEach(b => {
-    if (isNewBill(b)) {
-      const normP = norm(b.restaurant_name);
-      const amt = parseFloat(b.total_amount) || 0;
-      const paid = parseFloat(b.amount_paid) || (b.payment_status === 'paid' ? amt : 0);
-      if (amt > 0.05) {
-        if (!partyEvents[normP]) partyEvents[normP] = [];
-        partyEvents[normP].push({
-          date: b.bill_date || b.created_at || '2026-08-25',
-          debit: amt,
-          credit: paid
-        });
-      }
-    }
+    if (!isNewBill(b)) return;
+    const normP = norm(b.restaurant_name);
+    const amt = parseFloat(b.total_amount) || 0;
+    if (amt <= 0.05) return;
+    if (!byParty[normP]) byParty[normP] = { bills: [], totalPaid: 0 };
+    byParty[normP].bills.push(b);
+  });
+  (payments || []).forEach(p => {
+    if (!isNewPayment(p)) return;
+    const normP = norm(p.restaurant_name || p.restaurantName);
+    if (!byParty[normP]) byParty[normP] = { bills: [], totalPaid: 0 };
+    byParty[normP].totalPaid += parseFloat(p.amount) || 0;
   });
 
-  // 3. For every party with events or base balance, compute exact timeline balance
-  const allPartyNames = new Set([...Object.keys(map), ...Object.keys(partyEvents)]);
-
-  allPartyNames.forEach(normP => {
+  // 3. For every party with new activity, apply the payment pool FIFO across their new bills;
+  // whatever's left of the base previous_balance plus any new bills the pool didn't reach is owed.
+  Object.keys(byParty).forEach(normP => {
     const isZero = ZERO_BALANCE_PARTIES.some(h => norm(h) === normP);
-    let curBal = isZero ? 0 : (map[normP] || 0);
+    const previousBalance = isZero ? 0 : (map[normP] || 0);
+    const { bills: partyBills, totalPaid } = byParty[normP];
 
-    // Sort chronologically; on the same day, process debits (bills) before credits (payments)
-    const events = (partyEvents[normP] || []).sort((a, b) => {
-      const dateCmp = (a.date || '').localeCompare(b.date || '');
+    const sorted = [...partyBills].sort((a, b) => {
+      const dateCmp = (a.bill_date || '').localeCompare(b.bill_date || '');
       if (dateCmp !== 0) return dateCmp;
-      return (b.debit || 0) - (a.debit || 0);
+      return (parseInt(a.invoice_no, 10) || 0) - (parseInt(b.invoice_no, 10) || 0);
     });
 
-    events.forEach(e => {
-      if (e.debit > 0) curBal += e.debit;
-      if (e.credit > 0) curBal = Math.max(0, curBal - e.credit);
+    let remaining = Math.max(0, totalPaid - previousBalance);
+    let unpaidTotal = 0;
+    sorted.forEach(b => {
+      const total = parseFloat(b.total_amount) || 0;
+      const applied = Math.max(0, Math.min(total, remaining));
+      remaining -= applied;
+      unpaidTotal += total - applied;
     });
 
-    map[normP] = curBal;
+    map[normP] = Math.max(0, previousBalance - totalPaid) + unpaidTotal;
   });
 
   return map;

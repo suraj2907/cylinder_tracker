@@ -15,6 +15,7 @@ import Login from './components/Login';
 import PublicLedgerView from './components/PublicLedgerView';
 import { useInventory } from './hooks/useInventory';
 import { useExpenses } from './hooks/useExpenses';
+import TabLoadingSkeleton from './components/Skeleton';
 
 // Auto-retry helper for dynamic lazy imports when a new build is deployed
 const lazyWithRetry = (componentImport) =>
@@ -46,6 +47,18 @@ const SalesSummaryDashboard = lazyWithRetry(() => import('./components/SalesSumm
 const ProfitLossReport = lazyWithRetry(() => import('./components/ProfitLossReport'));
 const GstReportsHub = lazyWithRetry(() => import('./components/GstReportsHub'));
 const OutstandingBills = lazyWithRetry(() => import('./components/OutstandingBills'));
+
+// Shapes the Suspense fallback per-tab so it roughly resembles what's about to render.
+const TAB_SKELETON_VARIANT = {
+  billing: 'form',
+  calendar: 'calendar',
+  inventory: 'table',
+  expenses: 'table',
+  salesReport: 'table',
+  profitLoss: 'table',
+  gstReport: 'table',
+  outstandingBills: 'table'
+};
 
 export default function App() {
   const { session, currentUser, logout, loading: authLoading } = useUser();
@@ -198,6 +211,9 @@ export default function App() {
       )}
 
       {/* LIGHT EXECUTIVE HEADER */}
+      {/* will-change-transform forces this sticky+backdrop-blur header onto its own GPU layer -
+          without it, Chromium sometimes fails to repaint content below during fast scroll, leaving
+          it blank until something forces a reflow (a known sticky+backdrop-filter paint bug). */}
       <div className="bg-white border-b border-slate-200/80 sticky top-0 z-40 px-3 md:px-6 py-2.5 md:py-3 shadow-xs backdrop-blur-md bg-white/95">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
           
@@ -375,11 +391,7 @@ export default function App() {
       <div className="p-3 md:p-6 max-w-7xl mx-auto space-y-4 md:space-y-6 pb-28 lg:pb-8">
 
         {/* ACTIVE TAB CONTENT */}
-        <Suspense fallback={
-          <div className="bg-white border border-customBorder rounded-2xl p-12 text-center shadow-soft animate-pulse">
-            <div className="text-sm font-extrabold text-sky-700 uppercase tracking-wider">⚡ Loading view...</div>
-          </div>
-        }>
+        <Suspense fallback={<TabLoadingSkeleton variant={TAB_SKELETON_VARIANT[tab]} />}>
           <div key={tab} className="animate-fadeIn">
             {tab === "dashboard" && <Dashboard restaurants={restaurants} batchStats={batchStats} restMap={restMap} totAll={totAll} tot21={tot21} tot192={tot192} totEmpty={totEmpty} totOutstanding={totOutstanding} restaurantProfiles={restaurantProfiles} bills={bills} payments={payments} purchaseBills={purchaseBills} legacyLedgerEntries={legacyLedgerEntries} setTab={setTab} />}
             {tab === "restaurants" && <RestaurantsList restaurants={restaurants} tot21={tot21} tot192={tot192} totEmpty={totEmpty} totEmpty21={totEmpty21} totEmpty192={totEmpty192} totAll={totAll} totOutstanding={totOutstanding} search={search} setSearch={setSearch} sortBy={sortBy} setSortBy={setSortBy} batches={batches} payments={payments} handleDeleteEntry={handleDeleteEntry} onDeletePayment={handleDeletePayment} restaurantProfiles={restaurantProfiles} onSaveRestaurantProfile={saveRestaurantProfile} bills={bills} legacyLedgerEntries={legacyLedgerEntries} deleteBill={deleteBill} removeDeliveryEntries={removeDeliveryEntries} onEditBill={startEditBill} />}

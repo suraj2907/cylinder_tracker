@@ -1,8 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { getInvoiceLabel, norm, getPartyCurrentBalance, getPartyBalanceAroundBill } from '../utils/dataUtils';
 import { shareInvoicePDFOnWhatsApp, exportBillPDF } from '../utils/exportUtils';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 
 function emptyItem() {
   return { item_id: '', description: '', hsn: '', qty: 1, rate: 0, gst_rate: 18 };

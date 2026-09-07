@@ -1,76 +1,15 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import * as XLSX from 'xlsx';
-
-export const exportToPDF = (restaurants, tot21, tot192, totAll) => {
-  const doc = new jsPDF();
-  
-  // Title
-  doc.setFontSize(18);
-  doc.text('Cylinder Tracker Report', 14, 22);
-  
-  // Summary
-  doc.setFontSize(11);
-  doc.text(`Total Cylinders: ${totAll}`, 14, 30);
-  doc.text(`21 KG: ${tot21}`, 14, 36);
-  doc.text(`19.2 KG: ${tot192}`, 14, 42);
-
-  // Table Data
-  const tableColumn = ["#", "Restaurant Name", "21 KG", "19.2 KG", "Total"];
-  const tableRows = [];
-
-  restaurants.forEach((r, index) => {
-    const rowData = [
-      index + 1,
-      r.name,
-      r.kg21,
-      r.kg192,
-      r.total
-    ];
-    tableRows.push(rowData);
-  });
-
-  autoTable(doc, {
-    head: [tableColumn],
-    body: tableRows,
-    startY: 50,
-    theme: 'grid',
-    styles: { fontSize: 10 },
-    headStyles: { fillColor: [255, 107, 53] }
-  });
-
-  doc.save(`Cylinder_Report_${new Date().toISOString().slice(0, 10)}.pdf`);
-};
-
-export const exportToExcel = (restaurants, batchStats) => {
-  const wb = XLSX.utils.book_new();
-
-  // 1. Restaurants Sheet
-  const wsRestaurantsData = [
-    ["Rank", "Restaurant Name", "21 KG", "19.2 KG", "Total"]
-  ];
-  restaurants.forEach((r, i) => {
-    wsRestaurantsData.push([i + 1, r.name, r.kg21, r.kg192, r.total]);
-  });
-  const wsRestaurants = XLSX.utils.aoa_to_sheet(wsRestaurantsData);
-  XLSX.utils.book_append_sheet(wb, wsRestaurants, "Restaurants Summary");
-
-  // 2. Batches Sheet
-  const wsBatchesData = [
-    ["Batch #", "Khali Date", "Total Entries", "21 KG", "19.2 KG", "Total Cylinders", "Notes"]
-  ];
-  batchStats.forEach(b => {
-    wsBatchesData.push([b.batch, b.khaliDate, b.count, b.kg21, b.kg192, b.kg21 + b.kg192, b.note]);
-  });
-  const wsBatches = XLSX.utils.aoa_to_sheet(wsBatchesData);
-  XLSX.utils.book_append_sheet(wb, wsBatches, "Batches Overview");
-
-  // Write and download
-  XLSX.writeFile(wb, `Cylinder_Tracker_${new Date().toISOString().slice(0, 10)}.xlsx`);
-};
+// jsPDF/jspdf-autotable/xlsx are only pulled in here, on demand, right before they're actually
+// used - these libraries are ~330KB gzipped combined, and every one of this file's exports used
+// to import them at module scope, so simply opening a tab like Generate Bill (which imports this
+// file for its Share/Download buttons) forced that whole weight to load before the tab was even
+// interactive, regardless of whether the user ever clicked a PDF/Excel button.
 
 // Export individual customer passbook / ledger statement to professional PDF
-export const exportPartyLedgerPDF = (partyName, activities = [], profile = {}, periodLabel = 'All Time', stats = {}) => {
+export const exportPartyLedgerPDF = async (partyName, activities = [], profile = {}, periodLabel = 'All Time', stats = {}) => {
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable')
+  ]);
   const doc = new jsPDF('p', 'mm', 'a4');
   
   // Header banner
@@ -185,7 +124,8 @@ export const exportPartyLedgerPDF = (partyName, activities = [], profile = {}, p
 };
 
 // Export individual customer passbook / ledger statement to Excel (.xlsx)
-export const exportPartyLedgerExcel = (partyName, activities = [], profile = {}, periodLabel = 'All Time', stats = {}) => {
+export const exportPartyLedgerExcel = async (partyName, activities = [], profile = {}, periodLabel = 'All Time', stats = {}) => {
+  const XLSX = await import('xlsx');
   const wb = XLSX.utils.book_new();
 
   const closingBal = activities[0]?.runningBalance !== undefined ? activities[0].runningBalance : (stats.closingRupee || 0);
@@ -251,7 +191,11 @@ export const exportPartyLedgerExcel = (partyName, activities = [], profile = {},
 };
 
 // Generate professional vector Tax Invoice PDF document
-export const generateInvoicePDFDoc = (bill, profile = {}) => {
+export const generateInvoicePDFDoc = async (bill, profile = {}) => {
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable')
+  ]);
   const doc = new jsPDF('p', 'mm', 'a4');
   const invLabel = bill.invoiceLabel || (bill.invoice_no ? `INV-${String(bill.invoice_no).padStart(4, '0')}` : 'INVOICE');
   const isGst = bill.gst_mode === 'gst';
@@ -509,8 +453,8 @@ function numberToWords(num) {
 }
 
 // Export individual invoice as PDF download
-export const exportBillPDF = (bill, profile = {}) => {
-  const doc = generateInvoicePDFDoc(bill, profile);
+export const exportBillPDF = async (bill, profile = {}) => {
+  const doc = await generateInvoicePDFDoc(bill, profile);
   const invLabel = bill.invoiceLabel || (bill.invoice_no ? `INV-${String(bill.invoice_no).padStart(4, '0')}` : 'INVOICE');
   const safeName = (bill.restaurant_name || profile.name || 'Customer').replace(/[^a-zA-Z0-9]/g, '_');
   doc.save(`Invoice_${invLabel}_${safeName}.pdf`);
@@ -518,7 +462,7 @@ export const exportBillPDF = (bill, profile = {}) => {
 
 // Share invoice directly into party WhatsApp chat with PDF attachment
 export const shareInvoicePDFOnWhatsApp = async (bill, profile = {}) => {
-  const doc = generateInvoicePDFDoc(bill, profile);
+  const doc = await generateInvoicePDFDoc(bill, profile);
   const invLabel = bill.invoiceLabel || (bill.invoice_no ? `INV-${String(bill.invoice_no).padStart(4, '0')}` : 'INVOICE');
   const safeName = (bill.restaurant_name || profile.name || 'Customer').replace(/[^a-zA-Z0-9]/g, '_');
   const fileName = `Invoice_${invLabel}_${safeName}.pdf`;

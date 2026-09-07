@@ -116,7 +116,7 @@ function RestaurantsList({
   };
 
   return (
-    <div className="flex flex-col flex-1 pb-20 max-w-7xl mx-auto w-full animate-fadeIn overflow-hidden">
+    <div className="flex flex-col flex-1 pb-20 max-w-7xl mx-auto w-full animate-fadeIn">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between px-3 sm:px-4 pt-3 pb-3 gap-2">
         <div className="min-w-0">

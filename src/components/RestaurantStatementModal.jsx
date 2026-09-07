@@ -528,9 +528,9 @@ function RestaurantStatementModal({
           {/* Download Party Statement Buttons */}
           <div className="flex items-center gap-1.5">
             <button
-              onClick={() => {
+              onClick={async () => {
                 const pLabel = rangeMode ? `${startDate} to ${endDate}` : (filterPeriod === 'all' ? 'All Time' : filterPeriod);
-                exportPartyLedgerPDF(restaurantName, filteredActivities, profile, pLabel, stats);
+                await exportPartyLedgerPDF(restaurantName, filteredActivities, profile, pLabel, stats);
               }}
               className="flex-1 sm:flex-initial px-2.5 py-1 sm:py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-[10px] sm:text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
               title="Download PDF Ledger Statement"
@@ -539,9 +539,9 @@ function RestaurantStatementModal({
               <span>PDF</span>
             </button>
             <button
-              onClick={() => {
+              onClick={async () => {
                 const pLabel = rangeMode ? `${startDate} to ${endDate}` : (filterPeriod === 'all' ? 'All Time' : filterPeriod);
-                exportPartyLedgerExcel(restaurantName, filteredActivities, profile, pLabel, stats);
+                await exportPartyLedgerExcel(restaurantName, filteredActivities, profile, pLabel, stats);
               }}
               className="flex-1 sm:flex-initial px-2.5 py-1 sm:py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-[10px] sm:text-xs font-bold shadow-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
               title="Download Excel Spreadsheet"
