@@ -254,7 +254,7 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
 
     // 3. Stock Deduction (Category-wise in DB and local state)
     if (typeof deductStock === 'function') {
-      deductStock(billData.items);
+      await deductStock(billData.items);
     }
 
     // 4. Automatic Cylinder Delivery Entry Sync into Active Batch
@@ -346,7 +346,7 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
 
     // 1. Reverse old bill's stock deduction and cylinder delivery entry
     if (Array.isArray(oldBill.items) && typeof restoreStock === 'function') {
-      restoreStock(oldBill.items);
+      await restoreStock(oldBill.items);
     }
     if (typeof onRemoveDeliveryEntry === 'function') {
       await onRemoveDeliveryEntry(oldBill.restaurant_name, oldBill.bill_date);
@@ -363,7 +363,7 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
     const targetBatchNum = parseInt(billData.batch_num, 10) || oldBill.batch_num || 133;
 
     if (typeof deductStock === 'function') {
-      deductStock(billData.items);
+      await deductStock(billData.items);
     }
     if (Array.isArray(billData.items) && typeof onAddDeliveryEntry === 'function') {
       for (const it of billData.items) {
@@ -431,7 +431,7 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
 
     // 3. Live Stock Restoration (Adds back deducted cylinders immediately)
     if (billData && Array.isArray(billData.items) && typeof restoreStock === 'function') {
-      restoreStock(billData.items);
+      await restoreStock(billData.items);
     }
 
     // 4. Remove calendar delivery entry from memory and Supabase entries table

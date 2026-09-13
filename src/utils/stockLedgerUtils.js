@@ -53,21 +53,19 @@ function ledgerItemType(item) {
   return null;
 }
 
-// Quantity of `item` as of `targetDate` (inclusive). For today/future dates,
-// uses the live current_stock from the items catalog. For past dates covered
+// Quantity of `item` as of `targetDate` (inclusive). For past dates covered
 // by the ledger, uses its verified historical closing_stock. For dates after
-// the ledger's last entry but before today, replays real purchases/sales
-// (strict item_id match) forward from the ledger's last known point. Items
-// without ledger coverage fall back to live current_stock for every date.
+// the ledger's last entry (including today/future dates), replays real purchases/sales
+// forward from the ledger's last known point. Items without ledger coverage fall back
+// to live current_stock for every date.
 export function getItemQtyAsOf(item, targetDate, ledgerRows = [], { purchaseBills = [], bills = [] } = {}) {
   if (!item) return 0;
   const target = toDateOnly(targetDate);
   if (!target || target < BUSINESS_INCEPTION_DATE) return 0;
 
-  const todayStr = toDateOnly(new Date());
   const itemType = ledgerItemType(item);
 
-  if (target >= todayStr || !itemType) {
+  if (!itemType) {
     return parseFloat(item.current_stock) || 0;
   }
 
@@ -75,7 +73,7 @@ export function getItemQtyAsOf(item, targetDate, ledgerRows = [], { purchaseBill
     .filter(r => r.item_type === itemType)
     .sort((a, b) => (a.entry_date !== b.entry_date ? a.entry_date.localeCompare(b.entry_date) : a.import_seq - b.import_seq));
 
-  if (sortedRows.length === 0) return 0;
+  if (sortedRows.length === 0) return parseFloat(item.current_stock) || 0;
 
   const lastLedgerDate = sortedRows[sortedRows.length - 1].entry_date;
 
@@ -84,19 +82,33 @@ export function getItemQtyAsOf(item, targetDate, ledgerRows = [], { purchaseBill
     return relevant.length ? relevant[relevant.length - 1].closing_stock : 0;
   }
 
-  // Gap between the ledger's last entry and targetDate: replay real
-  // transactions forward, matched strictly by item_id.
+  // Gap between the ledger's last entry and targetDate (including today): replay real
+  // transactions forward from the verified ledger baseline.
   let qty = sortedRows[sortedRows.length - 1].closing_stock;
+
+  const matchesItem = (line) => {
+    if (line.item_id && line.item_id === item.id) return true;
+    const desc = (line.description || line.item_name || line.name || '').toLowerCase();
+    const itemName = (item.name || '').toLowerCase();
+    if (itemName.includes('19.2') && (desc.includes('19.2') || desc.includes('commercial'))) return true;
+    if (itemName.includes('21') && desc.includes('21')) return true;
+    return false;
+  };
+
   (purchaseBills || []).forEach(pb => {
     const d = toDateOnly(pb.purchase_date);
     if (d > lastLedgerDate && d <= target && Array.isArray(pb.items)) {
-      pb.items.forEach(line => { if (line.item_id === item.id) qty += parseFloat(line.qty) || 0; });
+      pb.items.forEach(line => {
+        if (matchesItem(line)) qty += parseFloat(line.qty) || 0;
+      });
     }
   });
   (bills || []).forEach(b => {
     const d = toDateOnly(b.bill_date);
     if (d > lastLedgerDate && d <= target && Array.isArray(b.items)) {
-      b.items.forEach(line => { if (line.item_id === item.id) qty -= parseFloat(line.qty) || 0; });
+      b.items.forEach(line => {
+        if (matchesItem(line)) qty -= parseFloat(line.qty) || 0;
+      });
     }
   });
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../utils/supabaseClient';
 import ledgerFallback from '../data/itemStockLedgerFallback.json';
+import { getItemQtyAsOf } from '../utils/stockLedgerUtils';
 
 export function useInventory(currentUser) {
   const [items, setItems] = useState([]);
@@ -94,16 +95,35 @@ export function useInventory(currentUser) {
     };
   }, [fetchData]);
 
-  // Compute live stock dynamically for each item from current database stock
+  // Compute live stock dynamically for each item:
+  // Cylinders covered by the verified ledger replay forward from purchases and sales.
+  // Non-ledger items (empty cylinders, regulators, etc.) fall back to their live current_stock.
   const itemsWithLiveStock = useMemo(() => {
+    const todayStr = new Date().toISOString().slice(0, 10);
     return items.map(item => {
-      const baseStock = parseFloat(item.current_stock) || 0;
+      const dynamicQty = getItemQtyAsOf(item, todayStr, itemStockLedger, { purchaseBills, bills });
       return {
         ...item,
-        current_stock: baseStock
+        current_stock: dynamicQty
       };
     });
-  }, [items]);
+  }, [items, itemStockLedger, purchaseBills, bills]);
+
+  // Auto-heal DB items table: if database row drifts from authoritative ledger math,
+  // silently synchronize the database row to keep external tools and direct DB queries consistent.
+  useEffect(() => {
+    if (items.length > 0 && (bills.length > 0 || purchaseBills.length > 0)) {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      items.forEach(async (it) => {
+        const dynamicQty = getItemQtyAsOf(it, todayStr, itemStockLedger, { purchaseBills, bills });
+        const dbStock = parseFloat(it.current_stock) || 0;
+        if (Math.abs(dynamicQty - dbStock) > 0.001) {
+          console.log(`⚡ Auto-reconciling item "${it.name}" stock: DB(${dbStock}) -> Authoritative Ledger(${dynamicQty})`);
+          await supabase.from('items').update({ current_stock: dynamicQty }).eq('id', it.id);
+        }
+      });
+    }
+  }, [items, bills, purchaseBills, itemStockLedger]);
 
   const saveItem = async (itemData) => {
     const { id, ...fields } = itemData;
