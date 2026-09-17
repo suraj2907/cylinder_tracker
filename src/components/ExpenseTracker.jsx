@@ -649,13 +649,13 @@ function RecordExpenseModal({ categories, expenseItems, onClose, onSave }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/65 backdrop-blur-xs flex items-center justify-center z-[99] p-4 overflow-y-auto">
-      <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-6 sm:p-7 space-y-5 max-h-[92vh] overflow-y-auto animate-scaleUp flex flex-col border border-slate-100">
+    <div className="fixed inset-0 bg-slate-900/65 backdrop-blur-xs flex items-center justify-center z-[99] p-2.5 sm:p-4 overflow-y-auto">
+      <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl p-4 sm:p-7 space-y-4 sm:space-y-5 max-h-[94vh] overflow-y-auto animate-scaleUp flex flex-col border border-slate-100">
         
         {/* Modal Header */}
         <div className="flex justify-between items-center border-b pb-4 shrink-0">
           <div className="flex items-center gap-3">
-            <span className="w-10 h-10 rounded-2xl bg-sky-50 text-sky-600 border border-sky-100 flex items-center justify-center text-lg font-black">
+            <span className="w-10 h-10 rounded-2xl bg-sky-50 text-sky-600 border border-sky-100 flex items-center justify-center text-lg font-black shrink-0">
               💸
             </span>
             <div>
@@ -666,7 +666,7 @@ function RecordExpenseModal({ categories, expenseItems, onClose, onSave }) {
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-all font-bold cursor-pointer"
+            className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-all font-bold cursor-pointer shrink-0"
           >
             ✕
           </button>
@@ -725,19 +725,19 @@ function RecordExpenseModal({ categories, expenseItems, onClose, onSave }) {
           </div>
 
           {/* Expense Items Breakdown Panel */}
-          <div className="border border-slate-200 p-4 rounded-2xl bg-slate-50/70 space-y-3">
-            <div className="flex justify-between items-center border-b border-slate-200 pb-2.5">
-              <div>
+          <div className="border border-slate-200 p-3 sm:p-4 rounded-2xl bg-slate-50/70 space-y-3">
+            <div className="flex justify-between items-center border-b border-slate-200 pb-2.5 gap-2">
+              <div className="min-w-0">
                 <span className="text-xs font-black text-slate-700 uppercase tracking-wider block">
                   Expense Items & Line Breakdown
                 </span>
                 <span className="text-[11px] font-semibold text-slate-400">Specify description, quantity and rate/amount</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowItemPicker(!showItemPicker)}
-                  className="px-3 py-1.5 rounded-xl bg-sky-100 hover:bg-sky-200 text-sky-800 text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1"
+                  className="px-3 py-1.5 rounded-xl bg-sky-100 hover:bg-sky-200 text-sky-800 text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1 shrink-0 whitespace-nowrap"
                 >
                   📋 Pick From Catalog
                 </button>
@@ -773,7 +773,7 @@ function RecordExpenseModal({ categories, expenseItems, onClose, onSave }) {
             <div className="flex flex-col sm:flex-row gap-2 items-center bg-white p-2 rounded-xl border border-slate-200">
               <input
                 type="text"
-                placeholder="➕ Or type custom item name (e.g. Manish Driver Salary)..."
+                placeholder="➕ Or type custom item name (e.g. Diesel, Driver Salary)..."
                 value={customItemName}
                 onChange={e => setCustomItemName(e.target.value)}
                 className="flex-1 bg-transparent px-3 py-1.5 text-xs font-bold text-slate-800 outline-none w-full"
@@ -790,7 +790,7 @@ function RecordExpenseModal({ categories, expenseItems, onClose, onSave }) {
                   placeholder="Rate (₹)"
                   value={customItemRate}
                   onChange={e => setCustomItemRate(e.target.value)}
-                  className="w-24 sm:w-28 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-black text-slate-800 outline-none"
+                  className="flex-1 sm:w-28 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-black text-slate-800 outline-none"
                   onKeyDown={e => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
@@ -801,86 +801,144 @@ function RecordExpenseModal({ categories, expenseItems, onClose, onSave }) {
                 <button
                   type="button"
                   onClick={handleAddCustomItem}
-                  className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold shrink-0 cursor-pointer"
+                  className="px-4 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold shrink-0 cursor-pointer"
                 >
                   Add
                 </button>
               </div>
             </div>
 
-            {/* Table Header for Line Items (Clear distinction of Qty vs Rate vs Amount) */}
+            {/* Table Header for Line Items (Desktop only) */}
             {itemsList.length > 0 && (
-              <div className="bg-slate-200/70 rounded-xl px-3.5 py-2 grid grid-cols-12 gap-2 text-[10px] font-black text-slate-600 uppercase tracking-wider">
-                <div className="col-span-5 sm:col-span-5">Item / Description</div>
-                <div className="col-span-2 sm:col-span-2 text-center">Qty</div>
-                <div className="col-span-2 sm:col-span-2 text-center">Rate / Salary (₹)</div>
-                <div className="col-span-2 sm:col-span-2 text-right">Amount (₹)</div>
-                <div className="col-span-1 sm:col-span-1 text-center">Del</div>
+              <div className="hidden sm:grid bg-slate-200/70 rounded-xl px-3.5 py-2 grid-cols-12 gap-2 text-[10px] font-black text-slate-600 uppercase tracking-wider">
+                <div className="col-span-5">Item / Description</div>
+                <div className="col-span-2 text-center">Qty</div>
+                <div className="col-span-2 text-center">Rate / Salary (₹)</div>
+                <div className="col-span-2 text-right">Amount (₹)</div>
+                <div className="col-span-1 text-center">Del</div>
               </div>
             )}
 
             {/* Line Items Rows */}
-            <div className="space-y-2">
+            <div className="space-y-2.5 sm:space-y-2">
               {itemsList.map((item, idx) => (
-                <div key={idx} className="bg-white p-3 rounded-xl border border-slate-200 grid grid-cols-12 gap-2 items-center shadow-xs">
-                  
-                  {/* Item Name */}
-                  <div className="col-span-5 sm:col-span-5 min-w-0">
-                    <input
-                      type="text"
-                      className="w-full text-xs font-extrabold text-slate-800 outline-none bg-transparent"
-                      value={item.item_name}
-                      onChange={e => updateLineItem(idx, 'item_name', e.target.value)}
-                    />
-                  </div>
+                <div key={idx}>
+                  {/* Mobile View: Clean Card Layout */}
+                  <div className="sm:hidden bg-white p-3 rounded-xl border border-slate-200 space-y-2.5 shadow-xs">
+                    {/* Item Name & Remove */}
+                    <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-0.5">Item / Description</span>
+                        <input
+                          type="text"
+                          className="w-full text-xs font-extrabold text-slate-800 outline-none bg-transparent"
+                          placeholder="Item name"
+                          value={item.item_name}
+                          onChange={e => updateLineItem(idx, 'item_name', e.target.value)}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveLineItem(idx)}
+                        className="w-7 h-7 rounded-lg hover:bg-rose-50 text-rose-500 hover:text-rose-700 text-xs font-black flex items-center justify-center transition-all cursor-pointer shrink-0"
+                        title="Remove Item"
+                      >
+                        ✕
+                      </button>
+                    </div>
 
-                  {/* Quantity Input */}
-                  <div className="col-span-2 sm:col-span-2">
-                    <div className="relative">
-                      <input
-                        type="number"
-                        min="1"
-                        placeholder="Qty"
-                        className="w-full bg-slate-50 border border-slate-200 focus:border-sky-500 rounded-lg px-2 py-1.5 text-xs font-black text-center text-slate-900 outline-none"
-                        value={item.qty}
-                        onChange={e => updateLineItem(idx, 'qty', parseInt(e.target.value) || 0)}
-                      />
+                    {/* Qty, Rate and Amount Row */}
+                    <div className="grid grid-cols-3 gap-2 items-center bg-slate-50/80 p-2.5 rounded-lg border border-slate-100">
+                      <div>
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block mb-1">Qty</span>
+                        <input
+                          type="number"
+                          min="1"
+                          placeholder="Qty"
+                          className="w-full bg-white border border-slate-200 focus:border-sky-500 rounded-lg px-2 py-1.5 text-xs font-black text-center text-slate-900 outline-none"
+                          value={item.qty}
+                          onChange={e => updateLineItem(idx, 'qty', parseInt(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block mb-1">Rate (₹)</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          placeholder="Rate"
+                          className="w-full bg-white border border-slate-200 focus:border-sky-500 rounded-lg px-2 py-1.5 text-xs font-black text-center text-slate-900 outline-none"
+                          value={item.rate}
+                          onChange={e => updateLineItem(idx, 'rate', parseFloat(e.target.value) || 0)}
+                        />
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider block mb-1">Amount</span>
+                        <div className="text-xs font-black text-rose-700 py-1 font-mono">
+                          ₹{Number(item.amount).toLocaleString('en-IN')}
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Rate / Salary Input */}
-                  <div className="col-span-2 sm:col-span-2">
-                    <div className="relative">
+                  {/* Desktop View: 12-Column Table Grid Layout */}
+                  <div className="hidden sm:grid bg-white p-3 rounded-xl border border-slate-200 grid-cols-12 gap-2 items-center shadow-xs">
+                    {/* Item Name */}
+                    <div className="col-span-5 min-w-0">
                       <input
-                        type="number"
-                        step="0.01"
-                        placeholder="Rate ₹"
-                        className="w-full bg-slate-50 border border-slate-200 focus:border-sky-500 rounded-lg px-2 py-1.5 text-xs font-black text-center text-slate-900 outline-none"
-                        value={item.rate}
-                        onChange={e => updateLineItem(idx, 'rate', parseFloat(e.target.value) || 0)}
+                        type="text"
+                        className="w-full text-xs font-extrabold text-slate-800 outline-none bg-transparent"
+                        value={item.item_name}
+                        onChange={e => updateLineItem(idx, 'item_name', e.target.value)}
                       />
                     </div>
-                  </div>
 
-                  {/* Computed Amount (Never cut off) */}
-                  <div className="col-span-2 sm:col-span-2 text-right">
-                    <span className="text-xs font-black text-rose-700 block truncate" title={`₹${Number(item.amount).toLocaleString('en-IN')}`}>
-                      ₹{Number(item.amount).toLocaleString('en-IN')}
-                    </span>
-                  </div>
+                    {/* Quantity Input */}
+                    <div className="col-span-2">
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="1"
+                          placeholder="Qty"
+                          className="w-full bg-slate-50 border border-slate-200 focus:border-sky-500 rounded-lg px-2 py-1.5 text-xs font-black text-center text-slate-900 outline-none"
+                          value={item.qty}
+                          onChange={e => updateLineItem(idx, 'qty', parseInt(e.target.value) || 0)}
+                        />
+                      </div>
+                    </div>
 
-                  {/* Delete Action */}
-                  <div className="col-span-1 sm:col-span-1 text-center">
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveLineItem(idx)}
-                      className="w-7 h-7 rounded-lg hover:bg-rose-50 text-rose-500 hover:text-rose-700 text-xs font-black flex items-center justify-center transition-all cursor-pointer mx-auto"
-                      title="Remove Item"
-                    >
-                      ✕
-                    </button>
-                  </div>
+                    {/* Rate / Salary Input */}
+                    <div className="col-span-2">
+                      <div className="relative">
+                        <input
+                          type="number"
+                          step="0.01"
+                          placeholder="Rate ₹"
+                          className="w-full bg-slate-50 border border-slate-200 focus:border-sky-500 rounded-lg px-2 py-1.5 text-xs font-black text-center text-slate-900 outline-none"
+                          value={item.rate}
+                          onChange={e => updateLineItem(idx, 'rate', parseFloat(e.target.value) || 0)}
+                        />
+                      </div>
+                    </div>
 
+                    {/* Computed Amount */}
+                    <div className="col-span-2 text-right">
+                      <span className="text-xs font-black text-rose-700 block truncate" title={`₹${Number(item.amount).toLocaleString('en-IN')}`}>
+                        ₹{Number(item.amount).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+
+                    {/* Delete Action */}
+                    <div className="col-span-1 text-center">
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveLineItem(idx)}
+                        className="w-7 h-7 rounded-lg hover:bg-rose-50 text-rose-500 hover:text-rose-700 text-xs font-black flex items-center justify-center transition-all cursor-pointer mx-auto"
+                        title="Remove Item"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ))}
 
@@ -938,25 +996,25 @@ function RecordExpenseModal({ categories, expenseItems, onClose, onSave }) {
         </div>
 
         {/* Total Amount & Submit Bottom Bar */}
-        <div className="border-t border-slate-100 pt-4 flex items-center justify-between shrink-0">
+        <div className="border-t border-slate-100 pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
           <div>
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Grand Total Outflow</span>
             <span className="text-2xl font-black text-rose-700 block">
               ₹{Number(totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+              className="flex-1 sm:flex-none px-4 sm:px-5 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer text-center"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="px-7 py-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-black shadow-soft hover:shadow-md transition-all cursor-pointer disabled:opacity-50 flex items-center gap-2"
+              className="flex-2 sm:flex-none px-5 sm:px-7 py-2.5 sm:py-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-black shadow-soft hover:shadow-md transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {saving ? 'Recording...' : '💾 Save & Record Expense'}
             </button>
