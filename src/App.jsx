@@ -11,6 +11,7 @@ import { useUser } from './context/UserContext';
 import { useHashNavigation } from './hooks/useHashNavigation';
 import { useCylinderData } from './hooks/useCylinderData';
 import { useBilling } from './hooks/useBilling';
+import { useQuotations } from './hooks/useQuotations';
 import Login from './components/Login';
 import PublicLedgerView from './components/PublicLedgerView';
 import { useInventory } from './hooks/useInventory';
@@ -41,6 +42,7 @@ const lazyWithRetry = (componentImport) =>
 // Lazy load secondary tabs with auto-retry on build changes
 const CalendarView = lazyWithRetry(() => import('./components/CalendarView'));
 const GenerateBill = lazyWithRetry(() => import('./components/GenerateBill'));
+const QuotationManager = lazyWithRetry(() => import('./components/QuotationManager'));
 const InventoryManager = lazyWithRetry(() => import('./components/InventoryManager'));
 const ExpenseTracker = lazyWithRetry(() => import('./components/ExpenseTracker'));
 const SalesSummaryDashboard = lazyWithRetry(() => import('./components/SalesSummaryDashboard'));
@@ -51,6 +53,7 @@ const OutstandingBills = lazyWithRetry(() => import('./components/OutstandingBil
 // Shapes the Suspense fallback per-tab so it roughly resembles what's about to render.
 const TAB_SKELETON_VARIANT = {
   billing: 'form',
+  quotations: 'table',
   calendar: 'calendar',
   inventory: 'table',
   expenses: 'table',
@@ -133,6 +136,17 @@ export default function App() {
     deleteBill,
     recordBillPayment
   } = useBilling(currentUser, handleAdd, removeDeliveryEntries, deductStock, restoreStock);
+
+  const {
+    quotations,
+    loadingQuotations,
+    quotationError,
+    nextSuggestedQuotationNo,
+    createQuotation,
+    updateQuotation,
+    claimQuotationForConversion,
+    deleteQuotation
+  } = useQuotations(currentUser);
 
   const [editingBill, setEditingBill] = useState(null);
   const startEditBill = (bill) => {
@@ -397,6 +411,7 @@ export default function App() {
             {tab === "dashboard" && <Dashboard restaurants={restaurants} batchStats={batchStats} restMap={restMap} totAll={totAll} tot21={tot21} tot192={tot192} totEmpty={totEmpty} totOutstanding={totOutstanding} restaurantProfiles={restaurantProfiles} bills={bills} payments={payments} purchaseBills={purchaseBills} legacyLedgerEntries={legacyLedgerEntries} setTab={setTab} loading={loading || loadingBilling} />}
             {tab === "restaurants" && <RestaurantsList restaurants={restaurants} tot21={tot21} tot192={tot192} totEmpty={totEmpty} totEmpty21={totEmpty21} totEmpty192={totEmpty192} totAll={totAll} totOutstanding={totOutstanding} search={search} setSearch={setSearch} sortBy={sortBy} setSortBy={setSortBy} batches={batches} payments={payments} handleDeleteEntry={handleDeleteEntry} onDeletePayment={handleDeletePayment} restaurantProfiles={restaurantProfiles} onSaveRestaurantProfile={saveRestaurantProfile} bills={bills} legacyLedgerEntries={legacyLedgerEntries} deleteBill={deleteBill} removeDeliveryEntries={removeDeliveryEntries} onEditBill={startEditBill} />}
             {tab === "billing" && <GenerateBill restaurants={restaurants} restaurantProfiles={restaurantProfiles} createBill={createBill} updateBill={updateBill} editingBill={editingBill} onDoneEditing={stopEditBill} itemsCatalog={itemsCatalog} partyItemPrices={partyItemPrices} bills={bills} payments={payments} nextSuggestedInvoiceNo={nextSuggestedInvoiceNo} batches={batches} legacyLedgerEntries={legacyLedgerEntries} />}
+            {tab === "quotations" && <QuotationManager restaurants={restaurants} restaurantProfiles={restaurantProfiles} itemsCatalog={itemsCatalog} partyItemPrices={partyItemPrices} batches={batches} quotations={quotations} loading={loadingQuotations} error={quotationError} nextSuggestedQuotationNo={nextSuggestedQuotationNo} createQuotation={createQuotation} updateQuotation={updateQuotation} claimQuotationForConversion={claimQuotationForConversion} deleteQuotation={deleteQuotation} createBill={createBill} />}
             {tab === "outstandingBills" && <OutstandingBills bills={bills} recordBillPayment={recordBillPayment} />}
             {tab === "inventory" && <InventoryManager items={itemsCatalog} purchaseBills={purchaseBills} stockAdjustments={stockAdjustments} partyItemPrices={partyItemPrices} restaurants={restaurants} saveItem={saveItem} saveStockAdjustment={saveStockAdjustment} savePurchaseBill={savePurchaseBill} deletePurchaseBill={deletePurchaseBill} savePartyPrice={savePartyPrice} deletePartyPrice={deletePartyPrice} />}
             {tab === "expenses" && <ExpenseTracker categories={expenseCategories} expenseItems={expenseItems} expenses={expenses} saveCategory={saveCategory} deleteCategory={deleteCategory} saveExpenseItem={saveExpenseItem} deleteExpenseItem={deleteExpenseItem} saveExpense={saveExpense} deleteExpense={deleteExpense} />}
@@ -529,6 +544,7 @@ export default function App() {
                     <div className="space-y-1">
                       {[
                         { id: "billing", label: "🧾 Create New Invoice", desc: "Generate GST & Supply bills" },
+                        { id: "quotations", label: "📄 Quotations / Estimates", desc: "Send quotes & convert to invoice" },
                         { id: "inventory", label: "📦 Stock & Inventory", desc: "Live stock & catalog rates", badge: lowStockItems.length > 0 ? `${lowStockItems.length} Low` : null }
                         // { id: "outstandingBills", label: "⏳ Pending Invoices", desc: "Unpaid customer invoices" }, // hidden alongside the TABS entry in useHashNavigation.js - re-add both together to bring it back
                       ].map(item => (

@@ -6,6 +6,7 @@ export const TABS = [
   { id: "payments", label: "💰 Cashflow & Wallet" },
   // { id: "outstandingBills", label: "⏳ Pending Bills" }, // hidden for now - re-add this line to bring the tab back
   { id: "billing", label: "🧾 Generate Bill" },
+  { id: "quotations", label: "📄 Quotations" },
   { id: "inventory", label: "📦 Inventory & Stock" },
   { id: "expenses", label: "💸 Expenses" },
   { id: "salesReport", label: "📈 Sales Summary" },

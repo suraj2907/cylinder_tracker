@@ -197,7 +197,10 @@ export const generateInvoicePDFDoc = async (bill, profile = {}) => {
     import('jspdf-autotable')
   ]);
   const doc = new jsPDF('p', 'mm', 'a4');
-  const invLabel = bill.invoiceLabel || (bill.invoice_no ? `INV-${String(bill.invoice_no).padStart(4, '0')}` : 'INVOICE');
+  const isQuotation = bill.document_type === 'quotation' || Boolean(bill.quotation_no);
+  const invLabel = isQuotation
+    ? `Q-${String(bill.quotation_no || 0).padStart(4, '0')}`
+    : (bill.invoiceLabel || (bill.invoice_no ? `INV-${String(bill.invoice_no).padStart(4, '0')}` : 'INVOICE'));
   const isGst = bill.gst_mode === 'gst';
 
   // Header Banner
@@ -221,7 +224,7 @@ export const generateInvoicePDFDoc = async (bill, profile = {}) => {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(9.5);
   doc.setFont('helvetica', 'bold');
-  doc.text(isGst ? 'TAX INVOICE' : 'PLAIN BILL', 173, 15, { align: 'center' });
+  doc.text(isQuotation ? 'QUOTATION' : (isGst ? 'TAX INVOICE' : 'PLAIN BILL'), 173, 15, { align: 'center' });
 
   // Bill To & Invoice Meta block
   doc.setTextColor(30, 41, 59);
@@ -248,19 +251,25 @@ export const generateInvoicePDFDoc = async (bill, profile = {}) => {
   // Invoice Details on the Right
   doc.setFontSize(8.5);
   doc.setTextColor(71, 85, 105);
-  doc.text(`Invoice No:`, 140, 34);
+  doc.text(isQuotation ? 'Quotation No:' : 'Invoice No:', 140, 34);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(14, 116, 144);
   doc.text(invLabel, 196, 34, { align: 'right' });
 
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(71, 85, 105);
-  doc.text(`Invoice Date:`, 140, 40);
+  doc.text(isQuotation ? 'Quotation Date:' : 'Invoice Date:', 140, 40);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(15, 23, 42);
-  doc.text(bill.bill_date || new Date().toISOString().slice(0, 10), 196, 40, { align: 'right' });
+  doc.text(bill.quotation_date || bill.bill_date || new Date().toISOString().slice(0, 10), 196, 40, { align: 'right' });
 
-  if (bill.batch_num) {
+  if (isQuotation && bill.expiry_date) {
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text('Valid Until:', 140, 46);
+    doc.setFont('helvetica', 'bold');
+    doc.text(bill.expiry_date, 196, 46, { align: 'right' });
+  } else if (bill.batch_num) {
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(71, 85, 105);
     doc.text(`Batch #:`, 140, 46);
@@ -399,37 +408,39 @@ export const generateInvoicePDFDoc = async (bill, profile = {}) => {
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(71, 85, 105);
-  doc.text('Received Amount:', 118, rY);
-  doc.text(`Rs. ${paidAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
-  rY += 4.5;
+  if (!isQuotation) {
+    doc.text('Received Amount:', 118, rY);
+    doc.text(`Rs. ${paidAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
+    rY += 4.5;
 
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(71, 85, 105);
-  doc.text('Previous Balance:', 118, rY);
-  doc.text(`Rs. ${prevBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
-  rY += 4.5;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text('Previous Balance:', 118, rY);
+    doc.text(`Rs. ${prevBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
+    rY += 4.5;
 
-  doc.setFontSize(8.5);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(225, 29, 72);
-  doc.text('Current Balance:', 118, rY);
-  doc.text(`Rs. ${currentBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(225, 29, 72);
+    doc.text('Current Balance:', 118, rY);
+    doc.text(`Rs. ${currentBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
+  }
 
   // Total in Words Box Below
   doc.setFontSize(7.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(71, 85, 105);
-  doc.text('Balance (in words):', 14, finalY + 48);
+  doc.text(isQuotation ? 'Total (in words):' : 'Balance (in words):', 14, finalY + 48);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(15, 23, 42);
-  doc.text(numberToWords(Math.round(currentBal > 0 ? currentBal : totAmt)), 45, finalY + 48);
+  doc.text(numberToWords(Math.round(isQuotation ? totAmt : (currentBal > 0 ? currentBal : totAmt))), 45, finalY + 48);
 
   // Footer note
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(148, 163, 184);
-  doc.text('Terms: Goods once sold will not be taken back. Empty cylinders returnable; loss/damage chargeable.', 14, finalY + 54);
+  doc.text(isQuotation ? 'Estimate only. Rates valid until expiry; supply is subject to stock availability.' : 'Terms: Goods once sold will not be taken back. Empty cylinders returnable; loss/damage chargeable.', 14, finalY + 54);
   doc.text('Authorized Signatory • M/S SHREE BALAJI AGENCIES', 196, finalY + 54, { align: 'right' });
 
   return doc;
@@ -458,6 +469,50 @@ export const exportBillPDF = async (bill, profile = {}) => {
   const invLabel = bill.invoiceLabel || (bill.invoice_no ? `INV-${String(bill.invoice_no).padStart(4, '0')}` : 'INVOICE');
   const safeName = (bill.restaurant_name || profile.name || 'Customer').replace(/[^a-zA-Z0-9]/g, '_');
   doc.save(`Invoice_${invLabel}_${safeName}.pdf`);
+};
+
+// Export a quotation/estimate without affecting invoice numbering, stock or party balance.
+export const exportQuotationPDF = async (quotation, profile = {}) => {
+  const quote = { ...quotation, document_type: 'quotation' };
+  const doc = await generateInvoicePDFDoc(quote, profile);
+  const label = `Q-${String(quote.quotation_no || 0).padStart(4, '0')}`;
+  const safeName = (quote.restaurant_name || profile.name || 'Customer').replace(/[^a-zA-Z0-9]/g, '_');
+  doc.save(`Quotation_${label}_${safeName}.pdf`);
+};
+
+export const shareQuotationPDFOnWhatsApp = async (quotation, profile = {}) => {
+  const quote = { ...quotation, document_type: 'quotation' };
+  const doc = await generateInvoicePDFDoc(quote, profile);
+  const label = `Q-${String(quote.quotation_no || 0).padStart(4, '0')}`;
+  const partyName = quote.restaurant_name || profile.name || 'Customer';
+  const safeName = partyName.replace(/[^a-zA-Z0-9]/g, '_');
+  const fileName = `Quotation_${label}_${safeName}.pdf`;
+  const cleanPhone = String(profile.mobile || quote.mobile || '').replace(/[^0-9]/g, '');
+  const recipient = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+  const amount = Number(quote.total_amount || 0);
+  const message = `📄 *QUOTATION ${label}*\n` +
+    `Dear *${partyName}*,\n\n` +
+    `Please find our quotation of *₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}* dated *${quote.quotation_date}*.\n` +
+    `This quotation is valid until *${quote.expiry_date}*.\n\n` +
+    `Please confirm to proceed with the supply and tax invoice.\n\n` +
+    `*M/S SHREE BALAJI AGENCIES*\n📞 9407922288 | msspagency@gmail.com`;
+
+  const pdfFile = new File([doc.output('blob')], fileName, { type: 'application/pdf' });
+  if (typeof navigator !== 'undefined' && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+    try {
+      await navigator.share({ files: [pdfFile], title: `Quotation ${label} - ${partyName}`, text: `Quotation ${label} for ${partyName}` });
+      return;
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      console.warn('Native quotation share error, falling back:', err);
+    }
+  }
+
+  doc.save(fileName);
+  const url = recipient
+    ? `https://wa.me/${recipient}?text=${encodeURIComponent(message)}`
+    : `https://wa.me/?text=${encodeURIComponent(message)}`;
+  window.open(url, '_blank');
 };
 
 // Share invoice directly into party WhatsApp chat with PDF attachment
