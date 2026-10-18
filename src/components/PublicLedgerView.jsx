@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { publicClient } from '../utils/supabaseClient';
-import { norm, isNewBill, isNewPayment } from '../utils/dataUtils';
+import { applyLedgerRunningBalances, fetchPublicLedgerPayload, isNewBill, sortLedgerTimeline } from '../utils/dataUtils';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -78,57 +78,7 @@ export default function PublicLedgerView({ token }) {
 
         if (!payload || !payload.restaurant) {
           // Direct Supabase Client Fallback
-          const rawTarget = partyName.trim();
-          const { data: restList } = await publicClient
-            .from('restaurants')
-            .select('name, mobile, previous_balance, address, gst_num')
-            .or(`name.ilike.%${rawTarget}%,name.ilike.${rawTarget}`)
-            .limit(5);
-
-          const restData = restList?.[0] || null;
-          const canonicalName = restData?.name || rawTarget;
-
-          const searchTerms = [rawTarget, canonicalName];
-          if (restData?.name) searchTerms.push(restData.name);
-          const stopWords = ['hotel', 'cafe', 'dhaba', 'dhabha', 'restaurant', 'restuarant', 'private', 'limited', 'project', 'and', 'the'];
-          rawTarget.split(/\s+/).forEach(w => {
-            const cleanW = w.toLowerCase().replace(/[^a-z0-9]/g, '');
-            if (cleanW.length >= 4 && !stopWords.includes(cleanW)) {
-              searchTerms.push(cleanW);
-            }
-          });
-
-          const orFilter = [...new Set(searchTerms)].map(t => `restaurant_name.ilike.%${t}%`).join(',');
-
-          const [
-            { data: legacyRows },
-            { data: billsData },
-            { data: paymentsData }
-          ] = await Promise.all([
-            publicClient
-              .from('legacy_ledger_entries')
-              .select('*')
-              .or(orFilter)
-              .not('entry_date', 'is', null)
-              .order('entry_date', { ascending: true }),
-            publicClient
-              .from('bills')
-              .select('*')
-              .or(orFilter)
-              .order('bill_date', { ascending: true }),
-            publicClient
-              .from('payments')
-              .select('*')
-              .or(orFilter)
-              .order('date', { ascending: true })
-          ]);
-
-          payload = {
-            restaurant: restData || { name: canonicalName, previous_balance: 0 },
-            legacyRows: legacyRows || [],
-            bills: billsData || [],
-            payments: paymentsData || []
-          };
+          payload = await fetchPublicLedgerPayload(publicClient, partyName);
         }
 
         setRestaurantProfile(payload.restaurant || { name: partyName, previous_balance: 0 });
@@ -159,7 +109,7 @@ export default function PublicLedgerView({ token }) {
       list.push({
         id: `leg_${idx}_${e.entry_date}_${e.sr_no}`,
         date: e.entry_date,
-        voucher: e.voucher_type === 'Invoice' ? 'Sales Invoice' : e.voucher_type,
+        voucher: e.voucher_type === 'Invoice' || e.voucher_type === 'Bill' ? 'Sales Invoice' : e.voucher_type,
         srNo: e.sr_no || '—',
         paymentMode: e.payment_mode || '—',
         credit,
@@ -167,7 +117,8 @@ export default function PublicLedgerView({ token }) {
         balance: e.balance !== null && e.balance !== undefined ? parseFloat(e.balance) : null,
         dueDate: e.due_date || '',
         status: e.payment_status ? (e.payment_status.charAt(0).toUpperCase() + e.payment_status.slice(1)) : 'Paid',
-        isOfficial: true
+        isOfficial: true,
+        sourceOrder: idx
       });
     });
 
@@ -222,24 +173,12 @@ export default function PublicLedgerView({ token }) {
     });
 
     // Sort chronologically ascending (Date asc, Bills before Payments on same date, srNo asc)
-    list.sort((a, b) => {
-      const dCmp = (a.date || '').localeCompare(b.date || '');
-      if (dCmp !== 0) return dCmp;
-      if (a.debit > 0 && b.credit > 0) return -1;
-      if (a.credit > 0 && b.debit > 0) return 1;
-      return (Number(a.srNo) || 0) - (Number(b.srNo) || 0);
-    });
+    const sortedList = sortLedgerTimeline(list);
 
-    // Compute dynamic continuous running balance
-    let runningBal = 0;
-
-    return list.map((item) => {
-      runningBal = runningBal + item.debit - item.credit;
-      return {
-        ...item,
-        runningBalance: runningBal
-      };
-    });
+    const initialBalance = ledgerRows.length > 0
+      ? 0
+      : parseFloat(restaurantProfile?.previous_balance || 0);
+    return applyLedgerRunningBalances(sortedList, initialBalance);
   }, [ledgerRows, bills, payments, restaurantProfile]);
 
   // Compute filtered timeline, opening balance, totals, and date range
@@ -292,7 +231,7 @@ export default function PublicLedgerView({ token }) {
 
     // Determine Opening Balance just before startLimit
     const priorItems = fullTimeline.filter(item => (item.date || '') < startLimit);
-    let openBal = parseFloat(restaurantProfile?.previous_balance || 0);
+    let openBal = ledgerRows.length > 0 ? 0 : parseFloat(restaurantProfile?.previous_balance || 0);
     if (priorItems.length > 0) {
       openBal = priorItems[priorItems.length - 1].runningBalance;
     }
@@ -334,14 +273,14 @@ export default function PublicLedgerView({ token }) {
       startDateStr: actualFirstDate,
       endDateStr: actualLastDate
     };
-  }, [fullTimeline, filterPreset, customStartDate, customEndDate, restaurantProfile]);
+  }, [fullTimeline, filterPreset, customStartDate, customEndDate, restaurantProfile, ledgerRows.length]);
 
   // Passbook sorting: Latest transaction on TOP (newest first)
   const displayTimeline = useMemo(() => {
     return [...filteredTimeline].sort((a, b) => {
       const dateCmp = (b.date || '').localeCompare(a.date || '');
       if (dateCmp !== 0) return dateCmp;
-      const rank = { 'Payment-in': 1, 'Payment': 1, 'Sales Invoice': 2, 'Invoice': 2 };
+      const rank = { 'Payment-in': 1, 'Payment-out': 1, 'Payment': 1, 'Sales Invoice': 2, 'Invoice': 2 };
       return (rank[a.voucher] || 2) - (rank[b.voucher] || 2);
     });
   }, [filteredTimeline]);
@@ -668,7 +607,9 @@ export default function PublicLedgerView({ token }) {
               {/* MOBILE VERTICAL CARD VIEW (Zero Horizontal Scrolling!) */}
               <div className="block sm:hidden divide-y divide-slate-100">
                 {displayTimeline.map((row, idx) => {
-                  const isPayment = row.voucher === 'Payment-in' || row.voucher === 'Payment';
+                  const isPayment = row.voucher === 'Payment-in' || row.voucher === 'Payment-out' || row.voucher === 'Payment';
+                  const isCredit = row.credit > 0;
+                  const isDebit = row.debit > 0;
                   const isPaid = (row.status || '').toLowerCase() === 'paid';
                   const isUnpaid = (row.status || '').toLowerCase() === 'unpaid';
 
@@ -688,21 +629,23 @@ export default function PublicLedgerView({ token }) {
                             ? 'bg-teal-50 text-teal-800 border-teal-200'
                             : 'bg-indigo-50 text-indigo-900 border-indigo-200'
                         }`}>
-                          {isPayment ? `💳 ${row.paymentMode || 'Payment'}` : `🧾 Invoice`}
+                          {isPayment ? `💳 ${row.voucher}` : `🧾 Invoice`}
                         </span>
                       </div>
 
                       {/* Row 2: Amount & Status Badge */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          {isPayment ? (
+                          {isCredit ? (
                             <span className="text-sm font-black text-emerald-700">
                               -₹{row.credit.toLocaleString('en-IN', { minimumFractionDigits: 1 })}
                             </span>
-                          ) : (
+                          ) : isDebit ? (
                             <span className="text-sm font-black text-rose-700">
                               +₹{row.debit.toLocaleString('en-IN', { minimumFractionDigits: 1 })}
                             </span>
+                          ) : (
+                            <span className="text-sm font-black text-slate-500">₹0.0</span>
                           )}
 
                           {!isPayment && (

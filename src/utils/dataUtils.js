@@ -353,6 +353,131 @@ export function norm(n) {
   );
 }
 
+export function getPartyNameVariants(name) {
+  const rawName = String(name || '').trim();
+  if (!rawName) return [];
+
+  const canonicalName = norm(rawName);
+  const variants = [rawName, canonicalName];
+
+  Object.keys(ALIASES).forEach((alias) => {
+    if (norm(alias).toLowerCase() === canonicalName.toLowerCase()) {
+      variants.push(alias);
+    }
+  });
+
+  const seen = new Set();
+  return variants.filter((variant) => {
+    const key = variant.trim().toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+export function applyLedgerRunningBalances(rows, initialBalance = 0) {
+  let runningBalance = Number(initialBalance) || 0;
+
+  return rows.map((row) => {
+    const officialBalance = Number(row.balance);
+    if (row.isOfficial && row.balance !== null && row.balance !== undefined && Number.isFinite(officialBalance)) {
+      runningBalance = officialBalance;
+    } else {
+      runningBalance += (Number(row.debit) || 0) - (Number(row.credit) || 0);
+    }
+
+    return { ...row, runningBalance };
+  });
+}
+
+export function sortLedgerTimeline(rows) {
+  return [...rows].sort((a, b) => {
+    const dateComparison = String(a.date || '').localeCompare(String(b.date || ''));
+    if (dateComparison !== 0) return dateComparison;
+
+    if (a.isOfficial && b.isOfficial) {
+      const firstSourceOrder = Number(a.sourceOrder);
+      const secondSourceOrder = Number(b.sourceOrder);
+      if (Number.isFinite(firstSourceOrder) && Number.isFinite(secondSourceOrder) && firstSourceOrder !== secondSourceOrder) {
+        return firstSourceOrder - secondSourceOrder;
+      }
+      const firstSequence = Number(a.srNo);
+      const secondSequence = Number(b.srNo);
+      if (Number.isFinite(firstSequence) && Number.isFinite(secondSequence) && firstSequence !== secondSequence) {
+        return firstSequence - secondSequence;
+      }
+      return 0;
+    }
+
+    if (a.isOfficial !== b.isOfficial) return a.isOfficial ? -1 : 1;
+    if (a.debit > 0 && b.credit > 0) return -1;
+    if (a.credit > 0 && b.debit > 0) return 1;
+    return (Number(a.srNo) || 0) - (Number(b.srNo) || 0);
+  });
+}
+
+async function fetchExactPartyRows(client, table, nameColumn, variants, options = {}) {
+  const { select = '*', dateColumn = '', requireDate = false } = options;
+  const responses = await Promise.all(variants.map(async (variant) => {
+    let query = client
+      .from(table)
+      .select(select)
+      .ilike(nameColumn, variant);
+
+    if (requireDate && dateColumn) query = query.not(dateColumn, 'is', null);
+    if (dateColumn) query = query.order(dateColumn, { ascending: true });
+
+    const { data, error } = await query;
+    if (error) throw error;
+    const expectedName = variant.trim().toLowerCase();
+    return (data || []).filter((row) => String(row[nameColumn] || '').trim().toLowerCase() === expectedName);
+  }));
+
+  const seen = new Set();
+  const rows = responses.flat().filter((row) => {
+    const key = row.id ?? JSON.stringify(row);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  if (dateColumn) {
+    rows.sort((a, b) => String(a[dateColumn] || '').localeCompare(String(b[dateColumn] || '')));
+  }
+  return rows;
+}
+
+export async function fetchPublicLedgerPayload(client, partyName) {
+  const rawName = String(partyName || '').trim();
+  if (!rawName) throw new Error('Party name required');
+
+  const variants = getPartyNameVariants(rawName);
+  const restaurants = await fetchExactPartyRows(client, 'restaurants', 'name', variants, {
+    select: 'name, mobile, previous_balance, address, gst_num',
+  });
+
+  const canonicalName = norm(rawName);
+  const restaurant = restaurants.find((row) => row.name?.toLowerCase() === canonicalName.toLowerCase())
+    || restaurants[0]
+    || { name: canonicalName, previous_balance: 0 };
+  const ledgerVariants = getPartyNameVariants(restaurant.name || canonicalName);
+
+  const [legacyRows, bills, payments] = await Promise.all([
+    fetchExactPartyRows(client, 'legacy_ledger_entries', 'restaurant_name', ledgerVariants, {
+      dateColumn: 'entry_date',
+      requireDate: true,
+    }),
+    fetchExactPartyRows(client, 'bills', 'restaurant_name', ledgerVariants, {
+      dateColumn: 'bill_date',
+    }),
+    fetchExactPartyRows(client, 'payments', 'restaurant_name', ledgerVariants, {
+      dateColumn: 'date',
+    }),
+  ]);
+
+  return { restaurant, legacyRows, bills, payments };
+}
+
 // Helper to normalize ISO date strings (e.g., "2026-7-5" -> "2026-07-05")
 export function formatIsoDate(dStr) {
   if (!dStr) return "";

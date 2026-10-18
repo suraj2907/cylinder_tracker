@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { fetchPublicLedgerPayload } from './src/utils/dataUtils.js'
 
 function publicLedgerApiPlugin() {
   return {
@@ -23,60 +24,11 @@ function publicLedgerApiPlugin() {
           try {
             const { createClient } = await import('@supabase/supabase-js');
             const client = createClient(supabaseUrl, serviceKey);
-
-            const rawTarget = partyName.trim();
-            const { data: restList } = await client
-              .from('restaurants')
-              .select('name, mobile, previous_balance, address, gst_num')
-              .or(`name.ilike.%${rawTarget}%,name.ilike.${rawTarget}`)
-              .limit(5);
-
-            const restData = restList?.[0] || null;
-            const canonicalName = restData?.name || rawTarget;
-
-            const searchTerms = [rawTarget, canonicalName];
-            if (restData?.name) searchTerms.push(restData.name);
-            const stopWords = ['hotel', 'cafe', 'dhaba', 'dhabha', 'restaurant', 'restuarant', 'private', 'limited', 'project', 'and', 'the'];
-            rawTarget.split(/\s+/).forEach(w => {
-              const cleanW = w.toLowerCase().replace(/[^a-z0-9]/g, '');
-              if (cleanW.length >= 4 && !stopWords.includes(cleanW)) {
-                searchTerms.push(cleanW);
-              }
-            });
-
-            const orFilter = [...new Set(searchTerms)].map(t => `restaurant_name.ilike.%${t}%`).join(',');
-
-            const [
-              { data: legacyRows },
-              { data: billsData },
-              { data: paymentsData }
-            ] = await Promise.all([
-              client
-                .from('legacy_ledger_entries')
-                .select('*')
-                .or(orFilter)
-                .not('entry_date', 'is', null)
-                .order('entry_date', { ascending: true }),
-              client
-                .from('bills')
-                .select('*')
-                .or(orFilter)
-                .order('bill_date', { ascending: true }),
-              client
-                .from('payments')
-                .select('*')
-                .or(orFilter)
-                .order('date', { ascending: true })
-            ]);
+            const payload = await fetchPublicLedgerPayload(client, partyName);
 
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
-            return res.end(JSON.stringify({
-              restaurant: restData || { name: canonicalName, previous_balance: 0 },
-              legacyRows: legacyRows || [],
-              bills: billsData || [],
-              payments: paymentsData || []
-            }));
+            return res.end(JSON.stringify(payload));
           } catch (err) {
             res.statusCode = 500;
             res.setHeader('Content-Type', 'application/json');
