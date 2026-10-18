@@ -1,4 +1,3 @@
-import React from 'react';
 
 // Shared building block - a pulsing gray bar/box matching the app's rounded-2xl card language.
 export function SkeletonBar({ className = '' }) {

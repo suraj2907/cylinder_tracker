@@ -1,12 +1,11 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { supabase } from '../utils/supabaseClient';
-import { useUser } from '../context/UserContext';
+import { useUser } from '../context/useUser';
 import { norm, VALID_RESTAURANTS, getAllPartiesCurrentBalances } from '../utils/dataUtils';
 
 export default function ReceivePaymentModal({
   isOpen,
   onClose,
-  restaurants = [],
   restaurantProfiles = {},
   bills = [],
   payments = [],
@@ -24,6 +23,8 @@ export default function ReceivePaymentModal({
 
   const [targetBatchNum, setTargetBatchNum] = useState(activeBatchNum);
   useEffect(() => {
+    // Keep the default batch aligned when batch data loads or changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTargetBatchNum(activeBatchNum);
   }, [activeBatchNum]);
 
@@ -97,7 +98,7 @@ export default function ReceivePaymentModal({
         previous_balance: balanceMap[name] !== undefined ? balanceMap[name] : map[name].previous_balance
       };
     });
-  }, [restaurantProfiles, restaurants, bills, payments, legacyLedgerEntries]);
+  }, [restaurantProfiles, bills, payments, legacyLedgerEntries]);
 
   // Autocomplete matching suggestions based on search query
   const suggestions = useMemo(() => {

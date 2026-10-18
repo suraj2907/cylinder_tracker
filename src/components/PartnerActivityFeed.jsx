@@ -1,5 +1,4 @@
-import React from 'react';
-import { useUser } from '../context/UserContext';
+import { useUser } from '../context/useUser';
 
 export function PartnerActivityFeed({ activities = [], onClose }) {
   const { currentUser } = useUser();

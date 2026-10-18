@@ -1,18 +1,5 @@
-import React, { useState, useMemo } from 'react';
-
-export const PRESETS = {
-  TODAY: 'Today',
-  YESTERDAY: 'Yesterday',
-  THIS_WEEK: 'This Week',
-  LAST_WEEK: 'Last Week',
-  LAST_7_DAYS: 'Last 7 Days',
-  THIS_MONTH: 'This Month',
-  LAST_MONTH: 'Last Month',
-  THIS_QUARTER: 'This Quarter',
-  LAST_QUARTER: 'Last Quarter',
-  CURRENT_FISCAL_YEAR: 'Current Fiscal Year (Indian)',
-  CUSTOM: 'Custom Range'
-};
+import { useState } from 'react';
+import { PRESETS } from './dateRangePresets';
 
 function formatLocalYMD(d) {
   if (!d) return '';
@@ -36,20 +23,22 @@ export default function DateRangePicker({ value = { startDate: '', endDate: '' }
         startDate = today;
         endDate = today;
         break;
-      case PRESETS.YESTERDAY:
+      case PRESETS.YESTERDAY: {
         const yesterday = new Date();
         yesterday.setDate(today.getDate() - 1);
         startDate = yesterday;
         endDate = yesterday;
         break;
-      case PRESETS.THIS_WEEK:
+      }
+      case PRESETS.THIS_WEEK: {
         // Mon - Today
         const dayOfWeek = today.getDay(); // 0 is Sun, 1 is Mon
         const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
         startDate = new Date(today.getFullYear(), today.getMonth(), diff);
         endDate = new Date();
         break;
-      case PRESETS.LAST_WEEK:
+      }
+      case PRESETS.LAST_WEEK: {
         // Previous week Mon - Sun
         const lastMon = new Date();
         const currentDay = lastMon.getDay();
@@ -57,6 +46,7 @@ export default function DateRangePicker({ value = { startDate: '', endDate: '' }
         startDate = new Date(lastMon.getFullYear(), lastMon.getMonth(), dist);
         endDate = new Date(lastMon.getFullYear(), lastMon.getMonth(), dist + 6);
         break;
+      }
       case PRESETS.LAST_7_DAYS:
         startDate = new Date();
         startDate.setDate(today.getDate() - 6);
@@ -70,25 +60,28 @@ export default function DateRangePicker({ value = { startDate: '', endDate: '' }
         startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
         endDate = new Date(today.getFullYear(), today.getMonth(), 0);
         break;
-      case PRESETS.THIS_QUARTER:
+      case PRESETS.THIS_QUARTER: {
         const currentQuarter = Math.floor(today.getMonth() / 3);
         startDate = new Date(today.getFullYear(), currentQuarter * 3, 1);
         endDate = new Date();
         break;
-      case PRESETS.LAST_QUARTER:
+      }
+      case PRESETS.LAST_QUARTER: {
         const lastQuarter = Math.floor(today.getMonth() / 3) - 1;
         const qYear = lastQuarter < 0 ? today.getFullYear() - 1 : today.getFullYear();
         const qIndex = lastQuarter < 0 ? 3 : lastQuarter;
         startDate = new Date(qYear, qIndex * 3, 1);
         endDate = new Date(qYear, (qIndex + 1) * 3, 0);
         break;
-      case PRESETS.CURRENT_FISCAL_YEAR:
+      }
+      case PRESETS.CURRENT_FISCAL_YEAR: {
         // Indian FY: 1 April to 31 March
         const currentMonth = today.getMonth();
         const fyStartYear = currentMonth >= 3 ? today.getFullYear() : today.getFullYear() - 1;
         startDate = new Date(fyStartYear, 3, 1); // April 1st
         endDate = new Date(fyStartYear + 1, 2, 31); // March 31st
         break;
+      }
       case PRESETS.CUSTOM:
         return { startDate: customStart, endDate: customEnd };
       default:

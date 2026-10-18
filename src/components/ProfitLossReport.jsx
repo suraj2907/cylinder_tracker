@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import DateRangePicker from './DateRangePicker';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -16,7 +16,6 @@ function formatLocalYMD(d) {
 export default function ProfitLossReport({
   items = [],
   purchaseBills = [],
-  stockAdjustments = [],
   bills = [],
   expenses = [],
   itemStockLedger = []
@@ -109,7 +108,7 @@ export default function ProfitLossReport({
       totalExpenses: Number.isFinite(totalExpenses) ? totalExpenses : 0,
       netProfit
     };
-  }, [items, purchaseBills, stockAdjustments, bills, expenses, dateRange, itemStockLedger]);
+  }, [items, purchaseBills, bills, expenses, dateRange, itemStockLedger]);
 
   const exportExcel = () => {
     const data = [

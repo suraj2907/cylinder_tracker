@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { supabase } from '../utils/supabaseClient';
 
 export default function BatchesList({ 
@@ -7,7 +7,6 @@ export default function BatchesList({
   setBatchSearch,
   handleDeleteBatch,
   handleUpdateBatchCost,
-  handleAdd,
   batches = []
 }) {
   const [expandedEntriesBatch, setExpandedEntriesBatch] = useState(null);

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import DateRangePicker from './DateRangePicker';
 import { getInvoiceLabel } from '../utils/dataUtils';
 

@@ -518,7 +518,8 @@ export function useCylinderData(currentUser) {
   }, [batchStats, batchSearch]);
 
   // Add Entry Handler (Supports both UI Form submission and Direct programmatic calls from Billing)
-  async function handleAdd(paramName, paramQty, paramType, paramDate, paramBatchNum, isNewBatch = false, paramKhaliDate = "") {
+  async function handleAdd(paramName, paramQty, paramType, paramDate, paramBatchNum, _isNewBatch = false, paramKhaliDate = "") {
+    void _isNewBatch; // Keep the existing positional argument used by billing callers.
     let name, qty, type, date, batchNum, khaliDate;
     if (typeof paramName === 'string' && paramName.trim()) {
       name = paramName;

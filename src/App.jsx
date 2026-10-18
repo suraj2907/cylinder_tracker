@@ -1,5 +1,5 @@
-import React, { useState, lazy, Suspense, useMemo } from 'react';
-import { LayoutGrid, Users, Calendar, BarChart3, Boxes } from 'lucide-react';
+import { useState, lazy, Suspense, useMemo } from 'react';
+import { LayoutGrid, Users, Boxes } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import RestaurantsList from './components/RestaurantsList';
 import BatchesList from './components/BatchesList';
@@ -7,7 +7,7 @@ import AddEntry from './components/AddEntry';
 import ReceivePaymentModal from './components/ReceivePaymentModal';
 import { PaymentLedger } from './components/PaymentLedger';
 import { PartnerActivityFeed } from './components/PartnerActivityFeed';
-import { useUser } from './context/UserContext';
+import { useUser } from './context/useUser';
 import { useHashNavigation } from './hooks/useHashNavigation';
 import { useCylinderData } from './hooks/useCylinderData';
 import { useBilling } from './hooks/useBilling';
@@ -84,7 +84,6 @@ export default function App() {
     setNewEntry,
     toast,
     loading,
-    syncing,
     restMap,
     dateMap,
     batchStats,
@@ -97,8 +96,6 @@ export default function App() {
     totAll,
     totOutstanding,
     filteredBatches,
-    netBookingWallet,
-    handleDownload,
     handleAdd,
     handleDeleteEntry,
     handleDeleteBatch,

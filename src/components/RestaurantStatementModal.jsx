@@ -1,10 +1,24 @@
-import React, { useState, useEffect, useMemo, memo } from 'react';
+import { useState, useEffect, useMemo, memo } from 'react';
 import { formatIsoDate, normType, getInvoiceLabel, norm, isNewPayment, isNewBill, ZERO_BALANCE_PARTIES, getPartyBalanceAroundBill, getPartyCurrentBalance } from '../utils/dataUtils';
 import { exportPartyLedgerPDF, exportPartyLedgerExcel, shareInvoicePDFOnWhatsApp, exportBillPDF } from '../utils/exportUtils';
 import { supabase } from '../utils/supabaseClient';
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const MFULL = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+function withRunningBalances(sortedEntries, initialBalance) {
+  let currentBalance = initialBalance;
+  return sortedEntries.map(item => {
+    if (item.isOfficialLedger && item.officialBalance !== null && item.officialBalance !== undefined) {
+      currentBalance = item.officialBalance;
+    } else {
+      const debit = parseFloat(item.debit) || 0;
+      const credit = parseFloat(item.credit) || 0;
+      if (debit > 0) currentBalance += debit;
+      if (credit > 0) currentBalance = Math.max(0, currentBalance - credit);
+    }
+    return { ...item, runningBalance: currentBalance };
+  });
+}
 
 function numberToWords(num) {
   if (!num || isNaN(num) || num <= 0) return 'Zero Rupees Only';
@@ -47,7 +61,6 @@ function RestaurantStatementModal({
   const [endDate, setEndDate] = useState(today);
 
   const [activeSection, setActiveSection] = useState('passbook');
-  const [activeTab, setActiveTab] = useState("all");
   const [ledgerRows, setLedgerRows] = useState([]);
   const [displayCount, setDisplayCount] = useState(25);
   const [selectedBillForPrint, setSelectedBillForPrint] = useState(null);
@@ -116,13 +129,13 @@ function RestaurantStatementModal({
     });
 
     // 2. Extract Cylinder deliveries/returns for this restaurant
-    batches.forEach(b => {
-      (b.entries || []).forEach(e => {
+    batches.forEach((b, batchIndex) => {
+      (b.entries || []).forEach((e, entryIndex) => {
         if (norm(e.name) === normTarget) {
           const rawDate = e.date || b.khaliDate || today;
           const entryDate = formatIsoDate(rawDate);
           list.push({
-            id: e.id || `cyl_${entryDate}_${e.name}_${Math.random()}`,
+            id: e.id || `cyl_${entryDate}_${e.name}_${batchIndex}_${entryIndex}`,
             kind: 'cylinder',
             date: entryDate,
             batchNum: b.batch,
@@ -139,7 +152,7 @@ function RestaurantStatementModal({
     });
 
     // 3. Extract Real-Time Payment Collections (ONLY new live payments created after legacy import)
-    payments.forEach(p => {
+    payments.forEach((p, paymentIndex) => {
       if (isNewPayment(p)) {
         const pName = norm(p.restaurant_name || p.restaurantName);
         if (pName === normTarget) {
@@ -148,7 +161,7 @@ function RestaurantStatementModal({
           const pAmt = parseFloat(p.amount) || 0;
 
           list.push({
-            id: p.id ? `pay_${p.id}` : `pay_${pDate}_${pAmt}_${Math.random()}`,
+            id: p.id ? `pay_${p.id}` : `pay_${pDate}_${pAmt}_${paymentIndex}`,
             kind: 'payment',
             date: pDate,
             batchNum: p.batch_num || p.batchNum || '-',
@@ -167,7 +180,7 @@ function RestaurantStatementModal({
     });
 
     // 4. Extract Real-Time Sales Invoices (ONLY new live bills created after legacy import)
-    bills.forEach(b => {
+    bills.forEach((b, billIndex) => {
       if (isNewBill(b)) {
         const pName = norm(b.restaurant_name || "");
         if (pName === normTarget) {
@@ -189,7 +202,7 @@ function RestaurantStatementModal({
           const itemsSummary = itemSummaryList.join(', ');
 
           list.push({
-            id: b.id || `bill_${bDate}_${b.total_amount}_${Math.random()}`,
+            id: b.id || `bill_${bDate}_${b.total_amount}_${billIndex}`,
             kind: 'bill',
             date: bDate,
             batchNum: '-',
@@ -228,27 +241,7 @@ function RestaurantStatementModal({
       return (a.srNo || 0) - (b.srNo || 0);
     });
     
-    let currentBalance = (ledgerRows && ledgerRows.length > 0) ? 0 : baseBalance;
-    const listWithBalance = sortedAsc.map(item => {
-      if (item.isOfficialLedger && item.officialBalance !== null && item.officialBalance !== undefined) {
-        currentBalance = item.officialBalance;
-      } else {
-        const debit = parseFloat(item.debit) || 0;
-        const credit = parseFloat(item.credit) || 0;
-        
-        if (debit > 0) {
-          currentBalance += debit;
-        }
-        if (credit > 0) {
-          currentBalance = Math.max(0, currentBalance - credit);
-        }
-      }
-      
-      return {
-        ...item,
-        runningBalance: currentBalance
-      };
-    });
+    const listWithBalance = withRunningBalances(sortedAsc, (ledgerRows && ledgerRows.length > 0) ? 0 : baseBalance);
 
     // Sort for UI display (newest date first; within same date: Aakhri transaction on top -> 1. PAYMENT -> 2. SUPPLY -> 3. INVOICE)
     return listWithBalance.sort((a, b) => {
@@ -263,7 +256,7 @@ function RestaurantStatementModal({
       if (rankA !== rankB) return rankA - rankB;
       return (b.srNo || 0) - (a.srNo || 0);
     });
-  }, [restaurantName, ledgerRows, batches, payments, bills, restaurantProfiles, today, profile.previous_balance]);
+  }, [restaurantName, ledgerRows, batches, payments, bills, today, profile.previous_balance]);
 
   // Filter activities based on Month / Date Range / All Time
   const filteredActivities = useMemo(() => {

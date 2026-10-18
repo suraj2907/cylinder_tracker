@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { formatIsoDate, normType, norm } from '../utils/dataUtils';
 import RestaurantStatementModal from './RestaurantStatementModal';
 
@@ -34,6 +34,7 @@ export default function CalendarView({
   const [selectedPassbookHotel, setSelectedPassbookHotel] = useState(null);
 
   const yr = cal.getFullYear(), mo = cal.getMonth();
+  const currentMonthPrefix = `${yr}-${String(mo + 1).padStart(2, "0")}`;
   const firstDay = new Date(yr, mo, 1).getDay();
   const daysInMo = new Date(yr, mo + 1, 0).getDate();
   const fmt = (d) => `${yr}-${String(mo + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
@@ -54,10 +55,10 @@ export default function CalendarView({
     Object.entries(dateMap).forEach(([dateStr, dObj]) => {
       const normDate = formatIsoDate(dateStr);
       if (dObj && dObj.details) {
-        dObj.details.forEach(item => {
+        dObj.details.forEach((item, itemIndex) => {
           const typeStr = normType(item.type);
           list.push({
-            id: item.originalEntry?.id || `cyl_${normDate}_${item.name}_${item.batch}_${Math.random()}`,
+            id: item.originalEntry?.id || `cyl_${normDate}_${item.name}_${item.batch}_${itemIndex}`,
             kind: 'cylinder',
             date: normDate,
             batchNum: item.batch,
@@ -91,7 +92,7 @@ export default function CalendarView({
         const normParty = norm(b.restaurant_name);
         // Only include bill cylinders if this party DOES NOT already have a batch delivery on this date
         if (!batchDeliveriesMap.has(`${bDate}_${normParty}`)) {
-          b.items.forEach(it => {
+          b.items.forEach((it, itemIndex) => {
             const q = parseInt(it.qty, 10) || 0;
             if (q > 0) {
               const desc = (it.description || it.item_name || it.name || '').toLowerCase();
@@ -100,7 +101,7 @@ export default function CalendarView({
               else if (desc.includes('15')) cylType = '15kg';
               
               list.push({
-                id: `bill_cyl_${b.id}_${it.item_id || it.description}_${Math.random()}`,
+                id: `bill_cyl_${b.id}_${it.item_id || it.description}_${itemIndex}`,
                 kind: 'cylinder',
                 date: bDate,
                 batchNum: b.invoice_no ? `INV-${b.invoice_no}` : 'Bill',
@@ -118,11 +119,11 @@ export default function CalendarView({
     });
 
     // 3. Add Payment Collection Entries
-    payments.forEach(p => {
+    payments.forEach((p, paymentIndex) => {
       const rawDate = p.date || (p.created_at ? p.created_at.slice(0, 10) : today);
       const pDate = formatIsoDate(rawDate);
       list.push({
-        id: p.id || `pay_${pDate}_${p.restaurant_name || p.restaurantName}_${p.amount}_${Math.random()}`,
+        id: p.id || `pay_${pDate}_${p.restaurant_name || p.restaurantName}_${p.amount}_${paymentIndex}`,
         kind: 'payment',
         date: pDate,
         batchNum: p.batch_num || p.batchNum || 128,
@@ -144,15 +145,11 @@ export default function CalendarView({
 
     return combinedEntries.filter(item => {
       // 1. Date Range / Calendar Filter
-      let inDate = false;
-      if (rangeMode) {
-        inDate = item.date >= startDate && item.date <= endDate;
-      } else if (selectedDate) {
-        inDate = item.date === selectedDate;
-      } else {
-        const currentMonthPrefix = `${yr}-${String(mo + 1).padStart(2, "0")}`;
-        inDate = item.date.startsWith(currentMonthPrefix);
-      }
+      const inDate = rangeMode
+        ? item.date >= startDate && item.date <= endDate
+        : selectedDate
+          ? item.date === selectedDate
+          : item.date.startsWith(currentMonthPrefix);
 
       // 2. Batch Filter
       const inBatch = selectedBatchFilter === "all" || String(item.batchNum) === String(selectedBatchFilter);
@@ -180,7 +177,7 @@ export default function CalendarView({
 
       return inDate && inBatch && inType && inSearch;
     }).sort((a, b) => new Date(b.date) - new Date(a.date));
-  }, [combinedEntries, rangeMode, startDate, endDate, selectedDate, yr, mo, selectedBatchFilter, searchQuery, activityTypeFilter]);
+  }, [combinedEntries, rangeMode, startDate, endDate, selectedDate, currentMonthPrefix, selectedBatchFilter, searchQuery, activityTypeFilter]);
 
   // Total summary numbers for current filter with 21kg & 19.2kg breakdown
   const filterStats = useMemo(() => {

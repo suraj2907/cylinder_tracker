@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Clock, Send, Search, AlertTriangle } from 'lucide-react';
 import { norm } from '../utils/dataUtils';
 

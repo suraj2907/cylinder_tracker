@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { formatIsoDate } from '../utils/dataUtils';
 
 export default function InventoryManager({
@@ -929,7 +929,7 @@ function ItemDetailModal({
 // ----------------------------------------------------
 // SUB-COMPONENT: Forms Modal (Item Creation Form Only)
 // ----------------------------------------------------
-function InventoryFormsModal({ mode, items, onClose, onSaveItem }) {
+function InventoryFormsModal({ onClose, onSaveItem }) {
   const [name, setName] = useState('');
   const [hsnCode, setHsnCode] = useState('27111900');
   const [defaultRate, setDefaultRate] = useState('');

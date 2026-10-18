@@ -100,6 +100,8 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
   }, [sortBillsDescending]);
 
   useEffect(() => {
+    // These async loaders update state only after the network request resolves.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     Promise.all([fetchProfiles(), fetchBills(), fetchLegacyLedgerEntries()]).finally(() => setLoadingBilling(false));
 
     // Real-time synchronization for Bills across multiple devices (Suraj & Shivam)
@@ -127,7 +129,7 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchProfiles, fetchBills, fetchLegacyLedgerEntries]);
+  }, [fetchProfiles, fetchBills, fetchLegacyLedgerEntries, sortBillsDescending]);
 
   // Shown to the user as a suggestion/placeholder only — the DB sequence is the real,
   // concurrency-safe source of truth for the actual assigned number (see createBill below).
@@ -236,13 +238,15 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
         const maxDbInv = maxRows && maxRows[0] ? parseInt(maxRows[0].invoice_no, 10) : 3514;
         const maxLocalInv = Math.max(3510, ...(bills || []).map(b => parseInt(b.invoice_no, 10) || 0));
         invNo = Math.max(maxDbInv, maxLocalInv) + 1;
-      } catch (err) {
+      } catch {
         const localMaxNo = Math.max(3510, ...(bills || []).map(b => parseInt(b.invoice_no, 10) || 0));
         invNo = localMaxNo + 1;
       }
     }
 
-    const { restaurant_id, batch_num, ...cleanBillData } = billData;
+    const cleanBillData = { ...billData };
+    delete cleanBillData.restaurant_id;
+    delete cleanBillData.batch_num;
     const tempId = Date.now();
     const savedBill = { 
       ...cleanBillData, 
@@ -282,12 +286,9 @@ export function useBilling(currentUser, onAddDeliveryEntry, onRemoveDeliveryEntr
 
     // 5. Save directly to Database with retry on unique constraint collision
     let payload = { ...cleanBillData, invoice_no: invNo, created_by: currentUser || 'Suraj' };
-    let dbData = null;
-    let dbError = null;
-
     const insertRes = await supabase.from('bills').insert([payload]).select().single();
-    dbData = insertRes.data;
-    dbError = insertRes.error;
+    let dbData = insertRes.data;
+    let dbError = insertRes.error;
 
     // Auto-resolve duplicate key collision if another partner/session created the same invoice_no
     if (dbError && (dbError.code === '23505' || dbError.message?.includes('unique'))) {

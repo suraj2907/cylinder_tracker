@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { publicClient } from '../utils/supabaseClient';
 import { applyLedgerRunningBalances, fetchPublicLedgerPayload, isNewBill, sortLedgerTimeline } from '../utils/dataUtils';
 import jsPDF from 'jspdf';
@@ -42,9 +42,9 @@ export default function PublicLedgerView({ token }) {
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   
   // Default to Last 6 Months (Covers entire financial year from March 2026 to present)
-  const [filterPreset, setFilterPreset] = useState('6months');
-  const [customStartDate, setCustomStartDate] = useState('');
-  const [customEndDate, setCustomEndDate] = useState('');
+  const [filterPreset] = useState('6months');
+  const [customStartDate] = useState('');
+  const [customEndDate] = useState('');
   
   const reportRef = useRef(null);
 
@@ -186,9 +186,7 @@ export default function PublicLedgerView({ token }) {
     filteredTimeline,
     openingBalance,
     totalsSummary,
-    dateRangeLabel,
-    startDateStr,
-    endDateStr
+    dateRangeLabel
   } = useMemo(() => {
     if (!fullTimeline || fullTimeline.length === 0) {
       const base = parseFloat(restaurantProfile?.previous_balance || 0);

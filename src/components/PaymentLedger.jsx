@@ -1,5 +1,5 @@
-import React, { useState, useMemo, memo } from 'react';
-import { useUser } from '../context/UserContext';
+import { useState, useMemo, memo } from 'react';
+import { useUser } from '../context/useUser';
 import { norm } from '../utils/dataUtils';
 
 function PaymentLedgerComponent({
@@ -20,7 +20,6 @@ function PaymentLedgerComponent({
   }, [batches]);
 
   const [showAddModal, setShowAddModal] = useState(false);
-  const [selectedBatchForPayment, setSelectedBatchForPayment] = useState(latestBatchNum);
   const [editingCostBatch, setEditingCostBatch] = useState(null);
   const [tempCost, setTempCost] = useState("");
   const [search, setSearch] = useState("");
@@ -141,11 +140,6 @@ function PaymentLedgerComponent({
   }, [batches, payments, expenses, batchDateRanges]);
 
   // Overall totals across tracked active batches (all-time, batch-scoped)
-  const totalCostAll = useMemo(() => batchSummaries.reduce((s, b) => s + b.bookingCost, 0), [batchSummaries]);
-  const totalCollectedAll = useMemo(() => batchSummaries.reduce((s, b) => s + b.totalCollected, 0), [batchSummaries]);
-  const totalCashAll = useMemo(() => batchSummaries.reduce((s, b) => s + b.totalCash, 0), [batchSummaries]);
-  const totalUPIAll = useMemo(() => batchSummaries.reduce((s, b) => s + b.totalUPI, 0), [batchSummaries]);
-  const totalExpensesAll = useMemo(() => batchSummaries.reduce((s, b) => s + b.totalExpenses, 0), [batchSummaries]);
 
   // Collection and Booking Cost stay scoped to whichever batches' Khali Date falls in the selected
   // month - these reuse each batch's own trusted totals (same numbers shown on its card below), so

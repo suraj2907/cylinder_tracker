@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { getInvoiceLabel, norm, getPartyCurrentBalance, getPartyBalanceAroundBill } from '../utils/dataUtils';
 import { shareInvoicePDFOnWhatsApp, exportBillPDF } from '../utils/exportUtils';
 
@@ -107,12 +107,16 @@ export default function GenerateBill({
 
   useEffect(() => {
     if (nextSuggestedInvoiceNo) {
+      // Keep the editable invoice field in sync with the DB-generated suggestion.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCustomInvoiceNo(String(nextSuggestedInvoiceNo));
     }
   }, [nextSuggestedInvoiceNo]);
 
   useEffect(() => {
     if (latestActiveBatch && !editingBill) {
+      // Active batch may arrive after initial data load; preserve the selected default.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setBatchNum(String(latestActiveBatch));
     }
   }, [latestActiveBatch, editingBill]);
@@ -120,6 +124,8 @@ export default function GenerateBill({
   // Pre-fill the whole form from the bill being edited
   useEffect(() => {
     if (editingBill) {
+      // Switching into edit mode intentionally hydrates the existing form state.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedRestaurant(editingBill.restaurant_name || '');
       setGstMode(editingBill.gst_mode || 'gst');
       setBillDate((editingBill.bill_date || '').slice(0, 10) || new Date().toISOString().slice(0, 10));
@@ -367,7 +373,6 @@ export default function GenerateBill({
   const billAround = savedBill ? getPartyBalanceAroundBill(savedBill, restaurantProfiles, bills, payments) : null;
   const currentBalance = billAround ? billAround.currentBal : previousBalance + totals.total;
   const savedAmountPaid = billAround ? billAround.receivedForThisBill : Number(savedBill?.amount_paid || 0);
-  const savedBalance = Math.max(0, Number(savedBill?.total_amount || totals.total) - savedAmountPaid);
 
   if (savedBill) {
     const billProfile = restaurantProfiles[selectedRestaurant] || {};

@@ -9,7 +9,7 @@ export function useInventory(currentUser) {
   const [stockAdjustments, setStockAdjustments] = useState([]);
   const [partyItemPrices, setPartyItemPrices] = useState([]);
   const [bills, setBills] = useState([]);
-  const [itemStockLedger, setItemStockLedger] = useState(ledgerFallback || []);
+  const [itemStockLedger] = useState(ledgerFallback || []);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -62,6 +62,8 @@ export function useInventory(currentUser) {
   }, []);
 
   useEffect(() => {
+    // Network fetch updates state asynchronously; this is not a render-time state sync.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData();
 
     // Setup Realtime postgres changes channel for items and inventory

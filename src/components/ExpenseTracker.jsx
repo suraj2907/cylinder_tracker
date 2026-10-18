@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import DateRangePicker, { PRESETS } from './DateRangePicker';
+import { useState, useMemo } from 'react';
+import DateRangePicker from './DateRangePicker';
 
 function formatLocalYMD(d) {
   if (!d) return '';
@@ -107,11 +107,6 @@ export default function ExpenseTracker({
     return filteredExpenses.slice(startIdx, startIdx + pageSize);
   }, [filteredExpenses, currentPage, pageSize]);
 
-  // Reset current page when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [dateRange, selectedCategoryFilter, searchQuery, pageSize]);
-
   const exportExpensesToCSV = () => {
     const headers = ["Date", "Category", "Items Breakdown", "Payment Mode", "Notes", "Amount (INR)"];
     const rows = filteredExpenses.map(e => {
@@ -182,7 +177,7 @@ export default function ExpenseTracker({
         <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-soft flex flex-col justify-between">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Date Period Filter</label>
           <div className="mt-2.5">
-            <DateRangePicker value={dateRange} onChange={setDateRange} />
+            <DateRangePicker value={dateRange} onChange={range => { setDateRange(range); setCurrentPage(1); }} />
           </div>
         </div>
 
@@ -235,7 +230,7 @@ export default function ExpenseTracker({
         <div className="flex items-center gap-2.5 w-full md:w-auto flex-1 md:justify-end flex-wrap">
           <select
             value={selectedCategoryFilter}
-            onChange={e => setSelectedCategoryFilter(e.target.value)}
+            onChange={e => { setSelectedCategoryFilter(e.target.value); setCurrentPage(1); }}
             className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-sky-500"
           >
             <option value="ALL">All Categories ({categories.length})</option>
@@ -248,7 +243,7 @@ export default function ExpenseTracker({
             type="text"
             placeholder="🔍 Search expense, note, #serial..."
             value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
+            onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }}
             className="bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-900 outline-none focus:border-sky-500 min-w-[200px] flex-1 md:flex-initial"
           />
 
@@ -257,7 +252,7 @@ export default function ExpenseTracker({
               <span>Per page:</span>
               <select
                 value={pageSize}
-                onChange={e => setPageSize(e.target.value === 'ALL' ? 'ALL' : parseInt(e.target.value, 10))}
+                onChange={e => { setPageSize(e.target.value === 'ALL' ? 'ALL' : parseInt(e.target.value, 10)); setCurrentPage(1); }}
                 className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs font-bold text-slate-800 outline-none focus:border-sky-500"
               >
                 <option value={10}>10</option>

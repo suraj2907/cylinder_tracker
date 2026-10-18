@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useUser } from '../context/UserContext';
+import { useState, useEffect, useMemo } from 'react';
+import { useUser } from '../context/useUser';
 
 export default function AddEntry({ newEntry, setNewEntry, handleAdd, restMap, batches = [] }) {
   const { currentUser } = useUser();

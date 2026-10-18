@@ -44,6 +44,8 @@ export function useExpenses(currentUser) {
   }, []);
 
   useEffect(() => {
+    // Network fetch updates state asynchronously; this is not a render-time state sync.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData();
   }, [fetchData]);
 

@@ -83,7 +83,6 @@ export const ALIASES = {
   "Rajwada  restaurant": "Rajwada Restaurant",
   "Rajwada restaurant": "Rajwada Restaurant",
   // Rasoi
-  "Rasoi Resturant": "Rasoi Restaurant",
   "Rasoi": "Rasoi Restaurant",
   "Rasoi restaurant": "Rasoi Restaurant",
   // Hotel Swagatam
@@ -145,7 +144,6 @@ export const ALIASES = {
   "Bajrang": "Bajrang Hotel",
   // Bajrang tadka point
   "Bajrang tadka": "Bajrang Tadka Point",
-  "Bajrang Tadka": "Bajrang Tadka Point",
   "bajrang tadka": "Bajrang Tadka Point",
   "Bajrang tadka point": "Bajrang Tadka Point",
   "bajrang tadka point": "Bajrang Tadka Point",
@@ -515,7 +513,7 @@ export function computeAll(batches) {
     let b21 = 0, b192 = 0, bEmpty = 0, bEmpty21 = 0, bEmpty192 = 0;
     (b.entries || []).forEach((e) => {
       let rawName = e.name;
-      rawName = rawName.replace(/[:\-]+\s*$/, '');
+      rawName = rawName.replace(/[:-]+\s*$/, '');
       const name = norm(rawName);
       const entryType = normType(e.type);
       const entryDate = formatIsoDate(e.date || b.khaliDate || "");
@@ -613,7 +611,7 @@ export function isNewPayment(p) {
   return note.includes('Payment Received') || (p.date >= '2026-08-21' && p.id >= 8632 && !note.includes('Legacy') && !note.includes('Official'));
 }
 
-export function getAllPartiesCurrentBalances(restaurantProfiles = {}, bills = [], payments = [], legacyLedgerEntries = []) {
+export function getAllPartiesCurrentBalances(restaurantProfiles = {}, bills = [], payments = []) {
   const map = {};
 
   // 1. Base closing balances from profiles (synced up to 20th August, ONLY Rasoi Restaurant and Route 66 start at 0)

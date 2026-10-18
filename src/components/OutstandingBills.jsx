@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { getInvoiceLabel } from '../utils/dataUtils';
 
 export default function OutstandingBills({

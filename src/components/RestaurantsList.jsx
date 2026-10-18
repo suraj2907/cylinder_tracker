@@ -1,8 +1,8 @@
-import React, { useState, useMemo, memo } from 'react';
+import { useState, useMemo, memo } from 'react';
 import { Search, MessageCircle } from 'lucide-react';
 import RestaurantStatementModal from './RestaurantStatementModal';
 import RestaurantProfileModal from './RestaurantProfileModal';
-import { norm, isNewBill, getAllPartiesCurrentBalances } from '../utils/dataUtils';
+import { norm, getAllPartiesCurrentBalances } from '../utils/dataUtils';
 
 function RestaurantsList({ 
   restaurants, 

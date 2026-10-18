@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { FileText, TrendingUp, Package, Percent, Receipt } from 'lucide-react';
 import { getAllPartiesCurrentBalances, getFifoInvoiceStatuses } from '../utils/dataUtils';
-import DateRangePicker, { PRESETS } from './DateRangePicker';
+import DateRangePicker from './DateRangePicker';
+import { PRESETS } from './dateRangePresets';
 import { SkeletonBar } from './Skeleton';
 
 function formatLocalYMD(d) {
