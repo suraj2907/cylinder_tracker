@@ -335,6 +335,7 @@ export const generateInvoicePDFDoc = async (bill, profile = {}) => {
   const taxable = Number(bill.taxable_amount || 0);
   const cgst = Number(bill.cgst || 0);
   const sgst = Number(bill.sgst || 0);
+  const discount = Number(bill.discount || 0);
   // previous_balance/received_amount/current_balance should all come from the caller, computed
   // together via getPartyBalanceAroundBill (dataUtils.js) so the three numbers printed on the
   // invoice always add up (previous + this bill's total - received === current). A "Receive
@@ -378,9 +379,9 @@ export const generateInvoicePDFDoc = async (bill, profile = {}) => {
 
   // Totals Breakdown Box (Right)
   doc.setFillColor(248, 250, 252);
-  doc.roundedRect(114, finalY, 82, 42, 2, 2, 'F');
+  doc.roundedRect(114, finalY, 82, discount > 0 ? 47 : 42, 2, 2, 'F');
   doc.setDrawColor(226, 232, 240);
-  doc.roundedRect(114, finalY, 82, 42, 2, 2, 'S');
+  doc.roundedRect(114, finalY, 82, discount > 0 ? 47 : 42, 2, 2, 'S');
 
   let rY = finalY + 5;
   if (isGst) {
@@ -395,6 +396,11 @@ export const generateInvoicePDFDoc = async (bill, profile = {}) => {
     rY += 4.5;
     doc.text('SGST @ 9%:', 118, rY);
     doc.text(`Rs. ${sgst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
+    rY += 5;
+  }
+  if (discount > 0) {
+    doc.text('Discount:', 118, rY);
+    doc.text(`- Rs. ${discount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 192, rY, { align: 'right' });
     rY += 5;
   }
 
@@ -431,17 +437,17 @@ export const generateInvoicePDFDoc = async (bill, profile = {}) => {
   doc.setFontSize(7.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(71, 85, 105);
-  doc.text(isQuotation ? 'Total (in words):' : 'Balance (in words):', 14, finalY + 48);
+  doc.text(isQuotation ? 'Total (in words):' : 'Balance (in words):', 14, finalY + (discount > 0 ? 53 : 48));
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(15, 23, 42);
-  doc.text(numberToWords(Math.round(isQuotation ? totAmt : (currentBal > 0 ? currentBal : totAmt))), 45, finalY + 48);
+  doc.text(numberToWords(Math.round(isQuotation ? totAmt : (currentBal > 0 ? currentBal : totAmt))), 45, finalY + (discount > 0 ? 53 : 48));
 
   // Footer note
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(148, 163, 184);
-  doc.text(isQuotation ? 'Estimate only. Rates valid until expiry; supply is subject to stock availability.' : 'Terms: Goods once sold will not be taken back. Empty cylinders returnable; loss/damage chargeable.', 14, finalY + 54);
-  doc.text('Authorized Signatory • M/S SHREE BALAJI AGENCIES', 196, finalY + 54, { align: 'right' });
+  doc.text(isQuotation ? 'Estimate only. Rates valid until expiry; supply is subject to stock availability.' : 'Terms: Goods once sold will not be taken back. Empty cylinders returnable; loss/damage chargeable.', 14, finalY + (discount > 0 ? 59 : 54));
+  doc.text('Authorized Signatory • M/S SHREE BALAJI AGENCIES', 196, finalY + (discount > 0 ? 59 : 54), { align: 'right' });
 
   return doc;
 };

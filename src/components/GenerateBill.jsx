@@ -102,6 +102,7 @@ export default function GenerateBill({
 
   const [batchNum, setBatchNum] = useState(() => String(latestActiveBatch));
   const [items, setItems] = useState([emptyItem()]);
+  const [discount, setDiscount] = useState(0);
   const [savedBill, setSavedBill] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -132,6 +133,7 @@ export default function GenerateBill({
       setCustomInvoiceNo(String(editingBill.invoice_no || editingBill.legacy_invoice_no || ''));
       setBatchNum(String(editingBill.batch_num || latestActiveBatch));
       setItems(Array.isArray(editingBill.items) && editingBill.items.length ? editingBill.items : [emptyItem()]);
+      setDiscount(Number(editingBill.discount) || 0);
       setSavedBill(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -276,9 +278,9 @@ export default function GenerateBill({
       nilRated: Number(nilRated.toFixed(2)),
       cgst: Number(cgst.toFixed(2)),
       sgst: Number(sgst.toFixed(2)),
-      total: Number(subtotal.toFixed(2))
+      total: Number(Math.max(0, subtotal - (Number(discount) || 0)).toFixed(2))
     };
-  }, [items, gstMode, itemsCatalog]);
+  }, [items, gstMode, itemsCatalog, discount]);
 
   const handleGenerate = async () => {
     if (!selectedRestaurant) {
@@ -287,6 +289,10 @@ export default function GenerateBill({
     }
     if (items.length === 0 || items.some(it => !it.item_id || !it.qty || !it.rate)) {
       alert('Sabhi items select karo aur unki qty aur rate bharo');
+      return;
+    }
+    if (Number(discount) < 0 || Number(discount) > totals.subtotal) {
+      alert('Discount bill amount se zyada nahi ho sakta');
       return;
     }
     setSaving(true);
@@ -309,6 +315,7 @@ export default function GenerateBill({
           taxable_amount: totals.taxable,
           cgst: totals.cgst,
           sgst: totals.sgst,
+          discount: Number(discount) || 0,
           total_amount: totals.total,
           due_date: dueDate,
           payment_status: editingBill.payment_status || 'unpaid',
@@ -328,6 +335,7 @@ export default function GenerateBill({
           taxable_amount: totals.taxable,
           cgst: totals.cgst,
           sgst: totals.sgst,
+          discount: Number(discount) || 0,
           total_amount: totals.total,
           due_date: dueDate,
           payment_status: 'unpaid',
@@ -357,6 +365,7 @@ export default function GenerateBill({
       taxable_amount: totals.taxable,
       cgst: totals.cgst,
       sgst: totals.sgst,
+      discount: Number(discount) || 0,
       gst_mode: gstMode,
       bill_date: billDate,
       invoice_no: savedBill.invoice_no || customInvoiceNo,
@@ -413,6 +422,7 @@ export default function GenerateBill({
                   taxable_amount: totals.taxable,
                   cgst: totals.cgst,
                   sgst: totals.sgst,
+                  discount: Number(discount) || 0,
                   gst_mode: gstMode,
                   bill_date: billDate,
                   invoice_no: savedBill.invoice_no || customInvoiceNo,
@@ -606,6 +616,12 @@ export default function GenerateBill({
                       <span className="text-slate-900 font-bold">₹{totals.sgst.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     </div>
                   </>
+                )}
+                {Number(discount) > 0 && (
+                  <div className="flex justify-between items-center text-slate-500 font-semibold">
+                    <span>Discount</span>
+                    <span className="text-slate-900 font-bold">- ₹{Number(discount).toFixed(2)}</span>
+                  </div>
                 )}
               </div>
 
@@ -883,6 +899,12 @@ export default function GenerateBill({
               </div>
             </>
           )}
+          <label className="flex justify-between items-center gap-3 text-slate-600 font-semibold">
+            <span>Discount (₹)</span>
+            <input type="number" min="0" max={totals.subtotal} step="0.01" value={discount}
+              onChange={e => setDiscount(e.target.value)}
+              className="w-28 border border-slate-200 rounded-lg px-2 py-1 text-right bg-white" />
+          </label>
           <div className="flex justify-between font-black text-sm text-slate-900 pt-1.5 border-t">
             <span>Total Amount Due</span>
             <span>₹{totals.total.toFixed(2)}</span>

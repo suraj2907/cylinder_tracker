@@ -1065,6 +1065,7 @@ function PurchaseBillModal({ items, purchaseBills = [], onClose, onSavePurchase 
   const [invoiceNo, setInvoiceNo] = useState(nextPurchaseInvoiceNo);
   const [purchaseDate, setPurchaseDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [purchaseNote, setPurchaseNote] = useState('');
+  const [discount, setDiscount] = useState(0);
   
   // Multiple line items array
   const [purchaseLines, setPurchaseLines] = useState([
@@ -1120,14 +1121,19 @@ function PurchaseBillModal({ items, purchaseBills = [], onClose, onSavePurchase 
       subtotal,
       cgst: totalGst / 2,
       sgst: totalGst / 2,
-      total: grandTotal
+      total: Math.max(0, grandTotal - (Number(discount) || 0)),
+      grossTotal: grandTotal
     };
-  }, [purchaseLines]);
+  }, [purchaseLines, discount]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (purchaseLines.length === 0 || purchaseLines.some(ln => !ln.item_id || !ln.qty || ln.rate === '')) {
       alert("Sabhi items select karein aur rate/qty fill karein!");
+      return;
+    }
+    if (Number(discount) < 0 || Number(discount) > calculations.grossTotal) {
+      alert('Discount purchase amount se zyada nahi ho sakta');
       return;
     }
     setSaving(true);
@@ -1154,6 +1160,7 @@ function PurchaseBillModal({ items, purchaseBills = [], onClose, onSavePurchase 
         taxable_amount: calculations.subtotal,
         cgst: calculations.cgst,
         sgst: calculations.sgst,
+        discount: Number(discount) || 0,
         total_amount: calculations.total,
         invoice_no: invoiceNo || nextPurchaseInvoiceNo,
         note: purchaseNote
@@ -1335,6 +1342,12 @@ function PurchaseBillModal({ items, purchaseBills = [], onClose, onSavePurchase 
               <span>SGST (9% approx)</span>
               <span className="font-bold text-slate-700">₹{calculations.sgst.toFixed(2)}</span>
             </div>
+            <label className="flex justify-between items-center gap-2 text-[11px]">
+              <span>Discount (₹)</span>
+              <input type="number" min="0" max={calculations.grossTotal} step="0.01" value={discount}
+                onChange={e => setDiscount(e.target.value)}
+                className="w-24 border border-slate-200 rounded-lg px-2 py-1 text-right bg-white" />
+            </label>
             <div className="flex justify-between font-black text-xs sm:text-sm text-slate-900 border-t border-slate-200 pt-1">
               <span>Total Amount (Paid)</span>
               <span className="text-emerald-700">₹{calculations.total.toFixed(2)}</span>
@@ -1415,7 +1428,7 @@ function PurchaseInvoicePrintModal({ bill, onClose }) {
               <tr className="border-b-2 border-slate-350 font-bold text-slate-650 bg-slate-50/50">
                 <th className="py-2 px-1">Item</th>
                 <th className="py-2 text-right">Qty</th>
-                <th className="py-2 text-right">Rate (Excl.)</th>
+                <th className="py-2 text-right">Rate (Incl.)</th>
                 <th className="py-2 text-right">Tax %</th>
                 <th className="py-2 text-right px-1">Line Total (Incl.)</th>
               </tr>
@@ -1423,9 +1436,7 @@ function PurchaseInvoicePrintModal({ bill, onClose }) {
             <tbody>
               {Array.isArray(bill.items) && bill.items.map((it, idx) => {
                 const itemName = it.description || it.item_name || it.name || (it.item_id ? 'Cylinder' : 'Item');
-                const baseVal = (Number(it.qty) || 1) * (Number(it.rate) || 0);
-                const taxVal = Number(it.tax_amount) || (baseVal * (Number(it.gst_rate) || 0) / 100);
-                const lineTotal = Number(it.line_total) || (baseVal + taxVal);
+                const lineTotal = Number(it.amount ?? it.line_total ?? ((Number(it.qty) || 0) * (Number(it.rate) || 0)));
 
                 return (
                   <tr key={idx} className="border-b border-slate-100 text-slate-800">
@@ -1457,6 +1468,12 @@ function PurchaseInvoicePrintModal({ bill, onClose }) {
                 <span>SGST (9%)</span>
                 <span className="text-slate-800">₹{Number(bill.sgst).toFixed(2)}</span>
               </div>
+              {Number(bill.discount) > 0 && (
+                <div className="flex justify-between">
+                  <span>Discount</span>
+                  <span className="text-slate-800">- ₹{Number(bill.discount).toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex justify-between font-black text-sm text-slate-900 border-t pt-1.5">
                 <span>Grand Total</span>
                 <span className="text-emerald-700">₹{Number(bill.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
