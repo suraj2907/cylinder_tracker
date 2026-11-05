@@ -24,6 +24,7 @@ export default function InventoryManager({
 
   // Purchase states
   const [recordingPurchase, setRecordingPurchase] = useState(false);
+  const [editingPurchaseBill, setEditingPurchaseBill] = useState(null);
   const [viewingPurchaseBill, setViewingPurchaseBill] = useState(null); // bill object to show print preview
 
   // Filtered items list
@@ -347,6 +348,9 @@ export default function InventoryManager({
                   >
                     📄 View / Print
                   </button>
+                  <button onClick={() => setEditingPurchaseBill(p)} className="px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold cursor-pointer">
+                    ✏️ Edit
+                  </button>
                   <button
                     onClick={() => handleDeleteBill(p.id)}
                     className="px-2.5 py-1.5 rounded-xl bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
@@ -392,6 +396,9 @@ export default function InventoryManager({
                         className="px-2.5 py-1 rounded-lg bg-sky-50 border border-sky-200 text-sky-850 hover:bg-sky-100 text-[11px] font-bold transition-all shadow-xs cursor-pointer"
                       >
                         📄 View / Print
+                      </button>
+                      <button onClick={() => setEditingPurchaseBill(p)} className="px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold cursor-pointer">
+                        ✏️ Edit
                       </button>
                       <button
                         onClick={() => handleDeleteBill(p.id)}
@@ -442,11 +449,12 @@ export default function InventoryManager({
       )}
 
       {/* Multi-Item Record Purchase Modal */}
-      {recordingPurchase && (
+      {(recordingPurchase || editingPurchaseBill) && (
         <PurchaseBillModal
+          bill={editingPurchaseBill}
           items={items}
           purchaseBills={purchaseBills}
-          onClose={() => setRecordingPurchase(false)}
+          onClose={() => { setRecordingPurchase(false); setEditingPurchaseBill(null); }}
           onSavePurchase={savePurchaseBill}
         />
       )}
@@ -1050,7 +1058,7 @@ function InventoryFormsModal({ onClose, onSaveItem }) {
 // ----------------------------------------------------
 // SUB-COMPONENT: Multi-Item Purchase Bill Modal
 // ----------------------------------------------------
-function PurchaseBillModal({ items, purchaseBills = [], onClose, onSavePurchase }) {
+function PurchaseBillModal({ bill, items, purchaseBills = [], onClose, onSavePurchase }) {
   const nextPurchaseInvoiceNo = useMemo(() => {
     let maxNo = 0;
     (purchaseBills || []).forEach(p => {
@@ -1061,16 +1069,16 @@ function PurchaseBillModal({ items, purchaseBills = [], onClose, onSavePurchase 
     return maxNo > 0 ? String(maxNo + 1) : '148';
   }, [purchaseBills]);
 
-  const [supplierName, setSupplierName] = useState('GASPOINT PETROLEUM (INDIA) LIMITED');
-  const [invoiceNo, setInvoiceNo] = useState(nextPurchaseInvoiceNo);
-  const [purchaseDate, setPurchaseDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [purchaseNote, setPurchaseNote] = useState('');
-  const [discount, setDiscount] = useState(0);
+  const [supplierName, setSupplierName] = useState(bill?.supplier_name || 'GASPOINT PETROLEUM (INDIA) LIMITED');
+  const [invoiceNo, setInvoiceNo] = useState(bill?.invoice_no || nextPurchaseInvoiceNo);
+  const [purchaseDate, setPurchaseDate] = useState(() => bill?.purchase_date || new Date().toISOString().slice(0, 10));
+  const [purchaseNote, setPurchaseNote] = useState(bill?.note || '');
+  const [discount, setDiscount] = useState(Number(bill?.discount) || 0);
   
   // Multiple line items array
-  const [purchaseLines, setPurchaseLines] = useState([
-    { item_id: '', qty: 1, rate: 0, gst_rate: 18 }
-  ]);
+  const [purchaseLines, setPurchaseLines] = useState(() => Array.isArray(bill?.items) && bill.items.length
+    ? bill.items.map(line => ({ item_id: line.item_id || '', qty: line.qty, rate: line.rate, gst_rate: line.gst_rate ?? 18 }))
+    : [{ item_id: '', qty: 1, rate: 0, gst_rate: 18 }]);
 
   const [saving, setSaving] = useState(false);
 
@@ -1106,7 +1114,7 @@ function PurchaseBillModal({ items, purchaseBills = [], onClose, onSavePurchase 
     purchaseLines.forEach(ln => {
       const qty = parseFloat(ln.qty) || 0;
       const rate = parseFloat(ln.rate) || 0;
-      const gstRate = parseFloat(ln.gst_rate || 18) / 100;
+      const gstRate = parseFloat(ln.gst_rate ?? 18) / 100;
 
       const lineTotal = qty * rate;              // rate is inclusive of tax — same convention as sales
       const lineTaxable = lineTotal / (1 + gstRate);
@@ -1153,6 +1161,7 @@ function PurchaseBillModal({ items, purchaseBills = [], onClose, onSavePurchase 
       });
 
       await onSavePurchase({
+        ...(bill ? { id: bill.id } : {}),
         supplier_name: supplierName,
         purchase_date: purchaseDate,
         items: itemsList,
@@ -1166,7 +1175,7 @@ function PurchaseBillModal({ items, purchaseBills = [], onClose, onSavePurchase 
         note: purchaseNote
       });
 
-      alert("Purchase invoice successfully recorded and stock updated!");
+      alert(bill ? "Purchase invoice updated!" : "Purchase invoice successfully recorded and stock updated!");
       onClose();
     } catch (err) {
       alert("Failed to save purchase: " + err.message);
@@ -1181,7 +1190,7 @@ function PurchaseBillModal({ items, purchaseBills = [], onClose, onSavePurchase 
         {/* Header */}
         <div className="flex justify-between items-center border-b border-slate-100 pb-3 shrink-0">
           <h3 className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-1.5">
-            <span>🚚</span> Record Stock Purchase Invoice
+            <span>🚚</span> {bill ? 'Edit Stock Purchase Invoice' : 'Record Stock Purchase Invoice'}
           </h3>
           <button type="button" onClick={onClose} className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold flex items-center justify-center cursor-pointer transition-colors">✕</button>
         </div>
@@ -1360,7 +1369,7 @@ function PurchaseBillModal({ items, purchaseBills = [], onClose, onSavePurchase 
           disabled={saving}
           className="w-full py-3 rounded-2xl bg-sky-600 hover:bg-sky-700 active:scale-98 text-white text-xs font-black shadow-soft flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all shrink-0"
         >
-          {saving ? 'Saving...' : '🚚 Save & Add to Stock'}
+          {saving ? 'Saving...' : bill ? '💾 Save Purchase Changes' : '🚚 Save & Add to Stock'}
         </button>
       </form>
     </div>

@@ -154,6 +154,8 @@ export function useInventory(currentUser) {
 
   const savePurchaseBill = async (billData) => {
     const { id, ...fields } = billData;
+    const previousBill = id ? purchaseBills.find(p => p.id === id) : null;
+    if (id && !previousBill) throw new Error('Purchase invoice to edit was not found. Refresh and try again.');
     let query;
     if (id) {
       query = supabase.from('purchase_bills').update(fields).eq('id', id).select();
@@ -163,35 +165,33 @@ export function useInventory(currentUser) {
     const { data, error } = await query;
     if (error) throw error;
 
-    // --- AUTO ADD STOCK TO ITEMS ON PURCHASE ---
+    // New purchases add stock. Edits adjust only the quantity difference, so
+    // correcting a rate, tax or discount never adds the same stock twice.
     if (Array.isArray(billData.items)) {
       try {
         const { data: allItems } = await supabase.from('items').select('*');
+        const quantityChanges = new Map();
+        for (const lineItem of previousBill?.items || []) {
+          quantityChanges.set(lineItem.item_id, (quantityChanges.get(lineItem.item_id) || 0) - (parseFloat(lineItem.qty) || 0));
+        }
         for (const lineItem of billData.items) {
-          const qty = parseFloat(lineItem.qty) || 0;
-          if (qty <= 0) continue;
+          quantityChanges.set(lineItem.item_id, (quantityChanges.get(lineItem.item_id) || 0) + (parseFloat(lineItem.qty) || 0));
+        }
+        for (const [itemId, qty] of quantityChanges) {
+          if (!qty) continue;
 
-          let targetItem = (allItems || []).find(it => it.id === lineItem.item_id);
-          if (!targetItem) {
-            const desc = (lineItem.item_name || lineItem.description || '').toLowerCase();
-            targetItem = (allItems || []).find(it => {
-              const n = it.name.toLowerCase();
-              if (desc.includes('21') && n.includes('21')) return true;
-              if (desc.includes('15') && n.includes('15')) return true;
-              if ((desc.includes('19.2') || desc.includes('commercial') || desc.includes('lpg') || desc.includes('cylinder')) && n.includes('19.2')) return true;
-              return false;
-            });
-          }
+          const targetItem = (allItems || []).find(it => it.id === itemId);
 
           if (targetItem) {
             const current = parseFloat(targetItem.current_stock) || 0;
-            const newStock = current + qty; // e.g. -2 + 2 = 0 or 0 + 100 = 100
+            const newStock = current + qty;
 
             // Optimistically update React state immediately
             setItems(prev => prev.map(it => it.id === targetItem.id ? { ...it, current_stock: newStock } : it));
 
             // Save to Supabase
-            await supabase.from('items').update({ current_stock: newStock }).eq('id', targetItem.id);
+            const { error: stockError } = await supabase.from('items').update({ current_stock: newStock }).eq('id', targetItem.id);
+            if (stockError) throw stockError;
           }
         }
       } catch (stockErr) {
