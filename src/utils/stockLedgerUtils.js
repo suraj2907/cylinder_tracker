@@ -17,12 +17,8 @@
 // the ledger's last known closing stock, matched strictly by item_id (recent
 // bills reliably carry it, unlike the old bulk-collapsed rows above).
 //
-// Every other catalog item (regulators, convertors, empty cylinders, ...) has
-// no transaction history at all - purchases/sales for them were never
-// recorded as line items anywhere - so there is no way to reconstruct a real
-// historical quantity for them. They're valued at today's live current_stock
-// for every date; this is a known approximation, small in rupee terms
-// relative to the cylinders above.
+// Other catalog items use live stock, rewound by recorded purchases and sales
+// after the requested date when it falls within the reliable transaction period.
 
 const BUSINESS_INCEPTION_DATE = '2024-07-16';
 
@@ -66,7 +62,26 @@ export function getItemQtyAsOf(item, targetDate, ledgerRows = [], { purchaseBill
   const itemType = ledgerItemType(item);
 
   if (!itemType) {
-    return parseFloat(item.current_stock) || 0;
+    let qty = parseFloat(item.current_stock) || 0;
+    const lastLedgerDate = (ledgerRows || []).reduce((latest, row) =>
+      row.entry_date > latest ? row.entry_date : latest, '');
+    if (target < lastLedgerDate) return qty;
+
+    (purchaseBills || []).forEach(pb => {
+      if (toDateOnly(pb.purchase_date) > target && Array.isArray(pb.items)) {
+        pb.items.forEach(line => {
+          if (line.item_id === item.id) qty -= parseFloat(line.qty) || 0;
+        });
+      }
+    });
+    (bills || []).forEach(b => {
+      if (toDateOnly(b.bill_date) > target && Array.isArray(b.items)) {
+        b.items.forEach(line => {
+          if (line.item_id === item.id) qty += parseFloat(line.qty) || 0;
+        });
+      }
+    });
+    return qty;
   }
 
   const sortedRows = (ledgerRows || [])
@@ -120,7 +135,7 @@ export function getItemQtyAsOf(item, targetDate, ledgerRows = [], { purchaseBill
 function getItemRate(item) {
   const pPrice = parseFloat(item.purchase_price) || 0;
   if (item.price_includes_tax && pPrice > 2500) {
-    return Math.round((pPrice / 1.18) * 100) / 100;
+    return pPrice / 1.18;
   }
   return pPrice;
 }
