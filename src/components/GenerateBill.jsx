@@ -642,8 +642,8 @@ export default function GenerateBill({
                   <span className="text-slate-700 font-bold">₹{(billAround ? billAround.prevBal : previousBalance).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between items-center pt-1 border-t border-slate-200/60">
-                  <span className="font-black text-rose-700 text-xs uppercase">Current Balance</span>
-                  <span className="font-black text-rose-700 text-sm">₹{currentBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className={`font-black text-xs uppercase ${currentBalance < 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{currentBalance < 0 ? 'Advance Balance' : 'Current Balance'}</span>
+                  <span className={`font-black text-sm ${currentBalance < 0 ? 'text-emerald-700' : 'text-rose-700'}`}>₹{currentBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
               </div>
 

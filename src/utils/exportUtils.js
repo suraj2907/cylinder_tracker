@@ -344,12 +344,12 @@ export const generateInvoicePDFDoc = async (bill, profile = {}) => {
   // size actually went to an older unpaid bill first) - getPartyBalanceAroundBill applies the
   // party's full payment pool FIFO, oldest bill first, to get a received figure that's honest
   // about which bill the money actually reached.
-  const prevBal = Math.max(0, parseFloat(profile.previous_balance ?? bill.previous_balance ?? 0));
+  const prevBal = parseFloat(profile.previous_balance ?? bill.previous_balance ?? 0);
   const paidAmt = profile.received_amount !== undefined
     ? Math.max(0, parseFloat(profile.received_amount))
     : Number(bill.amount_paid || (bill.payment_status === 'paid' ? totAmt : 0));
   const currentBal = profile.current_balance !== undefined
-    ? Math.max(0, parseFloat(profile.current_balance))
+    ? parseFloat(profile.current_balance)
     : prevBal + totAmt - paidAmt;
 
   // Bank details Box (Left)
@@ -541,12 +541,12 @@ export const shareInvoicePDFOnWhatsApp = async (bill, profile = {}) => {
   // size actually went to an older unpaid bill first) - getPartyBalanceAroundBill applies the
   // party's full payment pool FIFO, oldest bill first, to get a received figure that's honest
   // about which bill the money actually reached.
-  const prevBal = Math.max(0, parseFloat(profile.previous_balance ?? bill.previous_balance ?? 0));
+  const prevBal = parseFloat(profile.previous_balance ?? bill.previous_balance ?? 0);
   const paidAmt = profile.received_amount !== undefined
     ? Math.max(0, parseFloat(profile.received_amount))
     : Number(bill.amount_paid || (bill.payment_status === 'paid' ? totAmt : 0));
   const currentBal = profile.current_balance !== undefined
-    ? Math.max(0, parseFloat(profile.current_balance))
+    ? parseFloat(profile.current_balance)
     : prevBal + totAmt - paidAmt;
   const partyName = bill.restaurant_name || profile.name || '';
   const onlineLink = bill.invoice_link || (typeof window !== 'undefined' ? `${window.location.origin}/?ledger=${encodeURIComponent(partyName)}` : `https://cylinder-tracker.vercel.app/?ledger=${encodeURIComponent(partyName)}`);
@@ -555,8 +555,8 @@ export const shareInvoicePDFOnWhatsApp = async (bill, profile = {}) => {
     `Dear *${partyName || 'Customer'}*,\n\n` +
     `Your invoice *${invLabel}* of amount *₹${totAmt.toLocaleString('en-IN', { minimumFractionDigits: 2 })}* dated *${bill.bill_date || new Date().toISOString().slice(0, 10)}* is generated.\n\n` +
     `📄 *View Ledger / Passbook:* ${onlineLink}\n\n` +
-    (prevBal > 0 ? `⏮️ *Previous Balance:* ₹${prevBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` : '') +
-    `🔴 *Total Balance Due:* ₹${currentBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n\n` +
+    (prevBal !== 0 ? `⏮️ *Previous Balance:* ₹${prevBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n` : '') +
+    `${currentBal < 0 ? '🟢 *Advance Balance:*' : '🔴 *Total Balance Due:*'} ₹${currentBal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\n\n` +
     `💳 *UPI ID for Payment:* 9407922288-1@okbizaxis\n` +
     `🏦 *Bank:* MS SHREE BALAJI AGENCIES | A/C: 43204193003 | IFSC: SBIN0000464 | SBI Rajnandgaon\n\n` +
     `*M/S SHREE BALAJI AGENCIES*\n` +

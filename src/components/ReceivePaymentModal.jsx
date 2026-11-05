@@ -143,7 +143,7 @@ export default function ReceivePaymentModal({
     try {
       const partyName = selectedParty.name;
       const partyId = selectedParty.id;
-      const newPendingBalance = Math.max(0, selectedParty.previous_balance - payAmount);
+      const newPendingBalance = selectedParty.previous_balance - payAmount;
 
       // Insert row into `payments` table with all alias field names. This is the single,
       // live source of truth for payments - it is NOT also mirrored into
@@ -177,7 +177,7 @@ export default function ReceivePaymentModal({
         }
       }
 
-      alert(`✅ ₹${payAmount.toLocaleString('en-IN')} payment successfully received for ${partyName} (ID #${partyId})!\n\nNew Pending Balance: ₹${newPendingBalance.toLocaleString('en-IN')}`);
+      alert(`✅ ₹${payAmount.toLocaleString('en-IN')} payment successfully received for ${partyName} (ID #${partyId})!\n\n${newPendingBalance < 0 ? 'Advance Balance' : 'New Pending Balance'}: ₹${newPendingBalance.toLocaleString('en-IN')}`);
 
       // Reset form & close
       setSelectedParty(null);

@@ -264,7 +264,7 @@ export default function PublicLedgerView({ token }) {
       totalsSummary: {
         totalCredit: totCredit,
         totalDebit: totDebit,
-        finalBalance: Math.max(0, finalBal),
+        finalBalance: finalBal,
         overdueAmount: overdueAmt
       },
       dateRangeLabel: dateRange,
@@ -563,7 +563,7 @@ export default function PublicLedgerView({ token }) {
               <span className={`text-[10px] font-bold uppercase tracking-wider block ${
                 totalsSummary.finalBalance > 0 ? 'text-rose-700' : 'text-emerald-700'
               }`}>
-                {totalsSummary.finalBalance > 0 ? '🔴 Pending Amount' : '✅ Current Balance'}
+                {totalsSummary.finalBalance > 0 ? '🔴 Pending Amount' : totalsSummary.finalBalance < 0 ? '🟢 Advance Balance' : '✅ Current Balance'}
               </span>
               <div className="text-2xl sm:text-3xl font-black tracking-tight mt-0.5">
                 ₹{totalsSummary.finalBalance.toLocaleString('en-IN', { minimumFractionDigits: 1 })}
@@ -576,7 +576,7 @@ export default function PublicLedgerView({ token }) {
                   ? 'bg-rose-100/80 text-rose-800 border-rose-300'
                   : 'bg-emerald-100/80 text-emerald-800 border-emerald-300'
               }`}>
-                {totalsSummary.finalBalance > 0 ? 'Payment Due' : 'All Clear'}
+                {totalsSummary.finalBalance > 0 ? 'Payment Due' : totalsSummary.finalBalance < 0 ? 'Advance Available' : 'All Clear'}
               </span>
               <p className="text-[10px] text-slate-400 font-semibold mt-1">
                 {dateRangeLabel}

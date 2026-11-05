@@ -621,7 +621,7 @@ export function getAllPartiesCurrentBalances(restaurantProfiles = {}, bills = []
       map[normP] = 0;
     } else {
       const bal = parseFloat(restaurantProfiles[k].previous_balance || 0);
-      map[normP] = Math.max(0, bal);
+      map[normP] = bal;
     }
   });
 
@@ -660,16 +660,7 @@ export function getAllPartiesCurrentBalances(restaurantProfiles = {}, bills = []
       return (parseInt(a.invoice_no, 10) || 0) - (parseInt(b.invoice_no, 10) || 0);
     });
 
-    let remaining = Math.max(0, totalPaid - previousBalance);
-    let unpaidTotal = 0;
-    sorted.forEach(b => {
-      const total = parseFloat(b.total_amount) || 0;
-      const applied = Math.max(0, Math.min(total, remaining));
-      remaining -= applied;
-      unpaidTotal += total - applied;
-    });
-
-    map[normP] = Math.max(0, previousBalance - totalPaid) + unpaidTotal;
+    map[normP] = previousBalance + sorted.reduce((sum, bill) => sum + (parseFloat(bill.total_amount) || 0), 0) - totalPaid;
   });
 
   return map;
@@ -696,7 +687,7 @@ export function getPartyBalanceAroundBill(targetBill, restaurantProfiles = {}, b
   const normP = norm(targetBill.restaurant_name);
   const isZero = ZERO_BALANCE_PARTIES.some(h => norm(h) === normP);
   const profile = Object.values(restaurantProfiles || {}).find(p => norm(p.name) === normP);
-  const previousBalance = isZero ? 0 : Math.max(0, parseFloat(profile?.previous_balance || 0));
+  const previousBalance = isZero ? 0 : parseFloat(profile?.previous_balance || 0);
 
   const partyBills = (bills || []).filter(b => isNewBill(b) && norm(b.restaurant_name) === normP && (parseFloat(b.total_amount) || 0) > 0.05);
   const totalPaid = (payments || [])
@@ -709,8 +700,8 @@ export function getPartyBalanceAroundBill(targetBill, restaurantProfiles = {}, b
     return (parseInt(a.invoice_no, 10) || 0) - (parseInt(b.invoice_no, 10) || 0);
   });
 
-  let remainingPool = Math.max(0, totalPaid - previousBalance);
-  let cumulativeBalance = Math.max(0, previousBalance - totalPaid); // unpaid legacy portion, if any
+  let remainingPool = Math.max(0, totalPaid - Math.max(0, previousBalance)) + Math.max(0, -previousBalance);
+  let cumulativeBalance = Math.max(0, previousBalance - totalPaid);
   let prevBal = cumulativeBalance;
   let receivedForThisBill = 0;
   let currentBal = cumulativeBalance;
@@ -723,8 +714,19 @@ export function getPartyBalanceAroundBill(targetBill, restaurantProfiles = {}, b
     const balance = total - applied;
     if (b.id === targetBill.id) {
       prevBal = cumulativeBalance;
-      receivedForThisBill = applied;
-      currentBal = cumulativeBalance + balance;
+      const paidBeforeBill = (payments || [])
+        .filter(p => isNewPayment(p) && norm(p.restaurant_name || p.restaurantName) === normP && (p.date || '') < (b.bill_date || ''))
+        .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+      const earlierBills = sorted.slice(0, sorted.indexOf(b)).reduce((sum, bill) => sum + (parseFloat(bill.total_amount) || 0), 0);
+      const advanceBeforeBill = Math.max(0, paidBeforeBill - previousBalance - earlierBills);
+      prevBal -= advanceBeforeBill;
+      receivedForThisBill = Math.max(0, applied - advanceBeforeBill);
+      if (b === sorted[sorted.length - 1]) {
+        currentBal = previousBalance + sorted.reduce((sum, bill) => sum + (parseFloat(bill.total_amount) || 0), 0) - totalPaid;
+        receivedForThisBill = Math.max(0, prevBal + total - currentBal);
+      } else {
+        currentBal = prevBal + total - receivedForThisBill;
+      }
       found = true;
       break;
     }
@@ -737,12 +739,12 @@ export function getPartyBalanceAroundBill(targetBill, restaurantProfiles = {}, b
     // reconstruct a true pre-bill balance here. Fall back to the bill's own stored field, if any.
     const amt = parseFloat(targetBill.total_amount) || 0;
     const paid = parseFloat(targetBill.amount_paid) || (targetBill.payment_status === 'paid' ? amt : 0);
-    prevBal = Math.max(0, parseFloat(targetBill.previous_balance || 0));
+    prevBal = parseFloat(targetBill.previous_balance || 0);
     receivedForThisBill = paid;
     currentBal = prevBal + amt - paid;
   }
 
-  return { prevBal: Math.max(0, prevBal), currentBal: Math.max(0, currentBal), receivedForThisBill: Math.max(0, receivedForThisBill) };
+  return { prevBal, currentBal, receivedForThisBill: Math.max(0, receivedForThisBill) };
 }
 
 // FIFO payment allocation per party, for DISPLAY only (does not touch bill.amount_paid in the
@@ -776,7 +778,7 @@ export function getFifoInvoiceStatuses(bills = [], payments = [], restaurantProf
   Object.entries(byParty).forEach(([normP, { bills: partyBills, totalPaid }]) => {
     const profile = Object.values(restaurantProfiles || {}).find(p => norm(p.name) === normP);
     const isZero = ZERO_BALANCE_PARTIES.some(h => norm(h) === normP);
-    const previousBalance = isZero ? 0 : Math.max(0, parseFloat(profile?.previous_balance || 0));
+    const previousBalance = isZero ? 0 : parseFloat(profile?.previous_balance || 0);
 
     const sorted = [...partyBills].sort((a, b) => {
       const dateCmp = (a.bill_date || '').localeCompare(b.bill_date || '');

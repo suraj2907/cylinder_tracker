@@ -14,7 +14,7 @@ function withRunningBalances(sortedEntries, initialBalance) {
       const debit = parseFloat(item.debit) || 0;
       const credit = parseFloat(item.credit) || 0;
       if (debit > 0) currentBalance += debit;
-      if (credit > 0) currentBalance = Math.max(0, currentBalance - credit);
+      if (credit > 0) currentBalance -= credit;
     }
     return { ...item, runningBalance: currentBalance };
   });
@@ -449,8 +449,8 @@ function RestaurantStatementModal({
         {/* Compact Current Balance Header Strip */}
         <div className="bg-slate-50 rounded-xl px-2.5 py-1.5 sm:px-4 sm:py-2.5 flex items-center justify-between border border-slate-200 gap-2">
           <div className="min-w-0">
-            <div className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider">Current Balance (Outstanding)</div>
-            <div className="text-base sm:text-2xl font-black text-rose-600 truncate">
+            <div className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wider">{closingBalance < 0 ? 'Advance Balance' : 'Current Balance (Outstanding)'}</div>
+            <div className={`text-base sm:text-2xl font-black truncate ${closingBalance < 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
               ₹{closingBalance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </div>
