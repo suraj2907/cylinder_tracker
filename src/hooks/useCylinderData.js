@@ -623,17 +623,28 @@ export function useCylinderData(currentUser) {
     if (!originalEntry) return;
     if (isSupabaseConfigured) {
       try {
-        if (originalEntry.id) {
-          await fetch(`/api/db?table=entries&id=${originalEntry.id}`, { method: 'DELETE' }).catch(() => null);
-          await supabase.from('entries').delete().eq('id', originalEntry.id);
-        } else {
-          await supabase.from('entries').delete()
-            .eq('batch_num', batchNum)
-            .ilike('name', (originalEntry.name || '').trim())
-            .eq('qty', originalEntry.qty);
+        // A temporary entry may still have an insert in flight. Deleting it locally
+        // now would let that insert bring it back on the next refresh.
+        if (originalEntry.unsynced || String(originalEntry.id || '').startsWith('entry_')) {
+          showToast('Entry abhi sync ho rahi hai. Sync ke baad delete karein.', false);
+          return;
+        }
+
+        if (!originalEntry.id) {
+          showToast('Is entry ka database ID nahi mila. Refresh karke phir try karein.', false);
+          return;
+        }
+
+        const { data: deleted, error } = await supabase.from('entries')
+          .delete()
+          .eq('id', originalEntry.id)
+          .select('id');
+        if (error) throw error;
+        if (!deleted?.some(row => row.id === originalEntry.id)) {
+          throw new Error('Database ne entry delete confirm nahi ki. Refresh karke phir try karein.');
         }
       } catch (err) {
-        console.warn("Supabase delete background exception:", err);
+        console.warn("Supabase entry delete failed:", err);
         showToast(`Delete nahi hua: ${err.message || 'database error'}`, false);
         return;
       }
