@@ -36,9 +36,9 @@ export default function GstPurchaseReport({ purchaseBills = [], items = [] }) {
           const qty = parseFloat(line.qty) || 0;
           const rate = parseFloat(line.rate) || 0;
           const gstRate = parseFloat(line.gst_rate) || 0;
-          const amount = qty * rate;
-          const taxable = gstRate > 0 ? amount / (1 + gstRate / 100) : amount;
-          const tax = amount - taxable;
+          const amount = line.amount != null ? Number(line.amount) : qty * rate;
+          const taxable = line.taxable_amount != null ? Number(line.taxable_amount) : (gstRate > 0 ? amount / (1 + gstRate / 100) : amount);
+          const tax = line.tax_amount != null ? Number(line.tax_amount) : amount - taxable;
           out.push({
             key: `${p.id}-${idx}`,
             date: p.purchase_date,
@@ -49,6 +49,7 @@ export default function GstPurchaseReport({ purchaseBills = [], items = [] }) {
             hsn: line.hsn || itemObj?.hsn_code || '-',
             qty,
             rate,
+            rateDigits: line.rate_includes_tax === false ? 4 : 2,
             sgst: tax / 2,
             cgst: tax / 2,
             amount
@@ -68,7 +69,7 @@ export default function GstPurchaseReport({ purchaseBills = [], items = [] }) {
     const { startDate, endDate } = dateRange;
     const header = 'Date,Invoice No,Party GSTIN,Party Name,Item Name,HSN Code,Qty,Price/Unit,SGST,CGST,Amount\n';
     const body = rows.map(r =>
-      `${r.date},${r.invoiceNo},${r.supplierGstin},"${r.supplierName}","${r.itemName}",${r.hsn},${r.qty},${r.rate.toFixed(2)},${r.sgst.toFixed(2)},${r.cgst.toFixed(2)},${r.amount.toFixed(2)}`
+      `${r.date},${r.invoiceNo},${r.supplierGstin},"${r.supplierName}","${r.itemName}",${r.hsn},${r.qty},${r.rate.toFixed(r.rateDigits)},${r.sgst.toFixed(2)},${r.cgst.toFixed(2)},${r.amount.toFixed(2)}`
     ).join('\n');
     const blob = new Blob([header + body], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -136,7 +137,7 @@ export default function GstPurchaseReport({ purchaseBills = [], items = [] }) {
                   </div>
                   <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold">
                     <span>{r.date}</span>
-                    <span>{r.qty} PCS × ₹{r.rate.toFixed(2)}</span>
+                    <span>{r.qty} PCS × ₹{r.rate.toFixed(r.rateDigits)}</span>
                   </div>
                   <div className="flex items-center gap-3 text-[10px] text-slate-500 font-bold pt-1 border-t border-slate-100">
                     <span>CGST: ₹{r.cgst.toFixed(2)}</span>
@@ -174,7 +175,7 @@ export default function GstPurchaseReport({ purchaseBills = [], items = [] }) {
                       <td className="px-3 py-2.5 font-bold text-slate-800">{r.itemName}</td>
                       <td className="px-3 py-2.5 text-sky-700">{r.hsn}</td>
                       <td className="px-3 py-2.5 text-right">{r.qty} PCS</td>
-                      <td className="px-3 py-2.5 text-right">₹{r.rate.toFixed(2)}</td>
+                      <td className="px-3 py-2.5 text-right">₹{r.rate.toFixed(r.rateDigits)}</td>
                       <td className="px-3 py-2.5 text-right text-slate-700">₹{r.sgst.toFixed(2)}</td>
                       <td className="px-3 py-2.5 text-right text-slate-700">₹{r.cgst.toFixed(2)}</td>
                       <td className="px-3 py-2.5 text-right font-black text-slate-900">₹{r.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { formatIsoDate } from '../utils/dataUtils';
+import { calculatePurchase } from '../utils/purchaseCalculations';
 
 export default function InventoryManager({
   items = [],
@@ -1074,11 +1075,13 @@ function PurchaseBillModal({ bill, items, purchaseBills = [], onClose, onSavePur
   const [purchaseDate, setPurchaseDate] = useState(() => bill?.purchase_date || new Date().toISOString().slice(0, 10));
   const [purchaseNote, setPurchaseNote] = useState(bill?.note || '');
   const [discount, setDiscount] = useState(Number(bill?.discount) || 0);
+  const [rateIncludesTax, setRateIncludesTax] = useState(bill?.items?.[0]?.rate_includes_tax !== false);
+  const [taxableAdjustment, setTaxableAdjustment] = useState(Number(bill?.items?.[0]?.taxable_adjustment) || 0);
   
   // Multiple line items array
   const [purchaseLines, setPurchaseLines] = useState(() => Array.isArray(bill?.items) && bill.items.length
-    ? bill.items.map(line => ({ item_id: line.item_id || '', qty: line.qty, rate: line.rate, gst_rate: line.gst_rate ?? 18 }))
-    : [{ item_id: '', qty: 1, rate: 0, gst_rate: 18 }]);
+    ? bill.items.map(line => ({ item_id: line.item_id || '', qty: line.qty, rate: line.rate, gst_rate: line.gst_rate ?? 18, discount_type: line.discount_type || 'amount', discount_value: line.discount_value || 0 }))
+    : [{ item_id: '', qty: 1, rate: 0, gst_rate: 18, discount_type: 'amount', discount_value: 0 }]);
 
   const [saving, setSaving] = useState(false);
 
@@ -1098,7 +1101,7 @@ function PurchaseBillModal({ bill, items, purchaseBills = [], onClose, onSavePur
   };
 
   const addLineRow = () => {
-    setPurchaseLines(prev => [...prev, { item_id: '', qty: 1, rate: 0, gst_rate: 18 }]);
+    setPurchaseLines(prev => [...prev, { item_id: '', qty: 1, rate: 0, gst_rate: 18, discount_type: 'amount', discount_value: 0 }]);
   };
 
   const removeLineRow = (idx) => {
@@ -1106,33 +1109,7 @@ function PurchaseBillModal({ bill, items, purchaseBills = [], onClose, onSavePur
   };
 
   // Compute calculated values
-  const calculations = useMemo(() => {
-    let subtotal = 0;
-    let totalGst = 0;
-    let grandTotal = 0;
-
-    purchaseLines.forEach(ln => {
-      const qty = parseFloat(ln.qty) || 0;
-      const rate = parseFloat(ln.rate) || 0;
-      const gstRate = parseFloat(ln.gst_rate ?? 18) / 100;
-
-      const lineTotal = qty * rate;              // rate is inclusive of tax — same convention as sales
-      const lineTaxable = lineTotal / (1 + gstRate);
-      const lineGst = lineTotal - lineTaxable;
-
-      subtotal += lineTaxable;
-      totalGst += lineGst;
-      grandTotal += lineTotal;
-    });
-
-    return {
-      subtotal,
-      cgst: totalGst / 2,
-      sgst: totalGst / 2,
-      total: Math.max(0, grandTotal - (Number(discount) || 0)),
-      grossTotal: grandTotal
-    };
-  }, [purchaseLines, discount]);
+  const calculations = useMemo(() => calculatePurchase(purchaseLines, { rateIncludesTax, billDiscount: discount, taxableAdjustment }), [purchaseLines, rateIncludesTax, discount, taxableAdjustment]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1144,9 +1121,17 @@ function PurchaseBillModal({ bill, items, purchaseBills = [], onClose, onSavePur
       alert('Discount purchase amount se zyada nahi ho sakta');
       return;
     }
+    if (purchaseLines.some(ln => Number(ln.discount_value) < 0 || (ln.discount_type === 'percent' && Number(ln.discount_value) > 100) || (ln.discount_type === 'amount' && Number(ln.discount_value) > Number(ln.qty) * Number(ln.rate)))) {
+      alert('Line discount valid amount ya 0-100% mein daalein');
+      return;
+    }
+    if (Math.abs(Number(taxableAdjustment)) > 0.05 || calculations.subtotal < 0) {
+      alert('Taxable rounding adjustment ₹0.05 ke andar rakhein');
+      return;
+    }
     setSaving(true);
     try {
-      const itemsList = purchaseLines.map(ln => {
+      const itemsList = calculations.lines.map((ln, index) => {
         const itemObj = items.find(i => i.id === ln.item_id);
         const qty = parseFloat(ln.qty) || 0;
         const rate = parseFloat(ln.rate) || 0;
@@ -1155,8 +1140,15 @@ function PurchaseBillModal({ bill, items, purchaseBills = [], onClose, onSavePur
           item_name: itemObj ? itemObj.name : 'Unknown',
           qty,
           rate,
-          amount: qty * rate,   // rate already includes GST — no separate addition
-          gst_rate: ln.gst_rate
+          amount: ln.amount,
+          gst_rate: ln.gst_rate,
+          rate_includes_tax: rateIncludesTax,
+          discount_type: ln.discount_type,
+          discount_value: Number(ln.discount_value) || 0,
+          discount_amount: ln.discount,
+          taxable_amount: ln.taxable,
+          tax_amount: ln.tax,
+          taxable_adjustment: !rateIncludesTax && index === 0 ? Number(taxableAdjustment) || 0 : 0
         };
       });
 
@@ -1169,7 +1161,7 @@ function PurchaseBillModal({ bill, items, purchaseBills = [], onClose, onSavePur
         taxable_amount: calculations.subtotal,
         cgst: calculations.cgst,
         sgst: calculations.sgst,
-        discount: Number(discount) || 0,
+        discount: calculations.discount,
         total_amount: calculations.total,
         invoice_no: invoiceNo || nextPurchaseInvoiceNo,
         note: purchaseNote
@@ -1234,6 +1226,13 @@ function PurchaseBillModal({ bill, items, purchaseBills = [], onClose, onSavePur
         {/* Line Items Table - part of the single form scroll now (not its own nested scroll box),
             so it can't get squeezed down to a sliver on short mobile viewports. */}
         <div className="space-y-2.5 shrink-0">
+          <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
+            Rate type
+            <select className="border border-customBorder rounded-lg bg-white px-2 py-1" value={rateIncludesTax ? 'inclusive' : 'exclusive'} onChange={e => setRateIncludesTax(e.target.value === 'inclusive')}>
+              <option value="inclusive">GST included (existing bills)</option>
+              <option value="exclusive">GST extra, discount before tax (BillBook)</option>
+            </select>
+          </label>
           <div className="flex justify-between items-center flex-wrap gap-1">
             <span className="text-[10px] font-bold text-slate-500 uppercase">Purchase Line Items</span>
             <button
@@ -1287,12 +1286,12 @@ function PurchaseBillModal({ bill, items, purchaseBills = [], onClose, onSavePur
                   </div>
 
                   <div>
-                    <label className="text-[9px] font-bold text-slate-400 uppercase block">Rate (₹)</label>
+                    <label className="text-[9px] font-bold text-slate-400 uppercase block">Rate (₹ {rateIncludesTax ? 'incl. GST' : 'before GST'})</label>
                     <input
                       type="number"
                       placeholder="Rate"
                       required
-                      step="0.01"
+                      step="0.0001"
                       className="w-full border border-customBorder bg-white rounded-xl px-2 py-1.5 text-xs font-bold text-center mt-0.5"
                       value={ln.rate}
                       onChange={e => handleLineValueChange(i, 'rate', parseFloat(e.target.value) || 0)}
@@ -1320,6 +1319,19 @@ function PurchaseBillModal({ bill, items, purchaseBills = [], onClose, onSavePur
                     </span>
                   </div>
                 </div>
+                {!rateIncludesTax && (
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
+                    <span>Discount before GST</span>
+                    <input type="number" min="0" step="0.01" value={ln.discount_value || 0}
+                      onChange={e => handleLineValueChange(i, 'discount_value', e.target.value)}
+                      className="w-28 border border-customBorder rounded-lg bg-white px-2 py-1" />
+                    <select value={ln.discount_type || 'amount'} onChange={e => handleLineValueChange(i, 'discount_type', e.target.value)}
+                      className="border border-customBorder rounded-lg bg-white px-2 py-1">
+                      <option value="amount">₹</option><option value="percent">%</option>
+                    </select>
+                    <span>Final ₹{calculations.lines[i].amount.toFixed(2)}</span>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -1351,12 +1363,20 @@ function PurchaseBillModal({ bill, items, purchaseBills = [], onClose, onSavePur
               <span>SGST (9% approx)</span>
               <span className="font-bold text-slate-700">₹{calculations.sgst.toFixed(2)}</span>
             </div>
-            <label className="flex justify-between items-center gap-2 text-[11px]">
-              <span>Discount (₹)</span>
+            {rateIncludesTax ? <label className="flex justify-between items-center gap-2 text-[11px]">
+              <span>Discount after GST (₹)</span>
               <input type="number" min="0" max={calculations.grossTotal} step="0.01" value={discount}
                 onChange={e => setDiscount(e.target.value)}
                 className="w-24 border border-slate-200 rounded-lg px-2 py-1 text-right bg-white" />
-            </label>
+            </label> : <>
+              <div className="flex justify-between text-[11px]"><span>Discount before GST</span><span>− ₹{calculations.discount.toFixed(2)}</span></div>
+              <label className="flex justify-between items-center gap-2 text-[11px]">
+                <span>Taxable rounding (₹, optional)</span>
+                <input type="number" min="-0.05" max="0.05" step="0.01" value={taxableAdjustment}
+                  onChange={e => setTaxableAdjustment(e.target.value)}
+                  className="w-24 border border-slate-200 rounded-lg px-2 py-1 text-right bg-white" />
+              </label>
+            </>}
             <div className="flex justify-between font-black text-xs sm:text-sm text-slate-900 border-t border-slate-200 pt-1">
               <span>Total Amount (Paid)</span>
               <span className="text-emerald-700">₹{calculations.total.toFixed(2)}</span>
@@ -1437,7 +1457,7 @@ function PurchaseInvoicePrintModal({ bill, onClose }) {
               <tr className="border-b-2 border-slate-350 font-bold text-slate-650 bg-slate-50/50">
                 <th className="py-2 px-1">Item</th>
                 <th className="py-2 text-right">Qty</th>
-                <th className="py-2 text-right">Rate (Incl.)</th>
+                <th className="py-2 text-right">Rate (₹)</th>
                 <th className="py-2 text-right">Tax %</th>
                 <th className="py-2 text-right px-1">Line Total (Incl.)</th>
               </tr>
@@ -1451,7 +1471,7 @@ function PurchaseInvoicePrintModal({ bill, onClose }) {
                   <tr key={idx} className="border-b border-slate-100 text-slate-800">
                     <td className="py-2 px-1 font-extrabold text-slate-900">{itemName}</td>
                     <td className="py-2 text-right font-black text-slate-900">{it.qty} PCS</td>
-                    <td className="py-2 text-right text-slate-600">₹{Number(it.rate).toFixed(2)}</td>
+                    <td className="py-2 text-right text-slate-600">₹{Number(it.rate).toFixed(it.rate_includes_tax === false ? 4 : 2)}{it.rate_includes_tax === false ? ' + GST' : ''}</td>
                     <td className="py-2 text-right text-slate-600">{it.gst_rate}%</td>
                     <td className="py-2 text-right px-1 font-black text-slate-900">
                       ₹{lineTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -1479,8 +1499,8 @@ function PurchaseInvoicePrintModal({ bill, onClose }) {
               </div>
               {Number(bill.discount) > 0 && (
                 <div className="flex justify-between">
-                  <span>Discount</span>
-                  <span className="text-slate-800">- ₹{Number(bill.discount).toFixed(2)}</span>
+                  <span>Discount {bill.items?.[0]?.rate_includes_tax === false ? '(before GST; included in taxable subtotal)' : '(after GST)'}</span>
+                  <span className="text-slate-800">{bill.items?.[0]?.rate_includes_tax === false ? 'Included: ' : '− '}₹{Number(bill.discount).toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between font-black text-sm text-slate-900 border-t pt-1.5">

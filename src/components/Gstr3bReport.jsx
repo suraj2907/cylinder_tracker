@@ -70,11 +70,11 @@ export default function Gstr3bReport({
         pb.items.forEach(line => {
           const itemObj = items.find(i => i.id === line.item_id);
           if (itemObj) {
-            const lineAmount = (parseFloat(line.qty) || 0) * (parseFloat(line.rate) || 0);
+            const lineAmount = line.amount != null ? Number(line.amount) : (parseFloat(line.qty) || 0) * (parseFloat(line.rate) || 0);
             if (itemObj.gst_applicable !== false) {
               const lineGstRate = parseFloat(line.gst_rate) || 18;
-              const lineTaxable = lineAmount / (1 + lineGstRate / 100);
-              const lineTax = lineAmount - lineTaxable;
+              const lineTaxable = line.taxable_amount != null ? Number(line.taxable_amount) : lineAmount / (1 + lineGstRate / 100);
+              const lineTax = line.tax_amount != null ? Number(line.tax_amount) : lineAmount - lineTaxable;
               itcCgst += (lineTax / 2);
               itcSgst += (lineTax / 2);
             } else {
